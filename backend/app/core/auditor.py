@@ -182,6 +182,31 @@ class AuditEngine:
                 result.trust_level = self._trust_level(result.overall_score, checks)
                 result.summary = self._generate_summary(result)
                 result.recommendations = self._generate_recommendations(result)
+
+                # Add model reference data (公开权威数据对比)
+                try:
+                    from app.core.model_reference import get_model_reference
+                    ref = get_model_reference(result.model)
+                    if ref:
+                        result.model_reference = {
+                            "display_name": ref.display_name,
+                            "provider": ref.provider,
+                            "tier": ref.tier,
+                            "official_price": {
+                                "input": ref.input_price,
+                                "output": ref.output_price,
+                            },
+                            "intelligence_index": ref.intelligence_index,
+                            "arena_elo": ref.arena_elo,
+                            "arena_rank": ref.arena_rank,
+                            "ttft_seconds": ref.ttft_seconds,
+                            "output_tokens_per_second": ref.output_tokens_per_second,
+                            "context_window": ref.context_window,
+                            "release_date": ref.release_date,
+                        }
+                except Exception:
+                    pass  # Reference data is optional
+
                 result.status = AuditStatus.COMPLETED
                 result.completed_at = datetime.now()
 
