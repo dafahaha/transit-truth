@@ -1,55 +1,29 @@
-# TransitTruth 最终发布文案集合
+# TransitTruth 多平台推广文案合集
 
-> 本文档包含各平台的最终版本发布文案，可直接复制粘贴使用。
->
-> **关键链接汇总：**
-> - 在线Demo：https://dafahaha.github.io/transit-truth/
-> - GitHub仓库：https://github.com/dafahaha/transit-truth
-> - 完整爆文：https://github.com/dafahaha/transit-truth/blob/main/docs/blog_post.md
-> - 部署指南：https://github.com/dafahaha/transit-truth/blob/main/docs/deployment_guide.md
+> 最后更新：2026-09-15
+> 项目地址：https://github.com/dafahaha/transit-truth
+> 在线Demo：https://dafahaha.github.io/transit-truth/
 
 ---
 
-## 📋 发布前检查清单
+## 📊 项目核心卖点
 
-- [ ] GitHub仓库已公开
-- [ ] README已完善（含在线Demo链接）
-- [ ] GitHub Pages已部署：https://dafahaha.github.io/transit-truth/
-- [ ] 在线Demo可正常访问和使用
-- [ ] Topics已设置（ai, llm, openai, api, security, fingerprint, audit, gpt）
-- [ ] 仓库已Pinned到个人主页
-- [ ] 爆文已写好：docs/blog_post.md
-- [ ] 多平台发布指南已准备：docs/promotion_guide.md
-- [ ] 部署指南已准备：docs/deployment_guide.md
+1. **震撼发现**：GPT选数字100%返回7，选动物76%返回Okapi——大模型有"行为指纹"
+2. **真实痛点**：80%以上AI API中转站存在模型偷偷降级，用户花了GPT-4的钱用的是GPT-3.5
+3. **技术创新**：行为指纹可以区分同家族模型（gpt-4o vs gpt-4o-mini），tokenizer指纹做不到
+4. **零门槛使用**：55KB单文件，浏览器打开即用，不需要安装，不需要后端
+5. **全民共建**：中转站排行榜，5种贡献方式（GitHub/复制JSON/邮件/社区/API），无GitHub账号也能贡献
+6. **学术潜力**：基于统计分析（卡方检验+KS检验+贝叶斯更新），可复现验证，有论文转化潜力
 
 ---
 
-## 🚀 发布策略
-
-### 第一波（发布当天）
-1. **V2EX**（上午10:00）- 技术社区首发，获取早期反馈
-2. **掘金**（下午14:00）- 工具类社区，获取Star
-3. **知乎**（晚上20:00）- 详细科普，获取关注
-
-### 第二波（发布后1-2天）
-4. **Reddit r/LocalLLaMA**（美国时间上午）- 英文社区，获取国际关注
-5. **HackerNews**（美国时间上午）- 技术精英社区，获取高质量讨论
-
-### 第三波（发布后3-7天）
-6. **微信公众号/小红书** - 大众科普，获取非技术用户
-7. **B站/抖音视频**（如果有精力）- 视频演示，获取更大流量
-
----
-
-## 📝 各平台最终发布文案
-
-### 平台1：V2EX
+## 1️⃣ V2EX（中文技术社区）
 
 **节点**：分享创造 / 程序员
 
 **标题**：
 ```
-我用27分钟发现了GPT的"行为指纹"：选数字100%返回7，选动物76%返回Okapi
+我用27分钟发现了GPT的"行为指纹"：选数字100%返回7，做了个开源工具帮你验明正身
 ```
 
 **正文**：
@@ -91,7 +65,9 @@
 - 💰 Token计费审计（检测中转站是否多计token）
 - ⚡ 延迟与协议检查
 - 💳 余额查询
+- 🏆 中转站排行榜（12条初始数据，全民共建）
 - 🚀 零安装在线Demo（55KB单文件，浏览器即用）
+- 📋 5种贡献方式（GitHub/复制JSON/邮件/社区/API），无GitHub账号也能贡献
 
 **在线体验**：https://dafahaha.github.io/transit-truth/
 **GitHub**：https://github.com/dafahaha/transit-truth
@@ -116,7 +92,7 @@
 
 ---
 
-### 平台2：知乎
+## 2️⃣ 知乎（中文知识社区）
 
 **专栏**：人工智能 / 机器学习
 
@@ -127,15 +103,13 @@
 
 **正文**：
 ```
-（使用完整爆文 docs/blog_post.md，开头加一句知乎风格引言）
-
 你用的GPT-4是真的吗？
 
 如果你用过AI API中转站，可能会有这样的疑问：我付了GPT-4o的钱，实际用的是GPT-4o还是GPT-4o-mini？
 
 最近我做了一个27分钟的小实验，发现了一个惊人的现象...
 
-[此处粘贴完整爆文全文]
+[此处粘贴完整爆文全文，参考 docs/blog_post.md]
 
 ---
 
@@ -147,13 +121,13 @@
 
 ---
 
-### 平台3：掘金
+## 3️⃣ 掘金（中文技术社区）
 
 **分类**：人工智能 / 开源
 
 **标题**：
 ```
-我用27分钟发现了GPT的"行为指纹"，做了一个开源工具帮你验明正身
+我用27分钟发现了GPT的"行为指纹"，做了个开源工具帮你验明正身
 ```
 
 **正文**：
@@ -184,9 +158,8 @@ AI API中转站市场乱象频发，80%以上存在模型偷偷降级。但作�
 - 🧠 **能力测试**：10个能力探针，估算模型等级
 - 💰 **Token计费审计**：tiktoken精确计算，检测计费膨胀
 - ⚡ **延迟与协议检查**：P50/P95/P99，7项协议合规
-- 💳 **余额查询**：多中转站账户余额聚合，低余额自动告警
-- 📚 **模型参考数据**：14个模型的公开数据（价格/ELO/智能指数/延迟）
-- 🏆 **社区排行榜**：全民共建的中转站信誉排行榜
+- 💳 **余额查询**：多中转站账户余额聚合
+- 🏆 **中转站排行榜**：12条初始数据，全民共建，5种贡献方式
 - 🚀 **纯前端在线Demo**：零安装，浏览器即用（55KB单文件，苹果风格设计）
 
 ### 技术栈
@@ -228,7 +201,7 @@ python analyze_baseline.py
 
 ---
 
-### 平台4：Reddit r/LocalLLaMA
+## 4️⃣ Reddit r/LocalLLaMA（英文技术社区）
 
 **标题**：
 ```
@@ -262,6 +235,7 @@ I built **TransitTruth**, an open-source AI API security audit platform based on
 - 💰 Token billing audit
 - ⚡ Latency & protocol checks
 - 💳 Balance checking
+- 🏆 Community relay ranking (12 initial entries, 5 contribution methods)
 - 🚀 Zero-install online demo (55KB single file, pure frontend)
 
 **Live demo**: https://dafahaha.github.io/transit-truth/
@@ -290,7 +264,7 @@ Would love to hear your thoughts! Happy to answer any technical questions.
 
 ---
 
-### 平台5：HackerNews
+## 5️⃣ HackerNews（英文技术精英）
 
 **标题**：
 ```
@@ -313,25 +287,21 @@ I built an open-source audit tool based on this:
 - GitHub: https://github.com/dafahaha/transit-truth
 - 2600 API requests, 27 minutes, $0 cost
 - Statistical method: chi-square + KS test + Bayesian update with 95% credible intervals
+- Community ranking with 5 contribution methods (no GitHub account needed)
 
 Paper reference: "One Token Is Enough" (arXiv:2607.10252)
 ```
 
 ---
 
-### 平台6：微信公众号/小红书
+## 6️⃣ 微信公众号（中文大众科普）
 
-**标题**（公众号）：
+**标题**：
 ```
 我用27分钟发现了GPT的秘密：选数字100%返回7，选动物76%返回Okapi
 ```
 
-**标题**（小红书）：
-```
-震惊！GPT选数字居然100%返回7😱 我做了个工具帮你验明正身
-```
-
-**正文**（科普风格）：
+**正文**：
 ```
 你用的GPT-4是真的吗？
 
@@ -362,6 +332,8 @@ Paper reference: "One Token Is Enough" (arXiv:2607.10252)
 
 输入你的API Key，30秒就能测出你用的GPT是不是真的！
 
+还有**中转站排行榜**，看看大家用的中转站哪些靠谱哪些坑。
+
 ## 最后
 
 如果你觉得这个工具有用，欢迎分享给更多人！
@@ -373,13 +345,222 @@ GitHub开源：https://github.com/dafahaha/transit-truth
 
 ---
 
-## 📊 发布后跟踪指标
+## 7️⃣ 小红书（中文种草）
+
+**标题**：
+```
+震惊！GPT选数字居然100%返回7😱 我做了个工具帮你验明正身
+```
+
+**正文**：
+```
+姐妹们！我发现了GPT的惊天秘密🤯
+
+你们用的GPT-4可能是假的！！！
+
+我做了个实验，发现GPT选数字居然100%返回7，选动物76%返回Okapi（什么鬼？㺢㹢狓是什么？）
+
+原来每个大模型都有自己的"行为指纹"，就像每个人说话习惯不一样一样！
+
+而80%的AI中转站都在偷偷降级！你花了GPT-4的钱，实际用的可能是GPT-3.5😡
+
+于是我做了个工具👉TransitTruth
+
+✅ 零安装，浏览器打开就能用
+✅ 输入API Key，30秒出结果
+✅ 行为指纹验证，能区分gpt-4o和gpt-4o-mini
+✅ Token计费审计，看看有没有多扣你钱
+✅ 中转站排行榜，看看哪些靠谱哪些坑
+✅ 5种贡献方式，没有GitHub账号也能参与
+
+在线体验🔗 https://dafahaha.github.io/transit-truth/
+
+快看看你用的GPT是不是真的！评论区告诉我你的结果👇
+
+#AI #GPT #人工智能 #开源工具 #科技 #避坑 #中转站
+```
+
+---
+
+## 8️⃣ B站视频脚本（中文视频）
+
+**标题**：
+```
+【硬核】我用27分钟发现了GPT的"行为指纹"：选数字100%返回7！做了个开源工具帮你验明正身
+```
+
+**视频脚本**：
+```
+【开场：0-15秒】
+（画面：快速剪辑GPT回答"选一个1-10的数字"，每次都返回7）
+旁白：你相信吗？GPT选数字，100%返回7。选动物，76%返回Okapi。这不是bug，这是大模型的"行为指纹"。
+
+【第一部分：15-60秒 震撼发现】
+（画面：实验数据图表，Okapi动物图片）
+旁白：我是一名大三学生，最近做了一个27分钟的小实验，2600次API请求，发现了一个惊人的现象。
+- gpt-4o-mini选1-10的数字，100%返回7，零方差！
+- gpt-4o选随机动物，76%返回Okapi，就是这个罕见的非洲长颈鹿近亲。
+- 只用"选动物"一个探针，就能以90%准确率区分gpt-4o和gpt-4o-mini。
+
+【第二部分：60-120秒 为什么会这样】
+（画面：大模型原理图，训练数据词频图）
+旁白：为什么会这样？大语言模型本质上是"下一个词预测器"。当你问它"选一个随机数字"时，它并不是真的在随机生成，而是在预测"人类最可能说哪个数字"。
+而"7"因为文化原因——幸运数字、七宗罪、七大奇迹、一周七天——出现频率远高于其他数字。RLHF又进一步放大了这种偏好。
+结果就是：每个模型都有自己独特的"行为指纹"。
+
+【第三部分：120-180秒 这有什么用】
+（画面：中转站价格对比图，降级示意图）
+旁白：这有什么用？80%以上的AI API中转站存在模型偷偷降级——你花了GPT-4的钱，实际用的可能是GPT-3.5。
+但tokenizer指纹区分不了同家族的模型，因为gpt-4o和gpt-4o-mini用同一个tokenizer。而行为指纹可以。
+
+【第四部分：180-240秒 我做了什么】
+（画面：TransitTruth在线Demo演示，输入API Key，审计过程，结果展示）
+旁白：基于这个发现，我做了一个开源工具——TransitTruth，AI API安全审计平台。
+- 零安装，55KB单文件，浏览器打开就能用
+- 输入API Key，30秒出结果
+- 行为指纹验证，14个探针，卡方检验+KS检验+贝叶斯更新
+- Token计费审计，看看有没有多扣你钱
+- 延迟与协议检查
+- 中转站排行榜，全民共建
+- 5种贡献方式，没有GitHub账号也能参与
+
+【第五部分：240-270秒 怎么用】
+（画面：手机/电脑打开在线Demo，输入API Key，点击开始审计）
+旁白：怎么用？打开链接，输入你的API Key，点击开始审计，30秒就能测出你用的GPT是不是真的！
+链接在评论区置顶，快去试试吧！
+
+【结尾：270-300秒】
+（画面：GitHub仓库页面，Star按钮高亮）
+旁白：如果你觉得这个工具有用，欢迎给个Star，也欢迎提交PR一起完善。
+我是一名大三学生，正在申请美国PhD，你的支持对我很重要！
+我们下期再见！
+
+【视频信息】
+- 时长：约5分钟
+- 封面：GPT选数字100%返回7的截图 + 大字标题
+- 标签：#AI #GPT #人工智能 #开源 #编程 #科技
+```
+
+---
+
+## 9️⃣ 微博（中文短文本）
+
+**文案1（发现类）**：
+```
+震惊！我用27分钟做了2600次API请求，发现GPT选数字100%返回7，选动物76%返回Okapi（㺢㹢狓？）。原来每个大模型都有自己的"行为指纹"！
+
+而80%的AI中转站都在偷偷降级…你花了GPT-4的钱，用的可能是GPT-3.5😡
+
+我做了个开源工具帮你验明正身，零安装浏览器即用👉
+https://dafahaha.github.io/transit-truth/
+
+#AI #GPT #人工智能 #开源 #科技
+```
+
+**文案2（工具类）**：
+```
+推荐一个AI API中转站验真工具——TransitTruth🔍
+
+输入API Key，30秒测出：
+✅ 你的GPT是不是真的（行为指纹验证）
+✅ 有没有多扣你Token（计费审计）
+✅ 延迟和协议是否正常
+✅ 中转站排行榜，看看哪些靠谱哪些坑
+
+零安装，55KB单文件，浏览器打开就能用👉
+https://dafahaha.github.io/transit-truth/
+
+GitHub开源：https://github.com/dafahaha/transit-truth
+
+#AI #GPT #避坑 #开源工具
+```
+
+---
+
+## 🔟 Twitter/X（英文短文本）
+
+**文案1（发现类）**：
+```
+I discovered GPT's "behavioral fingerprint" in 27 minutes:
+- It returns "7" 100% of the time when asked to pick 1-10 (zero variance!)
+- It returns "Okapi" 76% of the time when asked to pick a random animal
+- A single probe distinguishes gpt-4o from gpt-4o-mini with 90% accuracy
+
+80%+ of AI API relays secretly downgrade models. I built an open-source tool to detect it:
+
+🔗 https://dafahaha.github.io/transit-truth/
+🐙 https://github.com/dafahaha/transit-truth
+
+#AI #LLM #OpenSource #GPT
+```
+
+**文案2（工具类）**：
+```
+Check if your AI API relay is secretly downgrading your model 🔍
+
+TransitTruth:
+✅ Behavioral fingerprint verification (14 probes)
+✅ Token billing audit
+✅ Latency & protocol checks
+✅ Community ranking
+✅ Zero-install, 55KB single file, browser-ready
+
+🔗 https://dafahaha.github.io/transit-truth/
+🐙 https://github.com/dafahaha/transit-truth
+
+#AI #LLM #OpenSource #Security
+```
+
+---
+
+## 📅 发布策略
+
+### 第一波（发布当天）
+1. **V2EX**（上午10:00）- 技术社区首发，获取早期反馈
+2. **掘金**（下午14:00）- 工具类社区，获取Star
+3. **知乎**（晚上20:00）- 详细科普，获取关注
+4. **微博**（晚上21:00）- 短文本扩散
+
+### 第二波（发布后1-2天）
+5. **Reddit r/LocalLLaMA**（美国时间上午）- 英文社区，获取国际关注
+6. **HackerNews**（美国时间上午）- 技术精英社区，获取高质量讨论
+7. **Twitter/X**（美国时间中午）- 英文短文本扩散
+
+### 第三波（发布后3-7天）
+8. **微信公众号** - 大众科普，获取非技术用户
+9. **小红书** - 种草平台，获取女性用户
+10. **B站视频** - 视频演示，获取更大流量
+
+---
+
+## ✅ 发布前检查清单
+
+- [ ] GitHub仓库已公开
+- [ ] README已完善（含在线Demo链接）
+- [ ] GitHub Pages已部署：https://dafahaha.github.io/transit-truth/
+- [ ] 在线Demo可正常访问和使用
+- [ ] 排行榜功能正常（12条数据，筛选/排序/搜索）
+- [ ] 多渠道贡献功能正常（5种方式）
+- [ ] 46个单元测试全部通过
+- [ ] 15个API端点正常
+- [ ] CLI工具正常（audit/list/export/benchmark/balance）
+- [ ] Topics已设置（ai, llm, openai, api, security, fingerprint, audit, gpt）
+- [ ] 仓库已Pinned到个人主页
+- [ ] 爆文已写好：docs/blog_post.md
+- [ ] 多平台文案已准备：docs/final_release_package.md
+- [ ] 部署指南已准备：docs/deployment_guide.md
+- [ ] Social Preview已设置
+
+---
+
+## 📊 跟踪指标
 
 ### 第一周目标
 - GitHub Stars：100+
 - 在线Demo访问量：1000+
 - 社区讨论：V2EX/知乎/Reddit/HN各有至少10条评论
 - PR/Issue：至少有3个外部贡献
+- 排行榜贡献：至少有5个用户提交审计结果
 
 ### 跟踪方式
 - GitHub Stars：https://github.com/dafahaha/transit-truth/stargazers
@@ -396,15 +577,7 @@ GitHub开源：https://github.com/dafahaha/transit-truth
 3. **保守表述**：审计结果基于统计分析，不要说"100%准确"
 4. **不要点名具体中转站**：用"某中转站"等保守表述，避免法律风险
 5. **保护用户隐私**：不要在公开场合展示用户的API Key或个人信息
-
----
-
-## 📞 问题反馈
-
-如果发布过程中遇到问题，可以：
-1. 查看 GitHub Issues：https://github.com/dafahaha/transit-truth/issues
-2. 提交新的 Issue
-3. 查看文档：https://github.com/dafahaha/transit-truth#readme
+6. **学术诚信**：明确说明这是初步研究，欢迎同行验证和批评
 
 ---
 
