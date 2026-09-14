@@ -20,6 +20,12 @@ def temp_db():
     temp_path = tempfile.mktemp(suffix=".db")
     db_module.DB_PATH = temp_path
     init_db()
+    # Clear initial ranking data for isolated tests
+    import sqlite3
+    conn = sqlite3.connect(str(temp_path))
+    conn.execute("DELETE FROM rankings")
+    conn.commit()
+    conn.close()
     yield
     db_module.DB_PATH = original_path
     if os.path.exists(temp_path):
