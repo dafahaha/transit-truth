@@ -15,6 +15,7 @@ from .api.audit import router as audit_router
 from .api.ranking import router as ranking_router
 from .api.detect import router as detect_router
 from .api.balance import router as balance_router
+from .api.contribute import router as contribute_router
 
 app = FastAPI(
     title="TransitTruth",
@@ -39,6 +40,7 @@ app.include_router(audit_router)
 app.include_router(ranking_router)
 app.include_router(detect_router)
 app.include_router(balance_router)
+app.include_router(contribute_router)
 
 # Serve frontend
 FRONTEND_DIR = BASE_DIR / "frontend"

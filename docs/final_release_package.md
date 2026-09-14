@@ -1,0 +1,411 @@
+# TransitTruth 最终发布文案集合
+
+> 本文档包含各平台的最终版本发布文案，可直接复制粘贴使用。
+>
+> **关键链接汇总：**
+> - 在线Demo：https://dafahaha.github.io/transit-truth/
+> - GitHub仓库：https://github.com/dafahaha/transit-truth
+> - 完整爆文：https://github.com/dafahaha/transit-truth/blob/main/docs/blog_post.md
+> - 部署指南：https://github.com/dafahaha/transit-truth/blob/main/docs/deployment_guide.md
+
+---
+
+## 📋 发布前检查清单
+
+- [ ] GitHub仓库已公开
+- [ ] README已完善（含在线Demo链接）
+- [ ] GitHub Pages已部署：https://dafahaha.github.io/transit-truth/
+- [ ] 在线Demo可正常访问和使用
+- [ ] Topics已设置（ai, llm, openai, api, security, fingerprint, audit, gpt）
+- [ ] 仓库已Pinned到个人主页
+- [ ] 爆文已写好：docs/blog_post.md
+- [ ] 多平台发布指南已准备：docs/promotion_guide.md
+- [ ] 部署指南已准备：docs/deployment_guide.md
+
+---
+
+## 🚀 发布策略
+
+### 第一波（发布当天）
+1. **V2EX**（上午10:00）- 技术社区首发，获取早期反馈
+2. **掘金**（下午14:00）- 工具类社区，获取Star
+3. **知乎**（晚上20:00）- 详细科普，获取关注
+
+### 第二波（发布后1-2天）
+4. **Reddit r/LocalLLaMA**（美国时间上午）- 英文社区，获取国际关注
+5. **HackerNews**（美国时间上午）- 技术精英社区，获取高质量讨论
+
+### 第三波（发布后3-7天）
+6. **微信公众号/小红书** - 大众科普，获取非技术用户
+7. **B站/抖音视频**（如果有精力）- 视频演示，获取更大流量
+
+---
+
+## 📝 各平台最终发布文案
+
+### 平台1：V2EX
+
+**节点**：分享创造 / 程序员
+
+**标题**：
+```
+我用27分钟发现了GPT的"行为指纹"：选数字100%返回7，选动物76%返回Okapi
+```
+
+**正文**：
+```
+大家好，我是一名大三学生，最近在做AI API安全相关的研究。
+
+你用的GPT-4是真的吗？中转站有没有偷偷给你降级成GPT-3.5？
+
+我做了一个27分钟的小实验，发现了一个几乎没人注意到的现象：大语言模型在"随机"任务上有极端强烈的偏好，这些偏好可以用来"验明正身"。
+
+## 震撼发现
+
+- gpt-4o-mini选1-10的数字，**100%返回7**（零方差！）
+- gpt-4o选随机动物，**76%返回Okapi**（㺢㹢狓，罕见非洲长颈鹿近亲）
+- gpt-4o-mini掷骰子，**96%返回4**
+- **只用"选一个随机动物"这一个探针，就能以90%准确率区分gpt-4o和gpt-4o-mini**——这是tokenizer指纹做不到的（两个模型用同一个o200k tokenizer）
+
+## 为什么会这样？
+
+大语言模型本质上是"下一个词预测器"。当你问它"选一个随机数字"时，它并不是真的在随机生成——它是在预测"在这种语境下，人类最可能说哪个数字"。
+
+而训练数据里，数字的出现频率是极不均匀的：
+- "7"因为文化原因（幸运数字、七宗罪、七大奇迹、一周七天）出现频率远高于其他数字
+- "Okapi"可能在动物学相关的训练数据里被反复提及
+- RLHF（人类反馈强化学习）又进一步放大了这些偏好
+
+**结果就是：每个模型都有自己独特的"行为指纹"，就像每个人都有独特的说话习惯一样。**
+
+## 这有什么用？
+
+80%以上的AI API中转站存在模型偷偷降级（用mini冒充pro，用3.5冒充4）。但tokenizer指纹区分不了同家族的模型（gpt-4o和gpt-4o-mini用同一个tokenizer），而行为指纹可以。
+
+## 我做了一个开源工具
+
+基于这个发现，我做了 **TransitTruth**（AI API安全审计平台）：
+
+- 🔍 行为指纹验证（14个探针，卡方检验+KS检验+贝叶斯更新）
+- 📊 统计不确定性量化（Wilson置信区间+样本量评估）
+- 💰 Token计费审计（检测中转站是否多计token）
+- ⚡ 延迟与协议检查
+- 💳 余额查询
+- 🚀 零安装在线Demo（55KB单文件，浏览器即用）
+
+**在线体验**：https://dafahaha.github.io/transit-truth/
+**GitHub**：https://github.com/dafahaha/transit-truth
+
+打开链接，输入API Key，30秒就能测出你用的GPT是不是真的！
+
+## 实验数据
+
+- 26个探针（14行为+8 tokenizer+4能力），每个50次
+- 2600次API请求，27分钟，$0成本（用免费中转站额度）
+- 完整实验报告：https://github.com/dafahaha/transit-truth/blob/main/docs/experiment_report.md
+- 基准数据已开源：https://github.com/dafahaha/transit-truth/tree/main/data/baselines
+
+## 参考论文
+
+- [One Token Is Enough](https://arxiv.org/abs/2607.10252)（2026）：单token指纹，165模型，EER 7.3%
+- [CoIn](https://arxiv.org/abs/2505.13778)（2025）：API模型替换检测
+- [RoFL](https://arxiv.org/abs/2505.12682)（2025）：鲁棒模型指纹
+
+欢迎大家试用、提Issue、提交PR！有任何技术问题欢迎在评论区讨论。
+```
+
+---
+
+### 平台2：知乎
+
+**专栏**：人工智能 / 机器学习
+
+**标题**：
+```
+我用27分钟发现了GPT的"行为指纹"：选数字100%返回7，选动物76%返回Okapi
+```
+
+**正文**：
+```
+（使用完整爆文 docs/blog_post.md，开头加一句知乎风格引言）
+
+你用的GPT-4是真的吗？
+
+如果你用过AI API中转站，可能会有这样的疑问：我付了GPT-4o的钱，实际用的是GPT-4o还是GPT-4o-mini？
+
+最近我做了一个27分钟的小实验，发现了一个惊人的现象...
+
+[此处粘贴完整爆文全文]
+
+---
+
+**在线体验**：https://dafahaha.github.io/transit-truth/
+**GitHub开源**：https://github.com/dafahaha/transit-truth
+
+如果你觉得这个发现有意思，或者这个工具有用，欢迎点赞、收藏、关注！
+```
+
+---
+
+### 平台3：掘金
+
+**分类**：人工智能 / 开源
+
+**标题**：
+```
+我用27分钟发现了GPT的"行为指纹"，做了一个开源工具帮你验明正身
+```
+
+**正文**：
+```
+## 前言
+
+AI API中转站市场乱象频发，80%以上存在模型偷偷降级。但作为普通用户，你怎么验证自己用的中转站有没有"参水分"？
+
+我做了一个27分钟的小实验，发现了GPT模型的"行为指纹"...
+
+[此处粘贴爆文的"震撼发现"+"为什么会这样"+"这有什么用"部分]
+
+## 我做了一个开源工具
+
+基于这个发现，我做了 **TransitTruth**（AI API安全审计平台）。
+
+### 在线体验
+
+**零安装在线Demo**：https://dafahaha.github.io/transit-truth/
+
+打开链接，输入API Key，30秒出结果。所有请求直接从浏览器发出，不需要后端服务器，不需要安装任何东西。
+
+### 功能特性
+
+- 🔍 **行为指纹验证**：14个行为探针（8英文+6中文），卡方检验+KS检验+贝叶斯更新
+- 📊 **统计不确定性量化**：Wilson置信区间+样本量评估+95%可信区间
+- 🔤 **Tokenizer指纹**：8个tokenizer探针，区分不同模型家族
+- 🧠 **能力测试**：10个能力探针，估算模型等级
+- 💰 **Token计费审计**：tiktoken精确计算，检测计费膨胀
+- ⚡ **延迟与协议检查**：P50/P95/P99，7项协议合规
+- 💳 **余额查询**：多中转站账户余额聚合，低余额自动告警
+- 📚 **模型参考数据**：14个模型的公开数据（价格/ELO/智能指数/延迟）
+- 🏆 **社区排行榜**：全民共建的中转站信誉排行榜
+- 🚀 **纯前端在线Demo**：零安装，浏览器即用（55KB单文件，苹果风格设计）
+
+### 技术栈
+
+- 后端：Python + FastAPI + SQLite
+- 前端：原生HTML/CSS/JS（无构建依赖）
+- 统计：scipy（KS检验、卡方检验、贝叶斯更新）
+- 部署：Docker / 本地运行 / 纯前端 / Vercel
+
+### 零成本复现
+
+```bash
+# 1. 克隆项目
+git clone https://github.com/dafahaha/transit-truth.git
+cd transit-truth
+
+# 2. 采集基准数据（用任何OpenAI兼容API即可）
+python collect_baseline.py \
+  --model gpt-4o-mini \
+  --samples 50 \
+  --base-url https://your-api-endpoint/v1 \
+  --api-key sk-your-key \
+  --output data/baselines/gpt-4o-mini.json \
+  --concurrency 3
+
+# 3. 分析结果
+python analyze_baseline.py
+```
+
+## 最后
+
+如果你觉得这个工具有用，欢迎给个Star ⭐，也欢迎提交PR一起完善。
+
+**GitHub**：https://github.com/dafahaha/transit-truth
+**在线Demo**：https://dafahaha.github.io/transit-truth/
+
+标签：#人工智能 #开源 #Python #AI #GPT
+```
+
+---
+
+### 平台4：Reddit r/LocalLLaMA
+
+**标题**：
+```
+I discovered GPT's "behavioral fingerprint" in 27 minutes: it returns "7" 100% of the time when asked to pick a random number, and "Okapi" 76% of the time when asked to pick a random animal
+```
+
+**正文**：
+```
+Hey r/LocalLLaMA,
+
+I'm a third-year CS student, and I recently did a 27-minute experiment that revealed something interesting about LLMs: they have extreme "behavioral fingerprints" on "random" tasks.
+
+## Key Findings
+
+- **gpt-4o-mini returns "7" 100% of the time** when asked to pick a random number from 1-10 (zero variance!)
+- **gpt-4o returns "Okapi" 76% of the time** when asked to pick a random animal (Okapi is a rare African giraffe relative)
+- **gpt-4o-mini returns "4" 96% of the time** when rolling a dice
+- **A single probe ("pick a random animal") can distinguish gpt-4o from gpt-4o-mini with 90% accuracy** — something tokenizer fingerprints can't do (they use the same o200k tokenizer)
+
+## Why this matters
+
+80%+ of AI API relay services in China secretly downgrade models (charging for GPT-4o but serving GPT-4o-mini). Tokenizer fingerprints can't distinguish same-family models, but behavioral fingerprints can.
+
+## What I built
+
+I built **TransitTruth**, an open-source AI API security audit platform based on this finding:
+
+- 🔍 Behavioral fingerprint verification (14 probes, chi-square + KS test + Bayesian update)
+- 📊 Statistical uncertainty quantification (Wilson confidence intervals + sample size assessment)
+- 🔤 Tokenizer fingerprints
+- 💰 Token billing audit
+- ⚡ Latency & protocol checks
+- 💳 Balance checking
+- 🚀 Zero-install online demo (55KB single file, pure frontend)
+
+**Live demo**: https://dafahaha.github.io/transit-truth/
+**GitHub**: https://github.com/dafahaha/transit-truth
+
+## Methodology
+
+- 26 probes (14 behavioral + 8 tokenizer + 4 capability), 50 samples each
+- 2600 total API requests, 27 minutes, $0 cost (using free relay credits)
+- Statistical analysis: chi-square test + KS test + Bayesian update with 95% credible intervals
+- Full experiment report: https://github.com/dafahaha/transit-truth/blob/main/docs/experiment_report.md
+- Baseline data open-sourced: https://github.com/dafahaha/transit-truth/tree/main/data/baselines
+
+## References
+
+- [One Token Is Enough](https://arxiv.org/abs/2607.10252) (arXiv:2607.10252, 2026) — single-token fingerprinting, 165 models, EER 7.3%
+- [CoIn](https://arxiv.org/abs/2505.13778) (arXiv:2505.13778, 2025) — API model substitution detection
+- [RoFL](https://arxiv.org/abs/2505.12682) (arXiv:2505.12682, 2025) — robust model fingerprinting
+
+Would love to hear your thoughts! Happy to answer any technical questions.
+
+---
+
+*All data is reproducible. Experiment scripts and baseline data are open-sourced.*
+```
+
+---
+
+### 平台5：HackerNews
+
+**标题**：
+```
+Show HN: I discovered GPT's behavioral fingerprint – it returns "7" 100% of the time for random numbers
+```
+
+**正文**：
+```
+I'm a CS student, and I recently discovered that LLMs have extreme "behavioral fingerprints" on "random" tasks:
+
+- gpt-4o-mini returns "7" 100% of the time when asked to pick 1-10 (zero variance)
+- gpt-4o returns "Okapi" 76% of the time when asked to pick a random animal
+- A single probe can distinguish gpt-4o from gpt-4o-mini with 90% accuracy
+
+This is useful for detecting AI API relay services that secretly downgrade models (charging for GPT-4o but serving GPT-4o-mini). Tokenizer fingerprints can't distinguish same-family models, but behavioral fingerprints can.
+
+I built an open-source audit tool based on this:
+
+- Live demo: https://dafahaha.github.io/transit-truth/
+- GitHub: https://github.com/dafahaha/transit-truth
+- 2600 API requests, 27 minutes, $0 cost
+- Statistical method: chi-square + KS test + Bayesian update with 95% credible intervals
+
+Paper reference: "One Token Is Enough" (arXiv:2607.10252)
+```
+
+---
+
+### 平台6：微信公众号/小红书
+
+**标题**（公众号）：
+```
+我用27分钟发现了GPT的秘密：选数字100%返回7，选动物76%返回Okapi
+```
+
+**标题**（小红书）：
+```
+震惊！GPT选数字居然100%返回7😱 我做了个工具帮你验明正身
+```
+
+**正文**（科普风格）：
+```
+你用的GPT-4是真的吗？
+
+最近AI API中转站特别火，几十块钱就能用GPT-4。但你有没有想过：你付了GPT-4的钱，实际用的可能是GPT-3.5？
+
+我做了一个27分钟的小实验，发现了一个惊人的现象...
+
+## 震撼发现
+
+🔴 gpt-4o-mini选1-10的数字，**100%返回7**（零方差！）
+🔴 gpt-4o选随机动物，**76%返回Okapi**（㺢㹢狓，罕见非洲长颈鹿近亲）
+🔴 gpt-4o-mini掷骰子，**96%返回4**
+🔴 只用"选动物"一个探针，就能以**90%准确率**区分gpt-4o和gpt-4o-mini
+
+## 为什么会这样？
+
+大语言模型本质上是"下一个词预测器"。当你问它"选一个随机数字"时，它并不是真的在随机生成——它是在预测"在这种语境下，人类最可能说哪个数字"。
+
+而训练数据里，"7"因为文化原因（幸运数字、七宗罪、七大奇迹、一周七天）出现频率远高于其他数字。RLHF又进一步放大了这种偏好。
+
+**结果就是：每个模型都有自己独特的"行为指纹"。**
+
+## 怎么用？
+
+我做了一个在线工具，零安装，打开就能用：
+
+👉 https://dafahaha.github.io/transit-truth/
+
+输入你的API Key，30秒就能测出你用的GPT是不是真的！
+
+## 最后
+
+如果你觉得这个工具有用，欢迎分享给更多人！
+
+GitHub开源：https://github.com/dafahaha/transit-truth
+
+#AI #GPT #人工智能 #开源工具 #科技
+```
+
+---
+
+## 📊 发布后跟踪指标
+
+### 第一周目标
+- GitHub Stars：100+
+- 在线Demo访问量：1000+
+- 社区讨论：V2EX/知乎/Reddit/HN各有至少10条评论
+- PR/Issue：至少有3个外部贡献
+
+### 跟踪方式
+- GitHub Stars：https://github.com/dafahaha/transit-truth/stargazers
+- 访问量：GitHub Insights → Traffic
+- 社区讨论：搜索"TransitTruth"或"行为指纹"
+- 贡献者：https://github.com/dafahaha/transit-truth/graphs/contributors
+
+---
+
+## ⚠️ 注意事项
+
+1. **不要过度营销**：重点放在技术发现和开源精神，不要像广告
+2. **回复评论要专业**：虚心接受批评，认真回答技术问题
+3. **保守表述**：审计结果基于统计分析，不要说"100%准确"
+4. **不要点名具体中转站**：用"某中转站"等保守表述，避免法律风险
+5. **保护用户隐私**：不要在公开场合展示用户的API Key或个人信息
+
+---
+
+## 📞 问题反馈
+
+如果发布过程中遇到问题，可以：
+1. 查看 GitHub Issues：https://github.com/dafahaha/transit-truth/issues
+2. 提交新的 Issue
+3. 查看文档：https://github.com/dafahaha/transit-truth#readme
+
+---
+
+**祝你发布顺利，项目爆火！🚀**
