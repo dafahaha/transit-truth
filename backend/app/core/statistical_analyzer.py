@@ -59,6 +59,12 @@ class StatisticalVerdict:
     # Confidence interval for posterior (95%)
     posterior_ci_lower: float = 0.0
     posterior_ci_upper: float = 1.0
+    # Sample sizes (for uncertainty quantification)
+    baseline_sample_size: int = 0
+    observed_sample_size: int = 0
+    # Sample adequacy warning
+    sample_adequacy: str = "unknown"  # "sufficient", "moderate", "insufficient"
+    sample_warning: Optional[str] = None
     # Conclusion
     conclusion: str = "inconclusive"  # "match", "mismatch", "inconclusive"
     confidence_level: str = "low"  # "high", "medium", "low"
@@ -440,6 +446,15 @@ class StatisticalAnalyzer:
         # Bayesian update
         posterior, ci_lower, ci_upper = self.bayesian_update(self.prior_honest, lr)
 
+        # Calculate observed sample size
+        observed_size = sum(len(responses) for responses in observed_behavioral.values())
+
+        # Assess sample adequacy
+        sample_adequacy, sample_warning = assess_sample_adequacy(
+            baseline_size=baseline.sample_size,
+            observed_size=observed_size,
+        )
+
         # Determine conclusion
         if posterior > 0.9 and ci_lower > 0.7:
             conclusion = "match"
@@ -457,6 +472,12 @@ class StatisticalAnalyzer:
             conclusion = "inconclusive"
             confidence_level = "low"
 
+        # If sample is insufficient, downgrade confidence
+        if sample_adequacy == "insufficient" and confidence_level == "high":
+            confidence_level = "medium"
+        elif sample_adequacy == "insufficient" and confidence_level == "medium":
+            confidence_level = "low"
+
         return StatisticalVerdict(
             claimed_model=claimed_model,
             detected_family=baseline.model_family,
@@ -467,15 +488,23 @@ class StatisticalAnalyzer:
             posterior_probability=posterior,
             posterior_ci_lower=ci_lower,
             posterior_ci_upper=ci_upper,
+            baseline_sample_size=baseline.sample_size,
+            observed_sample_size=observed_size,
+            sample_adequacy=sample_adequacy,
+            sample_warning=sample_warning,
             conclusion=conclusion,
             confidence_level=confidence_level,
             details={
                 "baseline_model": baseline.model_name,
                 "baseline_sample_size": baseline.sample_size,
+                "observed_sample_size": observed_size,
+                "sample_adequacy": sample_adequacy,
+                "sample_warning": sample_warning,
                 "likelihood_ratio": lr,
                 "prior_honest": self.prior_honest,
                 "ks_interpretation": self._interpret_pvalue(ks_pvalue),
                 "chi2_interpretation": self._interpret_pvalue(chi2_pvalue),
+                "posterior_95ci": [round(ci_lower, 3), round(ci_upper, 3)],
             },
         )
 
@@ -557,3 +586,97 @@ def quick_statistical_analysis(claimed_model: str,
         observed_behavioral=behavioral_results,
         capability_failure_rate=capability_failure_rate,
     )
+
+
+# ─── Wilson Score Interval (比例置信区间) ───────────────────────────
+def wilson_score_interval(successes: int, n: int, confidence: float = 0.95) -> tuple[float, float]:
+    """
+    Wilson Score Interval - 计算比例的置信区间
+
+    比正态近似更准确，特别适合小样本或极端比例（接近0或1）。
+
+    参数：
+    - successes: 成功次数
+    - n: 总样本数
+    - confidence: 置信水平（默认0.95）
+
+    返回：
+    - (lower, upper): 置信区间下界和上界
+
+    参考：https://en.wikipedia.org/wiki/Binomial_proportion_confidence_interval#Wilson_score_interval
+    """
+    import math
+
+    if n == 0:
+        return (0.0, 1.0)
+
+    # z-score for confidence level
+    z_scores = {0.90: 1.645, 0.95: 1.96, 0.99: 2.576}
+    z = z_scores.get(confidence, 1.96)
+
+    p_hat = successes / n
+    denominator = 1 + z**2 / n
+    center = (p_hat + z**2 / (2 * n)) / denominator
+    spread = z * math.sqrt((p_hat * (1 - p_hat) + z**2 / (4 * n)) / n) / denominator
+
+    lower = max(0.0, center - spread)
+    upper = min(1.0, center + spread)
+
+    return (lower, upper)
+
+
+def assess_sample_adequacy(
+    baseline_size: int,
+    observed_size: int,
+    min_baseline: int = 100,
+    min_observed: int = 10,
+) -> tuple[str, Optional[str]]:
+    """
+    评估样本量是否足够
+
+    参数：
+    - baseline_size: 基准数据样本量
+    - observed_size: 观测数据样本量
+    - min_baseline: 基准数据最小样本量（默认100）
+    - min_observed: 观测数据最小样本量（默认10）
+
+    返回：
+    - (adequacy, warning): 样本充足程度和警告信息
+      adequacy: "sufficient" | "moderate" | "insufficient"
+    """
+    warnings = []
+
+    # 评估基准样本量
+    if baseline_size >= 200:
+        baseline_status = "good"
+    elif baseline_size >= 100:
+        baseline_status = "moderate"
+        warnings.append(f"基准样本量({baseline_size})偏少，建议增加到200+以提高统计准确性")
+    elif baseline_size >= 50:
+        baseline_status = "low"
+        warnings.append(f"基准样本量({baseline_size})不足，95%置信区间约±14%，结论可能不稳定")
+    else:
+        baseline_status = "insufficient"
+        warnings.append(f"基准样本量({baseline_size})严重不足，结论不可靠，建议至少50样本")
+
+    # 评估观测样本量
+    if observed_size >= 20:
+        observed_status = "good"
+    elif observed_size >= 10:
+        observed_status = "moderate"
+        warnings.append(f"观测样本量({observed_size})偏少，建议增加到20+")
+    else:
+        observed_status = "low"
+        warnings.append(f"观测样本量({observed_size})不足，建议至少10样本")
+
+    # 综合评估
+    if baseline_status == "good" and observed_status == "good":
+        adequacy = "sufficient"
+    elif baseline_status in ("good", "moderate") and observed_status in ("good", "moderate"):
+        adequacy = "moderate"
+    else:
+        adequacy = "insufficient"
+
+    warning = "；".join(warnings) if warnings else None
+
+    return (adequacy, warning)
