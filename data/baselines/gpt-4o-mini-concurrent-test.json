@@ -1,0 +1,489 @@
+{
+  "metadata": {
+    "model": "gpt-4o-mini",
+    "base_url": "https://wolfai.top/v1",
+    "samples_per_probe": 3,
+    "collected_at": "2026-09-14T22:23:23.119821",
+    "total_requests": 78,
+    "failed_requests": 18,
+    "elapsed_seconds": 58.4
+  },
+  "tokenizer": {
+    "tok-digits": {
+      "description": "Long digit run - GPT tokenizes digits in pairs, Claude differently",
+      "prompt_tokens": {
+        "mean": 23,
+        "std": 0.0,
+        "min": 23,
+        "max": 23,
+        "median": 23,
+        "samples": [
+          23,
+          23,
+          23
+        ],
+        "sample_count": 3
+      },
+      "completion_tokens": {
+        "mean": 10.666666666666666,
+        "std": 0.5773502691896257,
+        "sample_count": 3
+      },
+      "latency_ms": {
+        "mean": 2093.724171320597,
+        "std": 471.9549573735554,
+        "sample_count": 3
+      },
+      "response_samples": [
+        "123456789012345678901234567890",
+        "123456789012345678901234567890",
+        "123456789012345678901234567890"
+      ]
+    },
+    "tok-cjk": {
+      "description": "CJK characters - different tokenizers handle Chinese differently",
+      "prompt_tokens": {
+        "mean": 24,
+        "std": 0.0,
+        "min": 24,
+        "max": 24,
+        "median": 24,
+        "samples": [
+          24,
+          24,
+          24
+        ],
+        "sample_count": 3
+      },
+      "completion_tokens": {
+        "mean": 11.666666666666666,
+        "std": 0.5773502691896257,
+        "sample_count": 3
+      },
+      "latency_ms": {
+        "mean": 1269.306977589925,
+        "std": 205.6307024477603,
+        "sample_count": 3
+      },
+      "response_samples": [
+        "人工智能强化学习具身智能机器人视觉语言模型",
+        "人工智能强化学习具身智能机器人视觉语言模型",
+        "人工智能强化学习具身智能机器人视觉语言模型"
+      ]
+    },
+    "tok-emoji": {
+      "description": "Emoji sequence - tokenizers handle emoji very differently",
+      "prompt_tokens": {
+        "mean": 31,
+        "std": 0.0,
+        "min": 31,
+        "max": 31,
+        "median": 31,
+        "samples": [
+          31,
+          31,
+          31
+        ],
+        "sample_count": 3
+      },
+      "completion_tokens": {
+        "mean": 19.666666666666668,
+        "std": 0.5773502691896257,
+        "sample_count": 3
+      },
+      "latency_ms": {
+        "mean": 1624.0546703338623,
+        "std": 277.27434089621994,
+        "sample_count": 3
+      },
+      "response_samples": [
+        "🤖🧠🚀💻🎯🔥✨🌟💡🎨",
+        "🤖🧠🚀💻🎯🔥✨🌟💡🎨",
+        "🤖🧠🚀💻🎯🔥✨🌟💡🎨"
+      ]
+    },
+    "tok-whitespace": {
+      "description": "Multiple spaces - tokenizers handle whitespace runs differently",
+      "prompt_tokens": {
+        "mean": 27,
+        "std": 0.0,
+        "min": 27,
+        "max": 27,
+        "median": 27,
+        "samples": [
+          27,
+          27,
+          27
+        ],
+        "sample_count": 3
+      },
+      "completion_tokens": {
+        "mean": 16,
+        "std": 0.0,
+        "sample_count": 3
+      },
+      "latency_ms": {
+        "mean": 1471.0924625396729,
+        "std": 172.1271681571804,
+        "sample_count": 3
+      },
+      "response_samples": [
+        "a    b    c    d    e    f    g    h",
+        "a    b    c    d    e    f    g    h",
+        "a    b    c    d    e    f    g    h"
+      ]
+    },
+    "tok-code": {
+      "description": "Code snippet - code tokenization varies across families",
+      "prompt_tokens": {
+        "mean": 25,
+        "std": 0.0,
+        "min": 25,
+        "max": 25,
+        "median": 25,
+        "samples": [
+          25,
+          25,
+          25
+        ],
+        "sample_count": 3
+      },
+      "completion_tokens": {
+        "mean": 14,
+        "std": 0.0,
+        "sample_count": 3
+      },
+      "latency_ms": {
+        "mean": 1323.4504063924153,
+        "std": 83.36418769152975,
+        "sample_count": 3
+      },
+      "response_samples": [
+        "def foo(x): return x*2+1  # test",
+        "def foo(x): return x*2+1  # test",
+        "def foo(x): return x*2+1  # test"
+      ]
+    },
+    "tok-url": {
+      "description": "URL with query params - URL tokenization varies",
+      "prompt_tokens": {
+        "mean": 29,
+        "std": 0.0,
+        "min": 29,
+        "max": 29,
+        "median": 29,
+        "samples": [
+          29,
+          29,
+          29
+        ],
+        "sample_count": 3
+      },
+      "completion_tokens": {
+        "mean": 18,
+        "std": 0.0,
+        "sample_count": 3
+      },
+      "latency_ms": {
+        "mean": 1809.7693125406902,
+        "std": 239.8594317022712,
+        "sample_count": 3
+      },
+      "response_samples": [
+        "https://api.example.com/v1/chat/completions?model=gpt-4",
+        "https://api.example.com/v1/chat/completions?model=gpt-4",
+        "https://api.example.com/v1/chat/completions?model=gpt-4"
+      ]
+    },
+    "tok-mixed-unicode": {
+      "description": "Mixed accented + CJK + Arabic - unicode handling varies",
+      "prompt_tokens": {
+        "mean": 22,
+        "std": 0.0,
+        "min": 22,
+        "max": 22,
+        "median": 22,
+        "samples": [
+          22,
+          22,
+          22
+        ],
+        "sample_count": 3
+      },
+      "completion_tokens": {
+        "mean": 11.333333333333334,
+        "std": 0.5773502691896257,
+        "sample_count": 3
+      },
+      "latency_ms": {
+        "mean": 1457.7399094899495,
+        "std": 172.60630785948987,
+        "sample_count": 3
+      },
+      "response_samples": [
+        "café résumé naïve über 日本語 한국어 العربية",
+        "café résumé naïve über 日本語 한국어 العربية",
+        "café résumé naïve über 日本語 한국어 العربية"
+      ]
+    },
+    "tok-repeated-chars": {
+      "description": "32 repeated 'a' chars - tokenizer compression behavior differs",
+      "prompt_tokens": {
+        "mean": 18,
+        "std": 0.0,
+        "min": 18,
+        "max": 18,
+        "median": 18,
+        "samples": [
+          18,
+          18,
+          18
+        ],
+        "sample_count": 3
+      },
+      "completion_tokens": {
+        "mean": 5,
+        "std": 0.0,
+        "sample_count": 3
+      },
+      "latency_ms": {
+        "mean": 2280.2744706471763,
+        "std": 107.24031286220601,
+        "sample_count": 3
+      },
+      "response_samples": [
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+      ]
+    }
+  },
+  "behavioral": {
+    "beh-random-100": {
+      "description": "Random number 1-100 - models show different distribution biases",
+      "response_distribution": {
+        "57": 2,
+        "42": 1
+      },
+      "unique_responses": 2,
+      "sample_count": 3,
+      "latency_ms": {
+        "mean": 2453.341086705526,
+        "sample_count": 3
+      }
+    },
+    "beh-random-color": {
+      "description": "Random color - different models favor different colors",
+      "response_distribution": {
+        "Cerulean": 3
+      },
+      "unique_responses": 1,
+      "sample_count": 3,
+      "latency_ms": {
+        "mean": 3664.4482612609863,
+        "sample_count": 3
+      }
+    },
+    "beh-coin-flip": {
+      "description": "Coin flip - models show different heads/tails biases",
+      "response_distribution": {
+        "Heads": 3
+      },
+      "unique_responses": 1,
+      "sample_count": 3,
+      "latency_ms": {
+        "mean": 3051.1335531870523,
+        "sample_count": 3
+      }
+    },
+    "beh-random-letter": {
+      "description": "Random letter - letter preference distribution varies",
+      "response_distribution": {
+        "K": 2,
+        "M": 1
+      },
+      "unique_responses": 2,
+      "sample_count": 3,
+      "latency_ms": {
+        "mean": 3746.098518371582,
+        "sample_count": 3
+      }
+    },
+    "beh-dice-roll": {
+      "description": "Dice roll - distribution bias varies by model",
+      "response_distribution": {
+        "4": 3
+      },
+      "unique_responses": 1,
+      "sample_count": 3,
+      "latency_ms": {
+        "mean": 3316.093365351359,
+        "sample_count": 3
+      }
+    },
+    "beh-random-animal": {
+      "description": "Random animal - semantic preference varies",
+      "response_distribution": {
+        "Giraffe": 1,
+        "Kangaroo": 1,
+        "Platypus": 1
+      },
+      "unique_responses": 3,
+      "sample_count": 3,
+      "latency_ms": {
+        "mean": 1331.851641337077,
+        "sample_count": 3
+      }
+    },
+    "beh-random-day": {
+      "description": "Random day - day preference varies",
+      "response_distribution": {
+        "Thursday": 2,
+        "Tuesday": 1
+      },
+      "unique_responses": 2,
+      "sample_count": 3,
+      "latency_ms": {
+        "mean": 1613.5140260060627,
+        "sample_count": 3
+      }
+    },
+    "beh-number-1-10": {
+      "description": "Random number 1-10 - small range shows clearer biases",
+      "response_distribution": {
+        "7": 3
+      },
+      "unique_responses": 1,
+      "sample_count": 3,
+      "latency_ms": {
+        "mean": 1302.7968406677246,
+        "sample_count": 3
+      }
+    }
+  },
+  "capability": {
+    "cap-simple-math": {
+      "description": "Simple multiplication - low-tier models may fail",
+      "responses": [
+        "391",
+        "391",
+        "391"
+      ],
+      "sample_count": 3,
+      "latency_ms": {
+        "mean": 1380.8526198069255,
+        "sample_count": 3
+      }
+    },
+    "cap-logic": {
+      "description": "Basic logic - tests reasoning capability",
+      "responses": [
+        "No.",
+        "No.",
+        "No."
+      ],
+      "sample_count": 3,
+      "latency_ms": {
+        "mean": 1630.190372467041,
+        "sample_count": 3
+      }
+    },
+    "cap-code-syntax": {
+      "description": "Code generation - tests coding capability",
+      "responses": [
+        "```python\nsum(num for num in nums if num % 2 == 0)\n```",
+        "```python\nsum(num for num in nums if num % 2 == 0)\n```",
+        "```python\nsum(num for num in nums if num % 2 == 0)\n```"
+      ],
+      "sample_count": 3,
+      "latency_ms": {
+        "mean": 2989.9450143178306,
+        "sample_count": 3
+      }
+    },
+    "cap-following-instructions": {
+      "description": "Instruction following - tests if model follows complex instructions",
+      "responses": [
+        "1, 2, 4, 5",
+        "1, 2, 4, 5",
+        "1, 2, 4, 5"
+      ],
+      "sample_count": 3,
+      "latency_ms": {
+        "mean": 2516.038656234741,
+        "sample_count": 3
+      }
+    }
+  },
+  "latency": [
+    2023.4153270721436,
+    2596.8892574310303,
+    1660.8679294586182,
+    1437.9689693450928,
+    1329.7131061553955,
+    1040.238857269287,
+    1349.8263359069824,
+    1904.2778015136719,
+    1618.0598735809326,
+    1462.0916843414307,
+    1303.6422729492188,
+    1647.5434303283691,
+    1291.9352054595947,
+    1417.9778099060059,
+    1260.4382038116455,
+    1541.1441326141357,
+    1885.6616020202637,
+    2002.502202987671,
+    1558.3739280700684,
+    1556.4112663269043,
+    1258.434534072876,
+    2404.0939807891846,
+    2219.789981842041,
+    2216.9394493103027,
+    2431.7831993103027,
+    1920.9253787994385,
+    3007.314682006836,
+    6565.7641887664795,
+    2216.3875102996826,
+    2211.193084716797,
+    3067.6350593566895,
+    2652.073860168457,
+    3433.6917400360107,
+    1866.0573959350586,
+    6313.41028213501,
+    3058.8278770446777,
+    3490.276336669922,
+    4498.020172119141,
+    1959.9835872650146,
+    1219.5782661437988,
+    1228.7654876708984,
+    1547.2111701965332,
+    1836.3573551177979,
+    1932.798147201538,
+    1071.3865756988525,
+    1099.2352962493896,
+    1515.5327320098877,
+    1293.6224937438965,
+    1139.2769813537598,
+    1823.7369060516357,
+    1179.5439720153809,
+    1572.5412368774414,
+    1471.4956283569336,
+    1846.534252166748,
+    1265.0365829467773,
+    6175.478219985962,
+    1529.320240020752,
+    2039.7942066192627,
+    2249.596118927002,
+    3258.725643157959
+  ],
+  "latency_overall": {
+    "mean": 2116.2858168284097,
+    "std": 1201.902702658593,
+    "min": 1040.238857269287,
+    "max": 6565.7641887664795,
+    "median": 1830.0471305847168,
+    "p95": 6175.478219985962,
+    "sample_count": 60
+  }
+}

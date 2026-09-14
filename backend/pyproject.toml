@@ -1,0 +1,81 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "transit-truth"
+version = "0.3.0"
+description = "AI API 中转站验真器 - 检测AI API中转站是否存在模型降级、Token膨胀等问题"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "Daizhi Liao", email = "ldz@e.gzhu.edu.cn"}
+]
+keywords = ["ai", "api", "llm", "audit", "security", "openai", "transit"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Security",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.104.0",
+    "uvicorn[standard]>=0.24.0",
+    "httpx>=0.25.0",
+    "tiktoken>=0.5.0",
+    "pydantic>=2.0.0",
+    "jinja2>=3.1.0",
+    "plotly>=5.18.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-asyncio>=0.21.0",
+    "flake8>=6.0.0",
+    "mypy>=1.5.0",
+    "black>=23.0.0",
+]
+monitor = [
+    "schedule>=1.2.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.scripts]
+transit-truth = "app.cli:main"
+tt = "app.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/dafahaha/transit-truth"
+Repository = "https://github.com/dafahaha/transit-truth"
+Issues = "https://github.com/dafahaha/transit-truth/issues"
+Documentation = "https://github.com/dafahaha/transit-truth#readme"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+
+[tool.flake8]
+max-line-length = 120
+extend-ignore = ["E203", "W503"]
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true

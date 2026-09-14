@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TransitTruth - AI API 中转站验真器</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <header class="header">
+        <div class="container">
+            <div class="logo">
+                <span class="logo-icon">🛡️</span>
+                <span class="logo-text">TransitTruth</span>
+            </div>
+            <nav class="nav">
+                <a href="#audit" class="nav-link active" data-tab="audit">一键审计</a>
+                <a href="#ranking" class="nav-link" data-tab="ranking">公开排行榜</a>
+                <a href="#history" class="nav-link" data-tab="history">审计历史</a>
+                <a href="#about" class="nav-link" data-tab="about">关于</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="container">
+            <!-- Audit Tab -->
+            <section id="tab-audit" class="tab-content active">
+                <div class="hero">
+                    <h1>AI API 中转站验真器</h1>
+                    <p class="subtitle">粘贴 API Key，一键检测 Token 造假、模型降级、协议不合规</p>
+                </div>
+
+                <div class="audit-form-card">
+                    <h2>开始审计</h2>
+
+                    <!-- Step 1: API Key -->
+                    <div class="form-step active" id="step-key">
+                        <div class="step-indicator"><span class="step-num">1</span> 粘贴 API Key</div>
+                        <div class="form-group">
+                            <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off">
+                            <small class="hint">仅用于本次审计，不会存储到服务器</small>
+                        </div>
+                        <div id="detectStatus" class="detect-status" style="display:none;">
+                            <span class="detect-spinner"></span>
+                            <span id="detectText">正在自动检测中转站...</span>
+                        </div>
+                    </div>
+
+                    <!-- Step 2: Base URL -->
+                    <div class="form-step" id="step-url">
+                        <div class="step-indicator"><span class="step-num">2</span> 确认 Base URL</div>
+                        <div class="form-group">
+                            <input type="url" id="baseUrl" placeholder="https://api.example.com/v1">
+                        </div>
+                        <div id="urlSuggestions" class="url-suggestions"></div>
+                        <button type="button" id="fetchModelsBtn" class="btn btn-secondary btn-small">获取支持的模型 →</button>
+                    </div>
+
+                    <!-- Step 3: Model & Mode -->
+                    <div class="form-step" id="step-model">
+                        <div class="step-indicator"><span class="step-num">3</span> 选择模型和模式</div>
+                        <div class="form-group">
+                            <label for="model">模型</label>
+                            <select id="modelSelect">
+                                <option value="">-- 请先获取模型列表 --</option>
+                            </select>
+                            <input type="text" id="modelManual" placeholder="或手动输入模型名称" style="margin-top:8px;">
+                        </div>
+                        <div class="form-group">
+                            <label>审计模式</label>
+                            <div class="mode-toggle">
+                                <label class="mode-option">
+                                    <input type="radio" name="mode" value="quick">
+                                    <span class="mode-label">⚡ 快速</span>
+                                    <span class="mode-desc">3探针 · ~10秒 · 日常验证</span>
+                                </label>
+                                <label class="mode-option selected">
+                                    <input type="radio" name="mode" value="deep" checked>
+                                    <span class="mode-label">🔬 深度</span>
+                                    <span class="mode-desc">10探针 · ~60秒 · 可贡献排行榜</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Advanced options (collapsible) -->
+                    <details class="advanced-options">
+                        <summary>高级选项</summary>
+                        <div class="form-group">
+                            <label for="officialKey">官方 API Key（可选）</label>
+                            <input type="password" id="officialKey" placeholder="用于精确对比 token 计数">
+                        </div>
+                        <div class="form-group checkbox-group">
+                            <label>检测项目（默认全部开启）</label>
+                            <div class="checkboxes">
+                                <label><input type="checkbox" name="checks" value="token" checked> Token 计数验证</label>
+                                <label><input type="checkbox" name="checks" value="fingerprint" checked> 模型指纹检测</label>
+                                <label><input type="checkbox" name="checks" value="latency" checked> 延迟与可用性</label>
+                                <label><input type="checkbox" name="checks" value="protocol" checked> 协议合规性</label>
+                            </div>
+                        </div>
+                    </details>
+
+                    <button type="button" id="submitBtn" class="btn btn-primary btn-large" disabled>
+                        <span class="btn-text">🔍 开始审计</span>
+                        <span class="btn-loading" style="display:none;">审计中...</span>
+                    </button>
+
+                    <!-- Progress bar -->
+                    <div id="progressSection" class="progress-section" style="display:none;">
+                        <div class="progress-bar">
+                            <div id="progressFill" class="progress-fill"></div>
+                        </div>
+                        <div id="progressText" class="progress-text">正在初始化...</div>
+                    </div>
+                </div>
+
+                <!-- Results -->
+                <div id="results" class="results-section" style="display:none;">
+                    <div class="results-header">
+                        <h2>审计结果</h2>
+                        <span id="auditId" class="audit-id"></span>
+                    </div>
+
+                    <div id="overallScore" class="score-card">
+                        <div class="score-circle">
+                            <span id="scoreValue">0</span>
+                            <span class="score-max">/100</span>
+                        </div>
+                        <div class="score-info">
+                            <div class="trust-level" id="trustLevel">--</div>
+                            <div class="score-model" id="scoreModel">--</div>
+                            <div class="score-url" id="scoreUrl">--</div>
+                        </div>
+                    </div>
+
+                    <div id="checksList" class="checks-list"></div>
+
+                    <div id="summarySection" class="summary-card">
+                        <h3>审计摘要</h3>
+                        <pre id="summaryText"></pre>
+                    </div>
+
+                    <div id="recommendationsSection" class="recommendations-card">
+                        <h3>建议</h3>
+                        <ul id="recommendationsList"></ul>
+                    </div>
+
+                    <!-- Contribute to ranking -->
+                    <div id="contributeSection" class="contribute-card">
+                        <h3>📊 贡献到公开排行榜</h3>
+                        <p>你的审计结果可以帮助更多用户识别可信的中转站。数据完全公开，可匿名贡献。</p>
+                        <div class="contribute-options">
+                            <label class="contribute-option">
+                                <input type="radio" name="contributeAnon" value="named" checked>
+                                <span>署名贡献（显示 GitHub 用户名）</span>
+                            </label>
+                            <label class="contribute-option">
+                                <input type="radio" name="contributeAnon" value="anonymous">
+                                <span>匿名贡献</span>
+                            </label>
+                        </div>
+                        <button type="button" id="contributeBtn" class="btn btn-secondary">
+                            🚀 一键贡献到排行榜
+                        </button>
+                        <div id="contributeResult" class="contribute-result" style="display:none;"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Ranking Tab -->
+            <section id="tab-ranking" class="tab-content">
+                <div class="hero">
+                    <h1>中转站公开排行榜</h1>
+                    <p class="subtitle">社区驱动的中转站信任度排名，数据公开可复现</p>
+                </div>
+                <div class="ranking-controls">
+                    <select id="rankingFilterRelay">
+                        <option value="">全部中转站</option>
+                    </select>
+                    <select id="rankingFilterModel">
+                        <option value="">全部模型</option>
+                    </select>
+                    <select id="rankingFilterTrust">
+                        <option value="">全部信任等级</option>
+                        <option value="high">高信任</option>
+                        <option value="medium">中等</option>
+                        <option value="low">低信任</option>
+                        <option value="critical">危险</option>
+                    </select>
+                    <button id="refreshRanking" class="btn btn-secondary">刷新</button>
+                </div>
+                <div id="rankingTable" class="ranking-table">
+                    <p class="loading-text">加载中...</p>
+                </div>
+                <div class="ranking-note">
+                    <p>💡 排行榜数据来自社区贡献，仅作参考。建议结合自身需求进行审计验证。</p>
+                </div>
+            </section>
+
+            <!-- History Tab -->
+            <section id="tab-history" class="tab-content">
+                <div class="hero">
+                    <h1>审计历史</h1>
+                    <p class="subtitle">查看过去的审计记录（本地存储）</p>
+                </div>
+                <div id="historyList" class="history-list">
+                    <p class="loading-text">加载中...</p>
+                </div>
+            </section>
+
+            <!-- About Tab -->
+            <section id="tab-about" class="tab-content">
+                <div class="hero">
+                    <h1>关于 TransitTruth</h1>
+                </div>
+                <div class="about-content">
+                    <h3>这是什么？</h3>
+                    <p>TransitTruth 是一个开源的 AI API 中转站审计工具，帮助用户验证中转站是否存在以下问题：</p>
+                    <ul>
+                        <li><strong>Token 计数造假</strong>：实际用 1000 token，收 1500 token 的钱</li>
+                        <li><strong>模型降级</strong>：付了 GPT-4o 的钱，实际返回 GPT-3.5</li>
+                        <li><strong>缓存响应</strong>：不实际调用 API，返回缓存结果</li>
+                        <li><strong>协议不合规</strong>：响应格式不符合 OpenAI API 规范</li>
+                    </ul>
+
+                    <h3>检测原理</h3>
+                    <ul>
+                        <li><strong>Tokenizer 指纹</strong>：不同模型家族用不同 tokenizer，发送精心构造的字符串，对比 token 计数</li>
+                        <li><strong>行为指纹</strong>：不同模型在随机数生成、颜色命名等任务上有不同的分布偏好</li>
+                        <li><strong>能力测试</strong>：简单推理/代码题区分模型等级</li>
+                        <li><strong>Token 对比</strong>：与官方 API 或本地 tiktoken 计算结果对比</li>
+                    </ul>
+
+                    <h3>全民共建</h3>
+                    <p>排行榜数据由社区用户贡献，完全公开可复现。完成审计后可选择贡献结果，帮助更多用户。</p>
+
+                    <h3>免责声明</h3>
+                    <p><strong>重要提示：</strong></p>
+                    <ul>
+                        <li>本工具仅供用户验证<strong>自己使用</strong>的服务，审计结果基于有限样本，<strong>不构成对任何服务的最终评价</strong>。</li>
+                        <li>Token 差异率包含 chat template 开销，<strong>不等同于造假</strong>。如需确认造假，请与官方 API 精确对比。</li>
+                        <li>模型指纹检测为概率性判断，置信度低于 80% 时<strong>不构成模型降级的证据</strong>。</li>
+                        <li>排行榜数据由社区用户贡献，<strong>未经独立验证</strong>，仅供参考。</li>
+                        <li>API Key 仅用于本次审计，<strong>不会存储到服务器</strong>。</li>
+                        <li>如对审计结果有异议，可在 GitHub 提交 Issue 并附上反驳证据。</li>
+                    </ul>
+
+                    <h3>开源</h3>
+                    <p>本项目完全开源，欢迎贡献代码和探针测试集。</p>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container">
+            <p>TransitTruth v0.2.0 | 开源 AI API 中转站验真器</p>
+        </div>
+    </footer>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

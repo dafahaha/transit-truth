@@ -1,0 +1,296 @@
+"""Main audit engine - orchestrates all checks."""
+import asyncio
+import uuid
+from datetime import datetime
+from typing import Optional
+
+from ..config import DEFAULT_PROBE_COUNT
+from ..models import (
+    AuditRequest,
+    AuditResult,
+    AuditStatus,
+    CheckResult,
+    CheckType,
+)
+from ..utils.http_client import AsyncAPIClient
+from .fingerprint import ModelFingerprinter
+from .latency_protocol import LatencyChecker, ProtocolChecker
+from .token_check import TokenVerifier
+from .randomized_probes import generate_randomized_probes
+
+
+class AuditEngine:
+    """Orchestrates the full audit pipeline."""
+
+    def __init__(self):
+        self.audits: dict[str, AuditResult] = {}
+
+    async def run_audit(self, request: AuditRequest) -> AuditResult:
+        """Run a complete audit."""
+        # Determine probe count based on mode if not explicitly set
+        if request.probe_count is None:
+            if request.mode == "quick":
+                request.probe_count = 3
+            else:
+                request.probe_count = 10
+
+        audit_id = str(uuid.uuid4())[:8]
+        result = AuditResult(
+            audit_id=audit_id,
+            status=AuditStatus.RUNNING,
+            model=request.model,
+            base_url=request.base_url,
+            started_at=datetime.now(),
+        )
+        self.audits[audit_id] = result
+
+        try:
+            async with AsyncAPIClient(request.api_key, request.base_url) as client:
+                # Check availability first
+                avail = await client.check_availability(request.model)
+                if "error" in avail:
+                    result.status = AuditStatus.FAILED
+                    result.error = f"API unavailable: {avail.get('error', {})}"
+                    result.completed_at = datetime.now()
+                    return result
+
+                # Official API client for comparison (if provided)
+                official_client = None
+                if request.official_api_key:
+                    # Determine official base URL from model
+                    official_base = self._get_official_base(request.model)
+                    if official_base:
+                        official_client = AsyncAPIClient(request.official_api_key, official_base)
+
+                checks = []
+
+                # 1. Token count check
+                if request.run_token_check:
+                    token_check = CheckResult(
+                        check_type=CheckType.TOKEN_COUNT,
+                        name="Token Count Verification",
+                        passed=False,
+                        score=0,
+                        details="Running...",
+                    )
+                    checks.append(token_check)
+
+                    verifier = TokenVerifier(client, request.model)
+                    token_result = await verifier.verify(official_client=official_client)
+                    result.token_comparison = token_result
+
+                    token_check.passed = not token_result.suspicious
+                    token_check.score = 100 if not token_result.suspicious else max(0, 100 - abs(token_result.prompt_inflation_pct or 0) * 2)
+                    token_check.details = self._token_summary(token_result)
+                    token_check.evidence = token_result.model_dump()
+
+                # 2. Model fingerprint check
+                if request.run_fingerprint:
+                    fp_check = CheckResult(
+                        check_type=CheckType.MODEL_FINGERPRINT,
+                        name="Model Fingerprint Verification",
+                        passed=False,
+                        score=0,
+                        details="Running...",
+                    )
+                    checks.append(fp_check)
+
+                    # Generate randomized probes to prevent relay defense
+                    randomized_probes, probe_seed = generate_randomized_probes()
+                    fingerprinter = ModelFingerprinter(client, request.model, custom_probes=randomized_probes)
+                    await fingerprinter.run_tokenizer_probes(count=min(8, request.probe_count))
+                    # Behavioral probes need more samples to detect fingerprints
+                    # (e.g., gpt-4o-mini returns "7" 100% for 1-10 selection)
+                    behavioral_samples = 10 if request.mode == "deep" else 5
+                    await fingerprinter.run_behavioral_probes(
+                        count=min(6, request.probe_count),
+                        samples=behavioral_samples
+                    )
+                    await fingerprinter.run_capability_probes(count=min(6, request.probe_count))
+                    fp_result = fingerprinter.analyze()
+                    result.fingerprint = fp_result
+
+                    fp_check.passed = not fp_result.suspicious
+                    fp_check.score = 100 if not fp_result.suspicious else max(0, 100 - fp_result.confidence * 50)
+                    fp_check.details = self._fingerprint_summary(fp_result)
+                    fp_check.evidence = {
+                        "claimed_model": fp_result.claimed_model,
+                        "detected_family": fp_result.detected_family,
+                        "family_match": fp_result.family_match,
+                        "confidence": fp_result.confidence,
+                        "suspicious": fp_result.suspicious,
+                        "capability_tier": fp_result.tokenizer_signature.get("capability_tier", "unknown") if hasattr(fp_result, 'tokenizer_signature') else "unknown",
+                    }
+
+                # 3. Latency check
+                if request.run_latency:
+                    lat_check = CheckResult(
+                        check_type=CheckType.RESPONSE_LATENCY,
+                        name="Response Latency & Availability",
+                        passed=False,
+                        score=0,
+                        details="Running...",
+                    )
+                    checks.append(lat_check)
+
+                    latency_checker = LatencyChecker(client, request.model)
+                    lat_result = await latency_checker.measure(samples=5)
+
+                    # Score: lower latency and lower error rate = better
+                    error_penalty = lat_result["error_rate"] * 50
+                    latency_penalty = min(lat_result["avg_latency_ms"] / 100, 30)  # Cap at 30
+                    lat_score = max(0, 100 - error_penalty - latency_penalty)
+
+                    lat_check.passed = lat_result["error_rate"] < 0.2 and lat_result["avg_latency_ms"] < 10000
+                    lat_check.score = round(lat_score, 1)
+                    lat_check.details = (
+                        f"Avg: {lat_result['avg_latency_ms']}ms, "
+                        f"P50: {lat_result['p50_latency_ms']}ms, "
+                        f"P95: {lat_result['p95_latency_ms']}ms, "
+                        f"Error rate: {lat_result['error_rate']*100:.0f}%"
+                    )
+                    lat_check.evidence = lat_result
+
+                # 4. Protocol compliance check
+                if request.run_protocol:
+                    proto_check = CheckResult(
+                        check_type=CheckType.PROTOCOL_COMPLIANCE,
+                        name="API Protocol Compliance",
+                        passed=False,
+                        score=0,
+                        details="Running...",
+                    )
+                    checks.append(proto_check)
+
+                    protocol_checker = ProtocolChecker(client, request.model)
+                    proto_result = await protocol_checker.check()
+                    summary = proto_result.get("_summary", {})
+
+                    proto_check.passed = summary.get("score", 0) >= 70
+                    proto_check.score = summary.get("score", 0)
+                    proto_check.details = f"{summary.get('passed', 0)}/{summary.get('total', 0)} checks passed"
+                    proto_check.evidence = {k: v for k, v in proto_result.items() if k != "_summary"}
+
+                # Close official client if opened
+                if official_client:
+                    await official_client.__aexit__(None, None, None)
+
+                # Calculate overall score
+                result.checks = checks
+                if checks:
+                    result.overall_score = round(sum(c.score for c in checks) / len(checks), 1)
+                result.trust_level = self._trust_level(result.overall_score, checks)
+                result.summary = self._generate_summary(result)
+                result.recommendations = self._generate_recommendations(result)
+                result.status = AuditStatus.COMPLETED
+                result.completed_at = datetime.now()
+
+        except Exception as e:
+            result.status = AuditStatus.FAILED
+            result.error = str(e)
+            result.completed_at = datetime.now()
+
+        return result
+
+    def _get_official_base(self, model: str) -> Optional[str]:
+        """Get official API base URL for a model."""
+        model_lower = model.lower()
+        if any(k in model_lower for k in ["gpt", "o1", "o3", "dall"]):
+            return "https://api.openai.com/v1"
+        if "claude" in model_lower:
+            return "https://api.anthropic.com/v1"
+        if "gemini" in model_lower:
+            return "https://generativelanguage.googleapis.com/v1beta"
+        return None
+
+    def _token_summary(self, token_result) -> str:
+        parts = [f"Reported: {token_result.total_tokens_reported} tokens"]
+        if token_result.prompt_inflation_pct is not None:
+            parts.append(f"Prompt discrepancy: {token_result.prompt_inflation_pct:+.1f}%")
+        if token_result.completion_inflation_pct is not None:
+            parts.append(f"Completion discrepancy: {token_result.completion_inflation_pct:+.1f}%")
+        if token_result.chat_template_overhead > 0:
+            parts.append(f"Chat template est.: {token_result.chat_template_overhead} tokens")
+        if token_result.suspicious:
+            parts.append("⚠ SUSPICIOUS (adjusted for chat template)")
+        return " | ".join(parts)
+
+    def _fingerprint_summary(self, fp_result) -> str:
+        parts = [f"Claimed: {fp_result.claimed_model}"]
+        if fp_result.detected_family:
+            parts.append(f"Detected family: {fp_result.detected_family}")
+        parts.append(f"Family match: {'✓' if fp_result.family_match else '✗'}")
+        parts.append(f"Confidence: {fp_result.confidence:.0%}")
+        if fp_result.suspicious:
+            parts.append("⚠ SUSPICIOUS")
+        return " | ".join(parts)
+
+    def _trust_level(self, score: float, checks: list[CheckResult]) -> str:
+        """Determine trust level from score and checks."""
+        has_critical_failure = any(
+            c.check_type in (CheckType.TOKEN_COUNT, CheckType.MODEL_FINGERPRINT)
+            and not c.passed
+            for c in checks
+        )
+        if has_critical_failure:
+            return "critical"
+        if score >= 80:
+            return "high"
+        if score >= 60:
+            return "medium"
+        if score >= 40:
+            return "low"
+        return "critical"
+
+    def _generate_summary(self, result: AuditResult) -> str:
+        """Generate human-readable summary."""
+        parts = [f"Audit of {result.model} at {result.base_url}"]
+        parts.append(f"Overall score: {result.overall_score}/100 ({result.trust_level} trust)")
+
+        for check in result.checks:
+            status = "✓" if check.passed else "✗"
+            parts.append(f"  {status} {check.name}: {check.score}/100 - {check.details}")
+
+        if result.token_comparison and result.token_comparison.suspicious:
+            parts.append("⚠ Token count inflation detected!")
+        if result.fingerprint and result.fingerprint.suspicious:
+            parts.append("⚠ Model identity mismatch detected!")
+
+        return "\n".join(parts)
+
+    def _generate_recommendations(self, result: AuditResult) -> list[str]:
+        """Generate recommendations based on audit findings."""
+        recs = []
+
+        if result.token_comparison and result.token_comparison.suspicious:
+            recs.append(
+                "Token count inflation detected - consider switching to a different "
+                "relay or using official API directly for cost-sensitive workloads."
+            )
+
+        if result.fingerprint and result.fingerprint.suspicious:
+            recs.append(
+                "Model identity mismatch - the endpoint may be serving a lower-tier "
+                "model. Verify with additional probes or contact the relay operator."
+            )
+
+        latency_checks = [c for c in result.checks if c.check_type == CheckType.RESPONSE_LATENCY]
+        if latency_checks and not latency_checks[0].passed:
+            recs.append(
+                "High latency or error rate - this relay may not be suitable for "
+                "production workloads requiring low latency."
+            )
+
+        proto_checks = [c for c in result.checks if c.check_type == CheckType.PROTOCOL_COMPLIANCE]
+        if proto_checks and proto_checks[0].score < 70:
+            recs.append(
+                "API protocol non-compliance - some response fields may be missing "
+                "or malformed, which could break client libraries."
+            )
+
+        if result.trust_level == "high":
+            recs.append("This relay appears trustworthy based on our checks. Continue monitoring periodically.")
+        elif result.trust_level == "critical":
+            recs.append("CRITICAL: This relay has serious issues. We recommend discontinuing use immediately.")
+
+        return recs

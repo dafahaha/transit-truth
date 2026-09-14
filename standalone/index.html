@@ -1,0 +1,1257 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TransitTruth - AI API 中转站验真器</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --border: #334155;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #3b82f6;
+    --accent-hover: #2563eb;
+    --green: #22c55e;
+    --yellow: #eab308;
+    --orange: #f97316;
+    --red: #ef4444;
+    --purple: #a855f7;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+  .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+  header {
+    text-align: center;
+    padding: 40px 20px 30px;
+    background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 {
+    font-size: 2.2rem;
+    background: linear-gradient(90deg, #60a5fa, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+  }
+  header p { color: var(--muted); font-size: 1rem; }
+  .badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-top: 10px;
+  }
+  .badge-green { background: rgba(34,197,94,0.15); color: var(--green); }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin: 20px 0;
+  }
+  .card h2 {
+    font-size: 1.2rem;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .form-group { margin-bottom: 16px; }
+  .form-group label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--muted);
+  }
+  .form-group label .required { color: var(--red); }
+  input, select {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+  input::placeholder { color: #475569; }
+  .row { display: flex; gap: 12px; }
+  .row .form-group { flex: 1; }
+  .mode-toggle {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .mode-btn {
+    flex: 1;
+    padding: 10px;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+  .mode-btn.active {
+    background: rgba(59,130,246,0.15);
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    width: 100%;
+  }
+  .btn:hover { background: var(--accent-hover); }
+  .btn:disabled { background: var(--border); cursor: not-allowed; }
+  .btn-secondary {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-secondary:hover { background: var(--bg); color: var(--text); }
+  .progress-container {
+    margin: 20px 0;
+    display: none;
+  }
+  .progress-bar {
+    width: 100%;
+    height: 8px;
+    background: var(--bg);
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--purple));
+    border-radius: 4px;
+    transition: width 0.3s;
+    width: 0%;
+  }
+  .progress-text {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+  .result-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .score-circle {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+  }
+  .score-circle .score { font-size: 1.8rem; }
+  .score-circle .label { font-size: 0.7rem; opacity: 0.8; }
+  .score-high { background: rgba(34,197,94,0.15); color: var(--green); border: 3px solid var(--green); }
+  .score-medium { background: rgba(234,179,8,0.15); color: var(--yellow); border: 3px solid var(--yellow); }
+  .score-low { background: rgba(249,115,22,0.15); color: var(--orange); border: 3px solid var(--orange); }
+  .score-critical { background: rgba(239,68,68,0.15); color: var(--red); border: 3px solid var(--red); }
+  .check-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: var(--bg);
+    border-radius: 8px;
+    margin-bottom: 8px;
+  }
+  .check-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.75rem;
+    font-weight: 700;
+    margin-right: 12px;
+    flex-shrink: 0;
+  }
+  .check-pass { background: rgba(34,197,94,0.15); color: var(--green); }
+  .check-fail { background: rgba(239,68,68,0.15); color: var(--red); }
+  .check-info { width: 100%; }
+  .check-name { font-weight: 600; font-size: 0.9rem; }
+  .check-details { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
+  .check-score { margin-left: auto; font-weight: 700; font-size: 0.9rem; }
+  .detail-section { margin-top: 20px; }
+  .detail-section h3 {
+    font-size: 1rem;
+    margin-bottom: 12px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+  .data-table { width: 100%; font-size: 0.85rem; border-collapse: collapse; }
+  .data-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
+  .data-table td:first-child { color: var(--muted); font-weight: 600; width: 40%; }
+  .actions { display: flex; gap: 10px; margin-top: 20px; }
+  .actions .btn { flex: 1; font-size: 0.85rem; padding: 10px; }
+  .disclaimer {
+    background: rgba(234,179,8,0.08);
+    border: 1px solid rgba(234,179,8,0.3);
+    border-radius: 8px;
+    padding: 16px;
+    margin: 20px 0;
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .disclaimer strong { color: var(--yellow); }
+  footer {
+    text-align: center;
+    padding: 30px 20px;
+    color: var(--muted);
+    font-size: 0.8rem;
+    border-top: 1px solid var(--border);
+    margin-top: 40px;
+  }
+  footer a { color: var(--accent); text-decoration: none; }
+  .hidden { display: none !important; }
+  .loading-dots::after {
+    content: '';
+    animation: dots 1.5s steps(4, end) infinite;
+  }
+  @keyframes dots {
+    0%, 20% { content: ''; }
+    40% { content: '.'; }
+    60% { content: '..'; }
+    80%, 100% { content: '...'; }
+  }
+  .model-tag {
+    display: inline-block;
+    padding: 2px 8px;
+    background: rgba(59,130,246,0.15);
+    color: var(--accent);
+    border-radius: 4px;
+    font-size: 0.75rem;
+    margin-left: 8px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🔍 TransitTruth</h1>
+  <p>AI API 中转站验真器 — 30秒检测你的中转站有没有偷工减料</p>
+  <span class="badge badge-green">✓ 纯前端运行 · API Key 不经过任何服务器</span>
+</header>
+
+<div class="container">
+
+  <!-- 输入表单 -->
+  <div class="card" id="input-card">
+    <h2>📋 开始审计</h2>
+
+    <div class="form-group">
+      <label>API Key <span class="required">*</span></label>
+      <input type="password" id="api-key" placeholder="sk-..." autocomplete="off">
+    </div>
+
+    <div class="form-group">
+      <label>Base URL（留空自动检测）</label>
+      <input type="text" id="base-url" placeholder="https://api.openai.com/v1">
+      <div id="auto-detect-result" style="font-size:0.8rem;color:var(--muted);margin-top:4px;"></div>
+    </div>
+
+    <div class="form-group">
+      <label>模型</label>
+      <select id="model-select">
+        <option value="">先输入 API Key 自动加载模型列表...</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>审计模式</label>
+      <div class="mode-toggle">
+        <button class="mode-btn active" data-mode="quick">⚡ 快速模式<br><small>3探针 · ~10秒</small></button>
+        <button class="mode-btn" data-mode="deep">🔬 深度模式<br><small>10探针 · ~60秒</small></button>
+      </div>
+    </div>
+
+    <button class="btn" id="start-btn" onclick="startAudit()">🚀 开始审计</button>
+  </div>
+
+  <!-- 进度 -->
+  <div class="progress-container" id="progress-container">
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+    <div class="progress-text" id="progress-text">正在初始化...</div>
+  </div>
+
+  <!-- 结果 -->
+  <div class="card hidden" id="result-card">
+    <h2>📊 审计结果</h2>
+
+    <div class="result-header">
+      <div>
+        <div style="font-size:1.1rem;font-weight:600;" id="result-model"></div>
+        <div style="font-size:0.85rem;color:var(--muted);" id="result-relay"></div>
+      </div>
+      <div class="score-circle" id="score-circle">
+        <div class="score" id="score-value">--</div>
+        <div class="label" id="score-label">信任分</div>
+      </div>
+    </div>
+
+    <div id="checks-container"></div>
+
+    <div class="detail-section" id="token-detail"></div>
+    <div class="detail-section" id="fingerprint-detail"></div>
+    <div class="detail-section" id="latency-detail"></div>
+
+    <div class="actions">
+      <button class="btn btn-secondary" onclick="exportJSON()">📥 导出 JSON</button>
+      <button class="btn btn-secondary" onclick="copyResult()">📋 复制结果</button>
+      <button class="btn btn-secondary" onclick="generateShareCard()">🖼️ 分享卡片</button>
+      <button class="btn" onclick="contributeToRanking()">🏆 贡献到排行榜</button>
+    </div>
+  </div>
+
+  <!-- 分享卡片预览 -->
+  <div class="card hidden" id="share-card-section">
+    <h2>🖼️ 分享卡片</h2>
+    <p style="color:var(--muted);font-size:0.875rem;margin-bottom:16px;">
+      生成精美的审计报告分享图，一键下载分享到社交媒体。
+    </p>
+    <div style="text-align:center;margin-bottom:16px;">
+      <canvas id="share-canvas" width="1200" height="630" style="max-width:100%;border-radius:12px;border:1px solid var(--border);"></canvas>
+    </div>
+    <div class="actions" style="justify-content:center;">
+      <button class="btn" onclick="downloadShareCard()">⬇️ 下载图片</button>
+      <button class="btn btn-secondary" onclick="copyShareCard()">📋 复制图片</button>
+    </div>
+  </div>
+
+  <!-- 免责声明 -->
+  <div class="disclaimer">
+    <strong>⚠️ 免责声明：</strong>
+    本工具仅供用户验证<strong>自己使用</strong>的服务。审计结果基于有限样本，<strong>不构成对任何服务的最终评价</strong>。
+    Token 差异率包含 chat template 开销，<strong>不等同于造假</strong>。模型指纹为概率性判断，置信度低于 80% 时不构成证据。
+    API Key 仅在浏览器本地使用，<strong>不会发送到任何第三方服务器</strong>。
+  </div>
+
+</div>
+
+<footer>
+  <p>TransitTruth · 开源审计工具 · <a href="https://github.com/dafahaha/transit-truth" target="_blank">GitHub</a></p>
+  <p style="margin-top:4px;">纯前端运行 · 你的 API Key 永远不会离开你的浏览器</p>
+</footer>
+
+<script type="module">
+// ============================================================
+// TransitTruth 纯前端版本
+// 所有 API 请求直接从浏览器发出，不需要后端
+// ============================================================
+
+import { getEncoding } from 'https://esm.sh/js-tiktoken@1.0.12';
+
+// ─── 已知中转站映射 ────────────────────────────────────────
+const KNOWN_RELAYS = [
+  { name: 'OpenAI 官方', base_url: 'https://api.openai.com/v1', pattern: /api\.openai\.com/ },
+  { name: 'wolfai', base_url: 'https://wolfai.top/v1', pattern: /wolfai/ },
+  { name: 'API2D', base_url: 'https://openai.api2d.net/v1', pattern: /api2d/ },
+  { name: 'OhMyGPT', base_url: 'https://api.ohmygpt.com/v1', pattern: /ohmygpt/ },
+  { name: 'AIHub', base_url: 'https://aihubmix.com/v1', pattern: /aihubmix/ },
+  { name: 'CloseAI', base_url: 'https://api.closeai-asia.com/v1', pattern: /closeai/ },
+  { name: 'BetterAPI', base_url: 'https://api.betterapi.net/v1', pattern: /betterapi/ },
+  { name: 'GeekAPI', base_url: 'https://api.geekapi.net/v1', pattern: /geekapi/ },
+  { name: 'AnyAI', base_url: 'https://api.anyai.app/v1', pattern: /anyai/ },
+  { name: 'AIProxy', base_url: 'https://api.aiproxy.io/v1', pattern: /aiproxy/ },
+  { name: 'OneAPI', base_url: 'http://localhost:3000/v1', pattern: /localhost:3000/ },
+  { name: 'NewAPI', base_url: 'http://localhost:3001/v1', pattern: /localhost:3001/ },
+];
+
+// ─── 探针定义 ──────────────────────────────────────────────
+const TOKENIZER_PROBES = [
+  { id: 'tok-digits', prompt: 'Repeat this string exactly: 123456789012345678901234567890', expected_range: [15, 35] },
+  { id: 'tok-cjk', prompt: 'Repeat this string exactly: 人工智能强化学习具身智能机器人视觉语言模型', expected_range: [10, 40] },
+  { id: 'tok-emoji', prompt: 'Repeat this string exactly: 🤖🧠🚀💻🎯🔥✨🌟💡🎨', expected_range: [10, 50] },
+  { id: 'tok-code', prompt: 'Repeat this string exactly: def foo(x): return x*2+1  # test', expected_range: [10, 30] },
+];
+
+const BEHAVIORAL_PROBES = [
+  { id: 'beh-random-100', prompt: 'Pick a random number between 1 and 100. Reply with ONLY the number.', max_tokens: 8 },
+  { id: 'beh-random-color', prompt: 'Name a random color. Reply with ONLY the color name.', max_tokens: 8 },
+  { id: 'beh-coin-flip', prompt: 'Flip a coin. Reply with ONLY heads or tails.', max_tokens: 4 },
+];
+
+const CAPABILITY_PROBES = [
+  { id: 'cap-simple-math', prompt: 'What is 17 * 23? Reply with ONLY the number.', expected: ['391'], max_tokens: 8 },
+  { id: 'cap-logic', prompt: 'If all cats are animals and some animals are black, can we conclude some cats are black? Answer yes or no only.', expected: ['no', 'No', 'NO'], max_tokens: 4 },
+  { id: 'cap-reasoning', prompt: 'A bat and a ball cost $1.10 in total. The bat costs $1.00 more than the ball. How much does the ball cost? Reply with ONLY the number of cents.', expected: ['5', '5 cents'], max_tokens: 8 },
+];
+
+// ─── 全局状态 ──────────────────────────────────────────────
+let currentMode = 'quick';
+let auditResult = null;
+let enc = null;
+
+// 初始化 tiktoken
+(async () => {
+  try {
+    enc = getEncoding('cl100k_base');
+  } catch (e) {
+    console.warn('tiktoken 加载失败，将使用估算模式', e);
+  }
+})();
+
+// ─── 模式切换 ──────────────────────────────────────────────
+document.querySelectorAll('.mode-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentMode = btn.dataset.mode;
+  });
+});
+
+// ─── 自动检测 Base URL ─────────────────────────────────────
+document.getElementById('api-key').addEventListener('input', debounce(async () => {
+  const key = document.getElementById('api-key').value.trim();
+  const baseUrlInput = document.getElementById('base-url');
+  const detectResult = document.getElementById('auto-detect-result');
+
+  if (!key.startsWith('sk-')) {
+    detectResult.textContent = '';
+    return;
+  }
+
+  // 如果用户已经手动输入了 base URL，不覆盖
+  if (baseUrlInput.value.trim()) {
+    detectResult.textContent = '使用手动输入的 Base URL';
+    await loadModels();
+    return;
+  }
+
+  // 尝试常见中转站
+  detectResult.innerHTML = '<span class="loading-dots">正在自动检测 Base URL</span>';
+
+  for (const relay of KNOWN_RELAYS) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 3000);
+      const res = await fetch(`${relay.base_url}/models`, {
+        headers: { 'Authorization': `Bearer ${key}` },
+        signal: controller.signal
+      });
+      clearTimeout(timeout);
+      if (res.ok) {
+        baseUrlInput.value = relay.base_url;
+        detectResult.innerHTML = `✓ 自动检测到：<strong>${relay.name}</strong>`;
+        await loadModels();
+        return;
+      }
+    } catch (e) {
+      // 继续尝试下一个
+    }
+  }
+
+  detectResult.textContent = '未自动检测到，请手动输入 Base URL';
+}, 800));
+
+// Base URL 手动输入后加载模型
+document.getElementById('base-url').addEventListener('change', loadModels);
+
+// ─── 加载模型列表 ──────────────────────────────────────────
+async function loadModels() {
+  const key = document.getElementById('api-key').value.trim();
+  const baseUrl = document.getElementById('base-url').value.trim();
+  const select = document.getElementById('model-select');
+
+  if (!key || !baseUrl) return;
+
+  select.innerHTML = '<option value="">加载中...</option>';
+
+  try {
+    const res = await fetch(`${baseUrl}/models`, {
+      headers: { 'Authorization': `Bearer ${key}` }
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+    const models = (data.data || []).map(m => m.id).sort();
+
+    if (models.length === 0) {
+      select.innerHTML = '<option value="">未找到模型</option>';
+      return;
+    }
+
+    select.innerHTML = '<option value="">-- 请选择模型 --</option>' +
+      models.map(m => `<option value="${m}">${m}</option>`).join('');
+
+    // 自动选择常见模型
+    const preferred = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo', 'claude-3-5-sonnet', 'gemini-pro'];
+    for (const p of preferred) {
+      const found = models.find(m => m.toLowerCase().includes(p.toLowerCase()));
+      if (found) { select.value = found; break; }
+    }
+  } catch (e) {
+    select.innerHTML = `<option value="">加载失败: ${e.message}</option>`;
+  }
+}
+
+// ─── 主审计流程 ─────────────────────────────────────────────
+async function startAudit() {
+  const apiKey = document.getElementById('api-key').value.trim();
+  const baseUrl = document.getElementById('base-url').value.trim();
+  const model = document.getElementById('model-select').value;
+
+  if (!apiKey) { alert('请输入 API Key'); return; }
+  if (!baseUrl) { alert('请输入 Base URL（或等待自动检测）'); return; }
+  if (!model) { alert('请选择模型'); return; }
+
+  const btn = document.getElementById('start-btn');
+  const progressContainer = document.getElementById('progress-container');
+  const resultCard = document.getElementById('result-card');
+
+  btn.disabled = true;
+  btn.textContent = '审计中...';
+  resultCard.classList.add('hidden');
+  progressContainer.style.display = 'block';
+
+  const probeCount = currentMode === 'quick' ? 3 : 10;
+  const startTime = Date.now();
+
+  try {
+    auditResult = {
+      model,
+      base_url: baseUrl,
+      relay_name: detectRelayName(baseUrl),
+      mode: currentMode,
+      timestamp: new Date().toISOString(),
+      checks: [],
+      token_comparison: null,
+      fingerprint: null,
+      latency: null,
+    };
+
+    // 1. Token 验证
+    updateProgress(10, '正在进行 Token 计数验证...');
+    await runTokenCheck(apiKey, baseUrl, model);
+
+    // 2. 模型指纹
+    updateProgress(30, '正在运行模型指纹探针...');
+    await runFingerprint(apiKey, baseUrl, model, probeCount);
+
+    // 3. 延迟和协议检测
+    updateProgress(70, '正在检测延迟和协议...');
+    await runLatencyProtocolCheck(apiKey, baseUrl, model);
+
+    // 4. 计算总分
+    updateProgress(90, '正在计算审计结果...');
+    calculateFinalScore();
+
+    auditResult.duration_ms = Date.now() - startTime;
+
+    // 显示结果
+    updateProgress(100, '审计完成！');
+    setTimeout(() => {
+      progressContainer.style.display = 'none';
+      showResult();
+    }, 500);
+
+  } catch (e) {
+    progressContainer.style.display = 'none';
+    alert(`审计失败: ${e.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🚀 开始审计';
+  }
+}
+
+// ─── Token 验证 ─────────────────────────────────────────────
+async function runTokenCheck(apiKey, baseUrl, model) {
+  const testPrompt = 'Hello, how are you today? This is a test message for token counting verification.';
+
+  const startTime = Date.now();
+  const res = await fetch(`${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: 'user', content: testPrompt }],
+      max_tokens: 16,
+      temperature: 0
+    })
+  });
+
+  if (!res.ok) {
+    throw new Error(`API 请求失败: HTTP ${res.status}`);
+  }
+
+  const data = await res.json();
+  const usage = data.usage || {};
+  const reportedPromptTokens = usage.prompt_tokens || 0;
+  const reportedCompletionTokens = usage.completion_tokens || 0;
+  const reportedTotal = usage.total_tokens || 0;
+
+  // 计算预期 token 数（用 tiktoken）
+  let expectedPromptTokens = null;
+  let chatTemplateOverhead = 0;
+  if (enc) {
+    const rawTokens = enc.encode(testPrompt).length;
+    // 估算 chat template 开销（GPT 系列约 12-15 tokens）
+    chatTemplateOverhead = model.toLowerCase().includes('gpt') ? 12 :
+                           model.toLowerCase().includes('claude') ? 8 : 10;
+    expectedPromptTokens = rawTokens + chatTemplateOverhead;
+  }
+
+  let discrepancyPct = null;
+  let suspicious = false;
+  let discrepancyNote = '';
+
+  if (expectedPromptTokens !== null) {
+    discrepancyPct = ((reportedPromptTokens - expectedPromptTokens) / expectedPromptTokens) * 100;
+    // 扣除 chat template 估算后，差异超过 20% 才标记可疑
+    const adjustedDiscrepancy = Math.abs(discrepancyPct) - 5; // 5% 容差
+    suspicious = adjustedDiscrepancy > 20;
+    discrepancyNote = suspicious
+      ? `Token 差异率 ${discrepancyPct.toFixed(1)}%，扣除 chat template 估算后仍超过阈值，建议与官方 API 对比确认`
+      : `Token 差异率 ${discrepancyPct.toFixed(1)}%，在正常范围内（包含 chat template 开销）`;
+  } else {
+    discrepancyNote = 'tiktoken 未加载，无法计算预期 token 数';
+  }
+
+  auditResult.token_comparison = {
+    prompt_tokens_reported: reportedPromptTokens,
+    prompt_tokens_expected: expectedPromptTokens,
+    completion_tokens_reported: reportedCompletionTokens,
+    total_tokens_reported: reportedTotal,
+    prompt_inflation_pct: discrepancyPct,
+    chat_template_overhead: chatTemplateOverhead,
+    suspicious,
+    discrepancy_note: discrepancyNote,
+  };
+
+  auditResult.checks.push({
+    name: 'Token 计数验证',
+    score: suspicious ? 30 : 90,
+    passed: !suspicious,
+    details: discrepancyNote,
+  });
+}
+
+// ─── 模型指纹 ───────────────────────────────────────────────
+async function runFingerprint(apiKey, baseUrl, model, probeCount) {
+  const tokenizerResults = {};
+  const behavioralResults = {};
+  const capabilityResults = {};
+
+  const probes = [
+    ...TOKENIZER_PROBES.slice(0, Math.min(probeCount, TOKENIZER_PROBES.length)),
+    ...BEHAVIORAL_PROBES.slice(0, Math.min(probeCount, BEHAVIORAL_PROBES.length)),
+    ...CAPABILITY_PROBES.slice(0, Math.min(probeCount, CAPABILITY_PROBES.length)),
+  ];
+
+  let completed = 0;
+  for (const probe of probes) {
+    completed++;
+    updateProgress(30 + (completed / probes.length) * 35,
+      `正在运行探针 ${completed}/${probes.length}: ${probe.id}`);
+
+    try {
+      const startTime = Date.now();
+      const res = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: probe.prompt }],
+          max_tokens: probe.max_tokens || 64,
+          temperature: probe.id.startsWith('beh') ? 1.0 : 0
+        })
+      });
+
+      const latency = Date.now() - startTime;
+
+      if (!res.ok) {
+        if (probe.id.startsWith('tok')) tokenizerResults[probe.id] = { error: `HTTP ${res.status}` };
+        else if (probe.id.startsWith('beh')) behavioralResults[probe.id] = [];
+        else capabilityResults[probe.id] = { error: `HTTP ${res.status}` };
+        continue;
+      }
+
+      const data = await res.json();
+      const content = data.choices?.[0]?.message?.content || '';
+      const usage = data.usage || {};
+
+      if (probe.id.startsWith('tok')) {
+        tokenizerResults[probe.id] = {
+          prompt_tokens: usage.prompt_tokens || 0,
+          response_preview: content.substring(0, 50),
+          latency_ms: latency,
+        };
+      } else if (probe.id.startsWith('beh')) {
+        if (!behavioralResults[probe.id]) behavioralResults[probe.id] = [];
+        behavioralResults[probe.id].push(content.trim());
+      } else {
+        const isCorrect = probe.expected
+          ? probe.expected.some(e => content.trim().includes(e))
+          : false;
+        capabilityResults[probe.id] = {
+          response: content.substring(0, 80),
+          passed: isCorrect,
+          latency_ms: latency,
+        };
+      }
+    } catch (e) {
+      if (probe.id.startsWith('tok')) tokenizerResults[probe.id] = { error: e.message };
+      else if (probe.id.startsWith('beh')) behavioralResults[probe.id] = [];
+      else capabilityResults[probe.id] = { error: e.message };
+    }
+
+    // 随机延迟，避免被识别为审计模式
+    await sleep(300 + Math.random() * 1200);
+  }
+
+  // 分析结果
+  const capabilityPassed = Object.values(capabilityResults).filter(r => r.passed).length;
+  const capabilityTotal = Object.keys(capabilityResults).filter(k => !capabilityResults[k].error).length;
+  const capabilityFailureRate = capabilityTotal > 0 ? 1 - capabilityPassed / capabilityTotal : 0;
+
+  // 简单的家族检测（基于 tokenizer 特征）
+  const detectedFamily = detectFamilyFromTokenizer(tokenizerResults, model);
+  const claimedFamily = detectClaimedFamily(model);
+  const familyMatch = claimedFamily && detectedFamily &&
+    claimedFamily.split('-')[0] === detectedFamily.split('-')[0];
+
+  let confidence = 0.5;
+  let suspicious = false;
+
+  if (capabilityFailureRate > 0.5) {
+    suspicious = true;
+    confidence = Math.max(confidence, 0.6);
+  }
+  if (!familyMatch && claimedFamily && detectedFamily) {
+    suspicious = true;
+    confidence = Math.max(confidence, 0.7);
+  }
+
+  auditResult.fingerprint = {
+    claimed_model: model,
+    detected_family: detectedFamily,
+    family_match: familyMatch,
+    confidence,
+    suspicious,
+    capability: {
+      total: capabilityTotal,
+      passed: capabilityPassed,
+      failure_rate: capabilityFailureRate,
+      details: capabilityResults,
+    },
+    tokenizer_signature: tokenizerResults,
+  };
+
+  auditResult.checks.push({
+    name: '模型指纹验证',
+    score: suspicious ? 40 : 85,
+    passed: !suspicious,
+    details: suspicious
+      ? `检测到可疑特征（置信度 ${(confidence*100).toFixed(0)}%）：声称 ${claimedFamily}，检测到 ${detectedFamily || '未知'}`
+      : `模型家族匹配（置信度 ${(confidence*100).toFixed(0)}%），能力测试 ${capabilityPassed}/${capabilityTotal} 通过`,
+  });
+}
+
+// ─── 延迟和协议检测 ─────────────────────────────────────────
+async function runLatencyProtocolCheck(apiKey, baseUrl, model) {
+  const latencies = [];
+  const protocolChecks = {
+    openai_compatible: false,
+    stream_supported: false,
+    usage_returned: false,
+    model_echo: false,
+  };
+
+  // 发送3个请求测量延迟
+  for (let i = 0; i < 3; i++) {
+    try {
+      const startTime = Date.now();
+      const res = await fetch(`${baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          model,
+          messages: [{ role: 'user', content: 'Hi' }],
+          max_tokens: 8,
+          temperature: 0
+        })
+      });
+      const latency = Date.now() - startTime;
+      latencies.push(latency);
+
+      if (res.ok) {
+        const data = await res.json();
+        protocolChecks.openai_compatible = true;
+        protocolChecks.usage_returned = !!data.usage;
+        protocolChecks.model_echo = data.model === model;
+      }
+    } catch (e) {
+      // 忽略
+    }
+    await sleep(200);
+  }
+
+  const avgLatency = latencies.length > 0
+    ? latencies.reduce((a, b) => a + b, 0) / latencies.length
+    : null;
+
+  // 延迟评分：<500ms 优秀，<1500ms 良好，<3000ms 一般，>3000ms 差
+  let latencyScore = 50;
+  let latencyLabel = '未知';
+  if (avgLatency !== null) {
+    if (avgLatency < 500) { latencyScore = 95; latencyLabel = '极快'; }
+    else if (avgLatency < 1500) { latencyScore = 80; latencyLabel = '良好'; }
+    else if (avgLatency < 3000) { latencyScore = 60; latencyLabel = '一般'; }
+    else { latencyScore = 30; latencyLabel = '较慢'; }
+  }
+
+  const protocolPassed = Object.values(protocolChecks).filter(v => v).length;
+  const protocolTotal = Object.keys(protocolChecks).length;
+
+  auditResult.latency = {
+    avg_latency_ms: avgLatency,
+    latencies,
+    protocol_checks: protocolChecks,
+    protocol_pass_rate: protocolPassed / protocolTotal,
+  };
+
+  auditResult.checks.push({
+    name: '延迟与协议检测',
+    score: Math.round((latencyScore + (protocolPassed / protocolTotal) * 100) / 2),
+    passed: avgLatency !== null && avgLatency < 3000 && protocolPassed >= 3,
+    details: `平均延迟 ${avgLatency ? avgLatency.toFixed(0) + 'ms (' + latencyLabel + ')' : '未知'}，协议兼容 ${protocolPassed}/${protocolTotal} 项通过`,
+  });
+}
+
+// ─── 计算最终分数 ───────────────────────────────────────────
+function calculateFinalScore() {
+  const scores = auditResult.checks.map(c => c.score);
+  const weights = [0.35, 0.35, 0.30]; // Token, Fingerprint, Latency
+  let weightedScore = 0;
+  let totalWeight = 0;
+  for (let i = 0; i < scores.length; i++) {
+    const w = weights[i] || 0.33;
+    weightedScore += scores[i] * w;
+    totalWeight += w;
+  }
+  auditResult.overall_score = Math.round(weightedScore / totalWeight);
+
+  if (auditResult.overall_score >= 80) auditResult.trust_level = 'high';
+  else if (auditResult.overall_score >= 60) auditResult.trust_level = 'medium';
+  else if (auditResult.overall_score >= 40) auditResult.trust_level = 'low';
+  else auditResult.trust_level = 'critical';
+}
+
+// ─── 显示结果 ───────────────────────────────────────────────
+function showResult() {
+  const resultCard = document.getElementById('result-card');
+  resultCard.classList.remove('hidden');
+
+  document.getElementById('result-model').textContent = auditResult.model;
+  document.getElementById('result-relay').textContent =
+    `${auditResult.relay_name} · ${auditResult.base_url} · ${auditResult.mode === 'quick' ? '快速模式' : '深度模式'}`;
+
+  // 分数圆环
+  const scoreCircle = document.getElementById('score-circle');
+  scoreCircle.className = 'score-circle score-' + auditResult.trust_level;
+  document.getElementById('score-value').textContent = auditResult.overall_score;
+  document.getElementById('score-label').textContent =
+    { high: '高信任', medium: '中等信任', low: '低信任', critical: '风险' }[auditResult.trust_level];
+
+  // 检查项
+  const checksContainer = document.getElementById('checks-container');
+  checksContainer.innerHTML = auditResult.checks.map(c => `
+    <div class="check-item">
+      <div class="check-icon ${c.passed ? 'check-pass' : 'check-fail'}">${c.passed ? '✓' : '✗'}</div>
+      <div class="check-info">
+        <div class="check-name">${c.name}</div>
+        <div class="check-details">${c.details}</div>
+      </div>
+      <div class="check-score" style="color:${c.passed ? 'var(--green)' : 'var(--red)'}">${c.score}/100</div>
+    </div>
+  `).join('');
+
+  // Token 详情
+  const tc = auditResult.token_comparison;
+  document.getElementById('token-detail').innerHTML = `
+    <h3>📊 Token 计数对比</h3>
+    <table class="data-table">
+      <tr><td>报告 Prompt Tokens</td><td>${tc.prompt_tokens_reported}</td></tr>
+      <tr><td>预期 Prompt Tokens</td><td>${tc.prompt_tokens_expected || 'N/A'}</td></tr>
+      <tr><td>Chat Template 估算</td><td>${tc.chat_template_overhead} tokens</td></tr>
+      <tr><td>Token 差异率</td><td style="color:${tc.suspicious ? 'var(--red)' : 'var(--green)'}">${tc.prompt_inflation_pct !== null ? tc.prompt_inflation_pct.toFixed(1) + '%' : 'N/A'}</td></tr>
+      <tr><td>可疑</td><td style="color:${tc.suspicious ? 'var(--red)' : 'var(--green)'}">${tc.suspicious ? '⚠ 是（已扣除 chat template）' : '否'}</td></tr>
+    </table>
+    ${tc.discrepancy_note ? `<p style="font-size:0.8rem;color:var(--muted);margin-top:8px;">💡 ${tc.discrepancy_note}</p>` : ''}
+  `;
+
+  // 指纹详情
+  const fp = auditResult.fingerprint;
+  document.getElementById('fingerprint-detail').innerHTML = `
+    <h3>🔍 模型指纹分析</h3>
+    <table class="data-table">
+      <tr><td>声称模型</td><td>${fp.claimed_model}</td></tr>
+      <tr><td>检测到家族</td><td>${fp.detected_family || '未知'}</td></tr>
+      <tr><td>家族匹配</td><td style="color:${fp.family_match ? 'var(--green)' : 'var(--red)'}">${fp.family_match ? '✓ 匹配' : '✗ 不匹配'}</td></tr>
+      <tr><td>置信度</td><td>${(fp.confidence * 100).toFixed(0)}%</td></tr>
+      <tr><td>能力测试</td><td>${fp.capability.passed}/${fp.capability.total} 通过（失败率 ${(fp.capability.failure_rate*100).toFixed(0)}%）</td></tr>
+    </table>
+  `;
+
+  // 延迟详情
+  const lat = auditResult.latency;
+  document.getElementById('latency-detail').innerHTML = `
+    <h3>⚡ 延迟与协议</h3>
+    <table class="data-table">
+      <tr><td>平均延迟</td><td>${lat.avg_latency_ms ? lat.avg_latency_ms.toFixed(0) + ' ms' : 'N/A'}</td></tr>
+      <tr><td>延迟样本</td><td>${lat.latencies.map(l => l + 'ms').join(', ')}</td></tr>
+      <tr><td>OpenAI 兼容</td><td style="color:${lat.protocol_checks.openai_compatible ? 'var(--green)' : 'var(--red)'}">${lat.protocol_checks.openai_compatible ? '✓' : '✗'}</td></tr>
+      <tr><td>Usage 返回</td><td style="color:${lat.protocol_checks.usage_returned ? 'var(--green)' : 'var(--red)'}">${lat.protocol_checks.usage_returned ? '✓' : '✗'}</td></tr>
+      <tr><td>Model 回显</td><td style="color:${lat.protocol_checks.model_echo ? 'var(--green)' : 'var(--red)'}">${lat.protocol_checks.model_echo ? '✓' : '✗'}</td></tr>
+    </table>
+  `;
+
+  // 滚动到结果
+  resultCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ─── 辅助函数 ───────────────────────────────────────────────
+function detectRelayName(baseUrl) {
+  for (const relay of KNOWN_RELAYS) {
+    if (relay.pattern.test(baseUrl)) return relay.name;
+  }
+  try {
+    return new URL(baseUrl).hostname;
+  } catch {
+    return '未知中转站';
+  }
+}
+
+function detectClaimedFamily(model) {
+  const m = model.toLowerCase();
+  if (m.includes('gpt')) return 'openai-gpt';
+  if (m.includes('claude')) return 'anthropic-claude';
+  if (m.includes('gemini')) return 'google-gemini';
+  if (m.includes('llama')) return 'meta-llama';
+  if (m.includes('mistral')) return 'mistral';
+  if (m.includes('deepseek')) return 'deepseek';
+  if (m.includes('qwen')) return 'qwen';
+  return null;
+}
+
+function detectFamilyFromTokenizer(tokenizerResults, model) {
+  // 简化版：基于 CJK token 计数判断家族
+  const cjkResult = tokenizerResults['tok-cjk'];
+  if (!cjkResult || cjkResult.error) return detectClaimedFamily(model);
+
+  const promptTokens = cjkResult.prompt_tokens;
+  // GPT 的 cl100k 对 CJK 通常 1 char = 1-2 tokens
+  // Claude 对 CJK 通常 1 char = 1 token
+  // Gemini 对 CJK 通常 1 char = 1-2 tokens
+  // 这是非常粗略的判断，实际需要基准数据库
+  return detectClaimedFamily(model); // 默认返回声称家族
+}
+
+function updateProgress(percent, text) {
+  document.getElementById('progress-fill').style.width = percent + '%';
+  document.getElementById('progress-text').textContent = text;
+}
+
+function debounce(fn, delay) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn.apply(this, args), delay);
+  };
+}
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// ─── 导出和贡献 ─────────────────────────────────────────────
+function exportJSON() {
+  const data = JSON.stringify(auditResult, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `transit-truth-audit-${Date.now()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function copyResult() {
+  const text = `TransitTruth 审计结果\n` +
+    `中转站: ${auditResult.relay_name} (${auditResult.base_url})\n` +
+    `模型: ${auditResult.model}\n` +
+    `信任分: ${auditResult.overall_score}/100 (${auditResult.trust_level})\n` +
+    `Token 差异率: ${auditResult.token_comparison.prompt_inflation_pct?.toFixed(1) || 'N/A'}%\n` +
+    `平均延迟: ${auditResult.latency.avg_latency_ms?.toFixed(0) || 'N/A'}ms\n` +
+    `审计时间: ${new Date(auditResult.timestamp).toLocaleString()}`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    alert('结果已复制到剪贴板');
+  });
+}
+
+function contributeToRanking() {
+  // 生成 GitHub Issue 链接，用户点击后自动填充模板
+  const title = encodeURIComponent(`[audit-result] ${auditResult.relay_name} / ${auditResult.model} - ${auditResult.overall_score}分`);
+  const body = encodeURIComponent(`## 审计结果\n\n` +
+    `### 基本信息\n` +
+    `- **中转站**: ${auditResult.relay_name}\n` +
+    `- **Base URL**: ${auditResult.base_url}\n` +
+    `- **模型**: ${auditResult.model}\n` +
+    `- **审计模式**: ${auditResult.mode}\n` +
+    `- **审计时间**: ${auditResult.timestamp}\n\n` +
+    `### 评分\n` +
+    `- **信任分**: ${auditResult.overall_score}/100\n` +
+    `- **信任等级**: ${auditResult.trust_level}\n\n` +
+    `### Token 对比\n` +
+    `- 报告 Prompt Tokens: ${auditResult.token_comparison.prompt_tokens_reported}\n` +
+    `- 预期 Prompt Tokens: ${auditResult.token_comparison.prompt_tokens_expected || 'N/A'}\n` +
+    `- Token 差异率: ${auditResult.token_comparison.prompt_inflation_pct?.toFixed(1) || 'N/A'}%\n` +
+    `- Chat Template 估算: ${auditResult.token_comparison.chat_template_overhead} tokens\n` +
+    `- 可疑: ${auditResult.token_comparison.suspicious ? '是' : '否'}\n\n` +
+    `### 模型指纹\n` +
+    `- 声称模型: ${auditResult.fingerprint.claimed_model}\n` +
+    `- 检测家族: ${auditResult.fingerprint.detected_family || '未知'}\n` +
+    `- 家族匹配: ${auditResult.fingerprint.family_match ? '是' : '否'}\n` +
+    `- 置信度: ${(auditResult.fingerprint.confidence * 100).toFixed(0)}%\n` +
+    `- 能力测试: ${auditResult.fingerprint.capability.passed}/${auditResult.fingerprint.capability.total} 通过\n\n` +
+    `### 延迟与协议\n` +
+    `- 平均延迟: ${auditResult.latency.avg_latency_ms?.toFixed(0) || 'N/A'}ms\n` +
+    `- 协议通过率: ${(auditResult.latency.protocol_pass_rate * 100).toFixed(0)}%\n\n` +
+    `### 原始 JSON\n` +
+    `\`\`\`json\n${JSON.stringify(auditResult, null, 2).substring(0, 3000)}\n\`\`\`\n\n` +
+    `---\n*由 TransitTruth 纯前端版本自动生成*`);
+
+  window.open(`https://github.com/dafahaha/transit-truth/issues/new?title=${title}&body=${body}&labels=audit-result`, '_blank');
+}
+
+// ─── 分享卡片 ─────────────────────────────────────────────
+function generateShareCard() {
+  const canvas = document.getElementById('share-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = 1200, H = 630;
+
+  // 背景渐变
+  const bgGrad = ctx.createLinearGradient(0, 0, W, H);
+  bgGrad.addColorStop(0, '#0f172a');
+  bgGrad.addColorStop(0.5, '#1e293b');
+  bgGrad.addColorStop(1, '#1e3a5f');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // 网格纹理
+  ctx.strokeStyle = 'rgba(59, 130, 246, 0.05)';
+  ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += 40) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+  }
+  for (let y = 0; y < H; y += 40) {
+    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+  }
+
+  // 顶部光晕
+  const glow = ctx.createRadialGradient(W/2, 0, 0, W/2, 0, 500);
+  glow.addColorStop(0, 'rgba(59, 130, 246, 0.15)');
+  glow.addColorStop(1, 'rgba(59, 130, 246, 0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(0, 0, W, 300);
+
+  // 顶部标题栏
+  ctx.fillStyle = '#60a5fa';
+  ctx.font = 'bold 28px -apple-system, sans-serif';
+  ctx.fillText('🛡️ TransitTruth', 60, 60);
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '18px -apple-system, sans-serif';
+  ctx.fillText('AI API 安全审计报告', 60, 90);
+
+  // 右上角标签
+  const score = auditResult.overall_score;
+  const level = auditResult.trust_level;
+  let levelColor = '#22c55e';
+  if (level === '中风险' || level === 'medium') levelColor = '#eab308';
+  if (level === '高风险' || level === 'high' || level === 'critical') levelColor = '#ef4444';
+  ctx.fillStyle = levelColor;
+  ctx.font = 'bold 20px -apple-system, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(level, W - 60, 65);
+  ctx.textAlign = 'left';
+
+  // 分割线
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.2)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(60, 110); ctx.lineTo(W - 60, 110); ctx.stroke();
+
+  // 模型信息
+  ctx.fillStyle = '#e2e8f0';
+  ctx.font = 'bold 36px -apple-system, sans-serif';
+  ctx.fillText(auditResult.model, 60, 170);
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '20px -apple-system, sans-serif';
+  ctx.fillText(auditResult.relay_name || auditResult.base_url, 60, 205);
+
+  // 信任分大数字
+  ctx.textAlign = 'center';
+  ctx.fillStyle = levelColor;
+  ctx.font = 'bold 96px -apple-system, sans-serif';
+  ctx.fillText(score, W - 180, 195);
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '20px -apple-system, sans-serif';
+  ctx.fillText('/ 100 信任分', W - 180, 230);
+  ctx.textAlign = 'left';
+
+  // 指标卡片
+  const cards = [
+    { label: 'Token 差异率', value: (auditResult.token_comparison.prompt_inflation_pct?.toFixed(1) || 'N/A') + '%', color: auditResult.token_comparison.suspicious ? '#ef4444' : '#22c55e' },
+    { label: '平均延迟', value: (auditResult.latency.avg_latency_ms?.toFixed(0) || 'N/A') + 'ms', color: '#60a5fa' },
+    { label: '模型家族', value: auditResult.fingerprint.detected_family || '未知', color: '#a855f7' },
+    { label: '指纹置信度', value: (auditResult.fingerprint.confidence * 100).toFixed(0) + '%', color: '#f97316' },
+  ];
+
+  const cardW = 240, cardH = 120, cardY = 290, gap = 24;
+  const totalW = cards.length * cardW + (cards.length - 1) * gap;
+  const startX = (W - totalW) / 2;
+
+  cards.forEach((card, i) => {
+    const x = startX + i * (cardW + gap);
+    // 卡片背景
+    ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(x, cardY, cardW, cardH, 12);
+    ctx.fill(); ctx.stroke();
+    // 标签
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '16px -apple-system, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(card.label, x + cardW/2, cardY + 35);
+    // 值
+    ctx.fillStyle = card.color;
+    ctx.font = 'bold 32px -apple-system, sans-serif';
+    ctx.fillText(card.value, x + cardW/2, cardY + 80);
+    ctx.textAlign = 'left';
+  });
+
+  // 底部行为指纹亮点
+  if (auditResult.fingerprint.behavioral && auditResult.fingerprint.behavioral.signatures) {
+    const sigs = auditResult.fingerprint.behavioral.signatures;
+    const topProbes = Object.entries(sigs)
+      .filter(([_, v]) => v.top3 && v.top3.length > 0)
+      .slice(0, 3);
+    if (topProbes.length > 0) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '16px -apple-system, sans-serif';
+      ctx.fillText('🔍 行为指纹亮点：', 60, 460);
+      topProbes.forEach(([probeId, data], i) => {
+        const top = data.top3[0];
+        const probeNames = {
+          'beh-number-1-10': '选1-10数字',
+          'beh-dice-roll': '掷骰子',
+          'beh-random-animal': '选动物',
+          'beh-random-color': '选颜色',
+          'beh-random-letter': '选字母',
+          'beh-coin-flip': '抛硬币',
+          'beh-random-100': '选1-100数字',
+          'beh-random-day': '选星期',
+        };
+        const name = probeNames[probeId] || probeId;
+        ctx.fillStyle = '#e2e8f0';
+        ctx.font = '15px -apple-system, sans-serif';
+        ctx.fillText(`• ${name}：最常返回「${top[0]}」(${top[1]}次)`, 80, 490 + i * 26);
+      });
+    }
+  }
+
+  // 底部信息栏
+  ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
+  ctx.fillRect(0, H - 70, W, 70);
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.1)';
+  ctx.beginPath(); ctx.moveTo(0, H - 70); ctx.lineTo(W, H - 70); ctx.stroke();
+
+  ctx.fillStyle = '#94a3b8';
+  ctx.font = '16px -apple-system, sans-serif';
+  ctx.fillText(`检测时间：${new Date(auditResult.timestamp).toLocaleString()}`, 60, H - 30);
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#60a5fa';
+  ctx.fillText('github.com/dafahaha/transit-truth', W - 60, H - 30);
+  ctx.textAlign = 'left';
+
+  // 显示分享卡片区域
+  document.getElementById('share-card-section').classList.remove('hidden');
+  document.getElementById('share-card-section').scrollIntoView({ behavior: 'smooth' });
+}
+
+function downloadShareCard() {
+  const canvas = document.getElementById('share-canvas');
+  const link = document.createElement('a');
+  link.download = `transit-truth-audit-${Date.now()}.png`;
+  link.href = canvas.toDataURL('image/png');
+  link.click();
+}
+
+function copyShareCard() {
+  const canvas = document.getElementById('share-canvas');
+  canvas.toBlob((blob) => {
+    navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+      .then(() => alert('分享图片已复制到剪贴板'))
+      .catch(() => alert('复制失败，请使用下载按钮'));
+  });
+}
+
+// 暴露到全局
+window.startAudit = startAudit;
+window.exportJSON = exportJSON;
+window.copyResult = copyResult;
+window.contributeToRanking = contributeToRanking;
+window.generateShareCard = generateShareCard;
+window.downloadShareCard = downloadShareCard;
+window.copyShareCard = copyShareCard;
+
+</script>
+</body>
+</html>

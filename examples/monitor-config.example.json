@@ -1,0 +1,24 @@
+{
+  "name": "My Relay Monitor",
+  "api_key": "sk-your-api-key-here",
+  "base_url": "https://api.example.com/v1",
+  "model": "gpt-4o",
+  "interval_seconds": 3600,
+  "alert_threshold": 60.0,
+  "score_drop_threshold": 10.0,
+  "mode": "quick",
+  "probe_count": 5,
+  "alert_channels": ["console", "telegram"],
+
+  "telegram_bot_token": "123456:ABC-DEF",
+  "telegram_chat_id": "@your_channel",
+
+  "smtp_host": "smtp.gmail.com",
+  "smtp_port": 587,
+  "smtp_user": "your@gmail.com",
+  "smtp_password": "app-password",
+  "email_from": "your@gmail.com",
+  "email_to": ["you@example.com"],
+
+  "webhook_url": "https://hooks.slack.com/services/XXX/YYY/ZZZ"
+}

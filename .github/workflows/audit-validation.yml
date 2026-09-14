@@ -1,0 +1,162 @@
+name: Audit Issue Validation
+
+on:
+  issues:
+    types: [opened, edited]
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    if: contains(github.event.issue.labels.*.name, 'audit-result')
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate audit issue format
+        id: validate
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = context.payload.issue.body || '';
+            const labels = [];
+            const errors = [];
+
+            // Parse frontmatter
+            const fmMatch = body.match(/^---\n([\s\S]*?)\n---/);
+            if (!fmMatch) {
+              errors.push('Missing frontmatter (--- ... ---)');
+            } else {
+              const fm = {};
+              fmMatch[1].split('\n').forEach(line => {
+                const [key, ...valueParts] = line.split(':');
+                if (key && valueParts.length > 0) {
+                  fm[key.trim()] = valueParts.join(':').trim();
+                }
+              });
+
+              // Required fields
+              const required = ['audit_id', 'relay', 'base_url', 'model', 'overall_score', 'trust_level', 'tested_at'];
+              required.forEach(field => {
+                if (!fm[field] || fm[field] === 'N/A') {
+                  errors.push(`Missing required field: ${field}`);
+                }
+              });
+
+              // Extract relay label
+              if (fm.relay && fm.relay !== 'unknown') {
+                labels.push(`relay:${fm.relay}`);
+              }
+
+              // Extract model label
+              if (fm.model && fm.model !== 'unknown') {
+                labels.push(`model:${fm.model}`);
+              }
+
+              // Extract trust level label
+              if (fm.trust_level && ['high', 'medium', 'low', 'critical'].includes(fm.trust_level)) {
+                labels.push(`trust:${fm.trust_level}`);
+              }
+
+              // Check for anomalies
+              const inflation = parseFloat(fm.token_inflation_pct);
+              if (!isNaN(inflation) && (inflation > 200 || inflation < 0)) {
+                errors.push(`Anomalous token inflation: ${inflation}%`);
+                labels.push('needs-review');
+              }
+
+              // Validate score range
+              const score = parseFloat(fm.overall_score);
+              if (!isNaN(score) && (score < 0 || score > 100)) {
+                errors.push(`Invalid score: ${score} (must be 0-100)`);
+              }
+            }
+
+            // Count existing audits for same relay+model to determine verified/preliminary
+            const { data: issues } = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'audit-result',
+              state: 'open',
+              per_page: 100,
+            });
+
+            let sameCount = 0;
+            if (fmMatch) {
+              const fm = {};
+              fmMatch[1].split('\n').forEach(line => {
+                const [key, ...valueParts] = line.split(':');
+                if (key && valueParts.length > 0) {
+                  fm[key.trim()] = valueParts.join(':').trim();
+                }
+              });
+
+              issues.forEach(issue => {
+                if (issue.number === context.payload.issue.number) return;
+                const issueBody = issue.body || '';
+                const issueFmMatch = issueBody.match(/^---\n([\s\S]*?)\n---/);
+                if (issueFmMatch) {
+                  const issueFm = {};
+                  issueFmMatch[1].split('\n').forEach(line => {
+                    const [key, ...valueParts] = line.split(':');
+                    if (key && valueParts.length > 0) {
+                      issueFm[key.trim()] = valueParts.join(':').trim();
+                    }
+                  });
+                  if (issueFm.relay === fm.relay && issueFm.model === fm.model) {
+                    sameCount++;
+                  }
+                }
+              });
+            }
+
+            if (sameCount >= 2) {
+              labels.push('verified');
+            } else {
+              labels.push('preliminary');
+            }
+
+            // Add comment with validation result
+            let commentBody = '## 审计结果校验\n\n';
+            if (errors.length > 0) {
+              commentBody += '### ❌ 发现问题\n\n';
+              errors.forEach(e => commentBody += `- ${e}\n`);
+              commentBody += '\n请修正后重新提交，或添加 `needs-review` 标签等待人工审核。\n';
+            } else {
+              commentBody += '### ✅ 格式校验通过\n\n';
+              commentBody += `- 同中转站+模型审计次数: ${sameCount + 1} (${sameCount >= 2 ? '已验证' : '初步数据'})\n`;
+              commentBody += '- 数据将加入公开排行榜\n';
+            }
+
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.issue.number,
+              body: commentBody,
+            });
+
+            // Add labels
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                labels: labels,
+              });
+            }
+
+            // If errors, add needs-review label
+            if (errors.length > 0 && !labels.includes('needs-review')) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.payload.issue.number,
+                labels: ['needs-review'],
+              });
+            }
+
+            core.setOutput('valid', errors.length === 0);
+            core.setOutput('errors', errors.join('; '));
