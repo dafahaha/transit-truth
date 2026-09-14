@@ -123,13 +123,16 @@ transit-truth sk-your-api-key --base-url https://your-relay.com/v1 --model gpt-4
 ## 功能特性
 
 ### ✅ 已实现
-- [x] **行为指纹验证**（8个行为探针，卡方检验+KS检验+贝叶斯更新）
+- [x] **行为指纹验证**（14个行为探针：8英文+6中文，卡方检验+KS检验+贝叶斯更新）
 - [x] **Tokenizer指纹**（8个tokenizer探针）
 - [x] **能力测试**（10个能力探针，模型等级估算）
 - [x] **Token计费审计**（tiktoken精确计算，差异率检测）
 - [x] **延迟与协议检查**（P50/P95/P99，7项协议合规）
 - [x] **余额查询**（多中转站账户余额聚合，低余额自动告警）
-- [x] **Web UI**（4个Tab，步骤式表单，进度条）
+- [x] **统计不确定性量化**（Wilson置信区间+样本量评估+95%可信区间）
+- [x] **生产级弹性机制**（指数退避重试+限流检测+断路器模式+详细日志）
+- [x] **模型参考数据**（14个模型的公开数据：价格/ELO/智能指数/延迟）
+- [x] **Web UI**（4个Tab，步骤式表单，进度条，苹果风格设计）
 - [x] **纯前端在线Demo**（零安装，浏览器即用）
 - [x] **CLI工具**（一行命令审计+余额查询）
 - [x] **HTML报告生成**（可分享的审计报告）
@@ -137,12 +140,13 @@ transit-truth sk-your-api-key --base-url https://your-relay.com/v1 --model gpt-4
 - [x] **社区排行榜**（全民共建，贡献者信誉系统）
 - [x] **持续监控+告警**（4种告警检测，4种告警通道）
 - [x] **真实基准数据库**（gpt-4o-mini、gpt-4o，各50样本）
-- [x] **46个单元测试**（全部通过）
+- [x] **灵活配置管理**（12个环境变量，支持自定义探针数量/超时/重试等）
+- [x] **46个单元测试+15个集成测试框架**（全部通过）
 - [x] **CI/CD**（GitHub Actions，Python 3.10/3.11/3.12矩阵）
 
 ### 🚧 开发中
 - [ ] 更多模型基准数据（Claude、Gemini、Llama、Qwen）
-- [ ] 多语言探针（中文/日文/韩文行为指纹）
+- [ ] 增加基准样本量到200+（当前50样本，统计误差约±14%）
 - [ ] 浏览器插件（实时审计正在使用的API）
 - [ ] 移动端适配
 
@@ -193,13 +197,17 @@ transit-truth/
 │   │   │   ├── fingerprint.py      # 模型指纹（行为+tokenizer）
 │   │   │   ├── token_check.py      # Token验证
 │   │   │   ├── latency_protocol.py # 延迟/协议检测
-│   │   │   ├── probes.py           # 探针集（26个）
-│   │   │   ├── statistical_analyzer.py  # 统计分析（KS+卡方+贝叶斯）
+│   │   │   ├── probes.py           # 探针集（26个：14行为+8 tokenizer+4能力）
+│   │   │   ├── statistical_analyzer.py  # 统计分析（KS+卡方+贝叶斯+Wilson置信区间）
+│   │   │   ├── retry.py            # 重试和弹性工具（指数退避+限流检测+断路器）
+│   │   │   ├── balance_checker.py  # 余额查询（8端点+5格式+批量+告警）
+│   │   │   ├── model_reference.py  # 模型参考数据（14个模型的公开数据）
 │   │   │   ├── monitor.py          # 持续监控+告警
 │   │   │   └── benchmark_collector.py   # 基准数据收集
 │   │   ├── api/               # REST API
 │   │   ├── utils/             # 工具函数
-│   │   ├── tests/             # 46个单元测试
+│   │   ├── config.py          # 配置管理（12个环境变量）
+│   │   ├── tests/             # 46个单元测试+15个集成测试
 │   │   └── main.py            # FastAPI入口
 │   └── requirements.txt
 ├── frontend/                   # Web前端
@@ -207,18 +215,20 @@ transit-truth/
 │   ├── css/style.css
 │   └── js/app.js
 ├── standalone/                 # 纯前端在线Demo（零安装）
-│   └── index.html              # 40KB单文件，浏览器即用
+│   └── index.html              # 55KB单文件，苹果风格，浏览器即用
 ├── data/
 │   └── baselines/              # 真实基准数据
 │       ├── gpt-4o-mini.json
 │       └── gpt-4o.json
 ├── docs/
-│   ├── experiment_report.md    # 完整实验报告
+│   ├── experiment_report.md    # 完整实验报告（23.7KB）
 │   ├── architecture.md         # 架构文档
 │   ├── methodology.md          # 技术原理文档
-│   ├── banner_1280x640.png    # 宣传图
-│   └── demo.gif                # 功能演示
-├── collect_baseline.py         # 基准数据采集脚本
+│   ├── blog_post.md            # 爆文（《我用27分钟发现了GPT的"行为指纹"》）
+│   ├── banner_1280x640.png    # 宣传图（苹果风格）
+│   ├── demo.gif                # 功能演示GIF
+│   └── demo.mp4                # 功能演示MP4
+├── collect_baseline.py         # 基准数据采集脚本（支持并发）
 ├── analyze_baseline.py         # 基准数据分析脚本
 ├── compare_models.py           # 跨模型对比分析脚本
 ├── Dockerfile
