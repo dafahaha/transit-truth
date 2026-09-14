@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TransitTruth - AI API 中转站验真器</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- tiktoken JS version for token counting -->
+    <script src="https://cdn.jsdelivr.net/npm/@dqbd/tiktoken@1.0.15/tiktoken.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>🔍 TransitTruth</h1>
+            <p class="subtitle">30秒检测你的AI中转站有没有偷工减料</p>
+            <p class="badge">纯前端运行 · API Key 不经过任何服务器</p>
+        </header>
+
+        <main class="main">
+            <!-- Step 1: Input -->
+            <section id="step-input" class="step active">
+                <h2>第一步：输入你的 API Key</h2>
+                <div class="form-group">
+                    <label for="apiKey">API Key</label>
+                    <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off">
+                    <p class="hint">你的 API Key 只在浏览器本地使用，不会发送到任何第三方服务器</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="baseUrl">Base URL（自动检测）</label>
+                    <input type="text" id="baseUrl" placeholder="https://api.openai.com/v1" value="">
+                    <div id="detectedRelay" class="detected-relay" style="display:none;"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="model">模型</label>
+                    <select id="model">
+                        <option value="gpt-4o">gpt-4o</option>
+                        <option value="gpt-4o-mini">gpt-4o-mini</option>
+                        <option value="gpt-4-turbo">gpt-4-turbo</option>
+                        <option value="gpt-3.5-turbo">gpt-3.5-turbo</option>
+                        <option value="claude-3-5-sonnet-20240620">claude-3-5-sonnet</option>
+                        <option value="claude-3-opus-20240229">claude-3-opus</option>
+                        <option value="gemini-1.5-pro">gemini-1.5-pro</option>
+                        <option value="custom">自定义...</option>
+                    </select>
+                    <input type="text" id="customModel" placeholder="输入模型名称" style="display:none; margin-top:8px;">
+                </div>
+
+                <div class="form-group">
+                    <label>检测模式</label>
+                    <div class="mode-selector">
+                        <button class="mode-btn active" data-mode="quick">快速检测（~10秒）</button>
+                        <button class="mode-btn" data-mode="deep">深度检测（~60秒）</button>
+                    </div>
+                </div>
+
+                <button id="startBtn" class="btn-primary" disabled>
+                    🔍 开始检测
+                </button>
+
+                <div class="disclaimer">
+                    <p><strong>免责声明：</strong>本工具仅供用户验证自己使用的服务，检测结果基于有限样本，不构成对任何服务的最终评价。Token 差异率包含 chat template 开销，不等同于造假。</p>
+                </div>
+            </section>
+
+            <!-- Step 2: Running -->
+            <section id="step-running" class="step">
+                <h2>正在检测中...</h2>
+                <div class="progress-container">
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                    <p id="progressText">初始化...</p>
+                </div>
+                <div id="runningDetails" class="running-details">
+                    <div class="detail-item">
+                        <span class="detail-label">延迟检测</span>
+                        <span id="latencyStatus" class="detail-status">等待中...</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">Token 计数验证</span>
+                        <span id="tokenStatus" class="detail-status">等待中...</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">模型指纹检测</span>
+                        <span id="fingerprintStatus" class="detail-status">等待中...</span>
+                    </div>
+                    <div class="detail-item">
+                        <span class="detail-label">能力测试</span>
+                        <span id="capabilityStatus" class="detail-status">等待中...</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Step 3: Results -->
+            <section id="step-result" class="step">
+                <h2>检测结果</h2>
+
+                <div id="overallScore" class="score-card">
+                    <div class="score-circle">
+                        <span id="scoreNumber">--</span>
+                        <span class="score-label">/ 100</span>
+                    </div>
+                    <div class="score-info">
+                        <h3 id="trustLevel">--</h3>
+                        <p id="scoreSummary">--</p>
+                    </div>
+                </div>
+
+                <div class="results-grid">
+                    <div class="result-card">
+                        <h4>⏱️ 延迟检测</h4>
+                        <div id="latencyResult" class="result-content">--</div>
+                    </div>
+                    <div class="result-card">
+                        <h4>🔢 Token 计数</h4>
+                        <div id="tokenResult" class="result-content">--</div>
+                    </div>
+                    <div class="result-card">
+                        <h4>🔍 模型指纹</h4>
+                        <div id="fingerprintResult" class="result-content">--</div>
+                    </div>
+                    <div class="result-card">
+                        <h4>🧠 能力测试</h4>
+                        <div id="capabilityResult" class="result-content">--</div>
+                    </div>
+                </div>
+
+                <div class="actions">
+                    <button id="contributeBtn" class="btn-secondary" style="display:none;">
+                        📊 贡献到公开排行榜
+                    </button>
+                    <button id="restartBtn" class="btn-secondary">
+                        🔄 重新检测
+                    </button>
+                    <button id="exportBtn" class="btn-secondary">
+                        📥 导出报告
+                    </button>
+                </div>
+
+                <div id="historySection" class="history-section">
+                    <h3>📋 本地检测历史</h3>
+                    <div id="historyList" class="history-list"></div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>TransitTruth · 开源项目 · <a href="https://github.com/dafahaha/transit-truth" target="_blank">GitHub</a></p>
+            <p class="footer-note">纯前端运行，你的 API Key 永远不会离开你的浏览器</p>
+        </footer>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

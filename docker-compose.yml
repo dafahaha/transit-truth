@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  transit-truth:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./data:/app/backend/data
+    restart: unless-stopped
+    environment:
+      - REQUEST_TIMEOUT=30
+      - MAX_RETRIES=2
+      - CONCURRENT_REQUESTS=5
