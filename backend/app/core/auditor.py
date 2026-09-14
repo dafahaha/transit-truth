@@ -330,7 +330,7 @@ class AuditEngine:
             )
 
         # Capability test failure
-        cap_checks = [c for c in result.checks if c.check_type == CheckType.CAPABILITY]
+        cap_checks = [c for c in result.checks if c.check_type == CheckType.CAPABILITY_TEST]
         if cap_checks and cap_checks[0].score < 60:
             recs.append(
                 "⚠ 能力测试失败率高 - 模型可能被降级。"
