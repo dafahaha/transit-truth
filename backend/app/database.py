@@ -65,8 +65,56 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_rankings_score ON rankings(avg_trust_score DESC)
     """)
 
+    # Load initial ranking data if table is empty
+    cursor.execute("SELECT COUNT(*) as cnt FROM rankings")
+    if cursor.fetchone()["cnt"] == 0:
+        _load_initial_rankings(cursor)
+
     conn.commit()
     conn.close()
+
+
+def _load_initial_rankings(cursor):
+    """Load initial ranking data from JSON file into database."""
+    import json
+    from pathlib import Path
+
+    json_path = Path(__file__).parent.parent.parent / "data" / "initial_ranking.json"
+    if not json_path.exists():
+        return
+
+    try:
+        with open(json_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+
+        entries = data.get("entries", [])
+        for entry in entries:
+            notes_parts = []
+            if entry.get("contributor"):
+                notes_parts.append(f"Contributor: {entry['contributor']}")
+            if entry.get("status"):
+                notes_parts.append(f"Status: {entry['status']}")
+            if entry.get("notes"):
+                notes_parts.append(entry["notes"])
+
+            cursor.execute("""
+                INSERT OR IGNORE INTO rankings
+                (relay_name, base_url, model, avg_trust_score, audit_count,
+                 last_audited, token_inflation_avg, avg_latency_ms, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                entry.get("relay", ""),
+                entry.get("base_url", ""),
+                entry.get("model", ""),
+                entry.get("overall_score", 0),
+                1,
+                entry.get("timestamp", ""),
+                entry.get("token_inflation_pct", 0),
+                entry.get("avg_latency_ms", 0),
+                " | ".join(notes_parts)[:500],
+            ))
+    except Exception as e:
+        print(f"Warning: Failed to load initial rankings: {e}")
 
 
 def save_audit(result: AuditResult):
