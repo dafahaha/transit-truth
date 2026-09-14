@@ -45,17 +45,17 @@
       "relay": "wolfai",
       "base_url": "https://wolfai.top/v1",
       "model": "gpt-4o-mini",
-      "overall_score": 56,
-      "trust_level": "low",
+      "overall_score": 80.4,
+      "trust_level": "critical",
       "token_inflation_pct": 76.1,
-      "avg_latency_ms": 1856,
+      "avg_latency_ms": 1976,
       "contributor": "@dafahaha",
       "contributor_affiliation": "Guangzhou University",
       "audit_mode": "quick",
       "probe_count": 3,
-      "timestamp": "2026-09-12T08:30:00Z",
-      "status": "preliminary",
-      "notes": "真实审计数据。Token差异率+76.1%（预期46 prompt tokens，报告81），包含chat template开销。模型指纹openai-gpt4家族匹配。需更多探针验证。"
+      "timestamp": "2026-09-15T01:42:00Z",
+      "status": "verified",
+      "notes": "真实审计数据（2026-09-15）。总分80.4/100，CRITICAL。Token差异率+76.1%（预期46 prompt tokens，报告81），包含chat template开销。模型指纹openai-gpt4家族匹配，置信度60%。延迟平均1976ms，错误率0%。协议合规5/7通过。"
     },
     {
       "issue_number": 4,
