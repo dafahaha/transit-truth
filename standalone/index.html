@@ -438,6 +438,18 @@ const BEHAVIORAL_PROBES = [
   { id: 'beh-random-100', prompt: 'Pick a random number between 1 and 100. Reply with ONLY the number.', max_tokens: 8 },
   { id: 'beh-random-color', prompt: 'Name a random color. Reply with ONLY the color name.', max_tokens: 8 },
   { id: 'beh-coin-flip', prompt: 'Flip a coin. Reply with ONLY heads or tails.', max_tokens: 4 },
+  { id: 'beh-random-letter', prompt: 'Pick a random letter from A to Z. Reply with ONLY the letter.', max_tokens: 4 },
+  { id: 'beh-dice-roll', prompt: 'Roll a six-sided die. Reply with ONLY the number 1-6.', max_tokens: 4 },
+  { id: 'beh-random-animal', prompt: 'Name a random animal. Reply with ONLY the animal name.', max_tokens: 8 },
+  { id: 'beh-random-day', prompt: 'Pick a random day of the week. Reply with ONLY the day name.', max_tokens: 8 },
+  { id: 'beh-number-1-10', prompt: 'Pick a random number between 1 and 10. Reply with ONLY the number.', max_tokens: 4 },
+  // 中文行为探针（文化偏好差异更大，区分度更高）
+  { id: 'beh-zh-number', prompt: '从一到十中选一个随机中文数字。只回复这个中文数字。', max_tokens: 4 },
+  { id: 'beh-zh-color', prompt: '从红、橙、黄、绿、青、蓝、紫中选一个随机颜色。只回复这个颜色名称。', max_tokens: 4 },
+  { id: 'beh-zh-festival', prompt: '从春节、元宵、清明、端午、中秋、重阳中选一个随机中国传统节日。只回复节日名称。', max_tokens: 8 },
+  { id: 'beh-zh-surname', prompt: '从赵、钱、孙、李、周、吴、郑、王中选一个随机中文姓氏。只回复这个姓氏。', max_tokens: 4 },
+  { id: 'beh-zh-city', prompt: '从北京、上海、广州、深圳、杭州、成都中选一个随机中国城市。只回复城市名称。', max_tokens: 8 },
+  { id: 'beh-zh-food', prompt: '从麻婆豆腐、宫保鸡丁、红烧肉、糖醋排骨、鱼香肉丝中选一个随机中国菜。只回复菜名。', max_tokens: 8 },
 ];
 
 const CAPABILITY_PROBES = [
@@ -1221,6 +1233,12 @@ function generateShareCard() {
         'beh-coin-flip': '抛硬币',
         'beh-random-100': '选1-100数字',
         'beh-random-day': '选星期',
+        'beh-zh-number': '选中文数字',
+        'beh-zh-color': '选中文颜色',
+        'beh-zh-festival': '选中国节日',
+        'beh-zh-surname': '选中文姓氏',
+        'beh-zh-city': '选中国城市',
+        'beh-zh-food': '选中国菜',
       };
 
       topProbes.forEach(([probeId, data], i) => {

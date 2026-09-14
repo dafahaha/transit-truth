@@ -147,6 +147,49 @@ BEHAVIORAL_PROBES: list[Probe] = [
         description="Random number 1-10 - small range shows clearer biases",
         max_tokens=4,
     ),
+    # ─── Chinese Behavioral Probes (文化偏好差异更大，区分度更高) ───
+    Probe(
+        id="beh-zh-number",
+        category="behavioral",
+        prompt="从一到十中选一个随机中文数字。只回复这个中文数字。",
+        description="Chinese number 1-10 - cultural preference (8/6/9 lucky numbers) creates strong bias",
+        max_tokens=4,
+    ),
+    Probe(
+        id="beh-zh-color",
+        category="behavioral",
+        prompt="从红、橙、黄、绿、青、蓝、紫中选一个随机颜色。只回复这个颜色名称。",
+        description="Chinese color - red/yellow cultural preference differs from English models",
+        max_tokens=4,
+    ),
+    Probe(
+        id="beh-zh-festival",
+        category="behavioral",
+        prompt="从春节、元宵、清明、端午、中秋、重阳中选一个随机中国传统节日。只回复节日名称。",
+        description="Chinese festival - Spring Festival dominance creates extreme bias",
+        max_tokens=8,
+    ),
+    Probe(
+        id="beh-zh-surname",
+        category="behavioral",
+        prompt="从赵、钱、孙、李、周、吴、郑、王中选一个随机中文姓氏。只回复这个姓氏。",
+        description="Chinese surname - Wang/Li dominance in training data creates strong bias",
+        max_tokens=4,
+    ),
+    Probe(
+        id="beh-zh-city",
+        category="behavioral",
+        prompt="从北京、上海、广州、深圳、杭州、成都中选一个随机中国城市。只回复城市名称。",
+        description="Chinese city - Beijing/Shanghai dominance creates strong bias",
+        max_tokens=8,
+    ),
+    Probe(
+        id="beh-zh-food",
+        category="behavioral",
+        prompt="从麻婆豆腐、宫保鸡丁、红烧肉、糖醋排骨、鱼香肉丝中选一个随机中国菜。只回复菜名。",
+        description="Chinese food - cultural familiarity creates distinct distribution patterns",
+        max_tokens=8,
+    ),
 ]
 
 # ─── Capability Probes ───────────────────────────────────────────────
