@@ -457,6 +457,95 @@
     background: var(--bg-secondary);
     border-radius: 8px;
   }
+  /* ─── 贡献模态框 ─── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+  }
+  .modal-overlay.active { display: flex; }
+  .modal {
+    background: var(--card-bg);
+    border-radius: 16px;
+    padding: 24px;
+    max-width: 520px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+  .modal h3 {
+    margin: 0 0 8px 0;
+    font-size: 1.25rem;
+  }
+  .modal-subtitle {
+    color: var(--muted);
+    font-size: 0.875rem;
+    margin-bottom: 20px;
+  }
+  .contribute-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .contribute-option:hover {
+    border-color: var(--accent);
+    background: rgba(59,130,246,0.04);
+  }
+  .contribute-option .icon {
+    font-size: 1.5rem;
+    flex-shrink: 0;
+  }
+  .contribute-option .content {
+    flex: 1;
+  }
+  .contribute-option .title {
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin-bottom: 2px;
+  }
+  .contribute-option .desc {
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .contribute-option .badge-recommend {
+    background: rgba(34,197,94,0.15);
+    color: #16a34a;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    margin-left: 8px;
+  }
+  .modal-close {
+    float: right;
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--muted);
+    padding: 0;
+    line-height: 1;
+  }
+  .modal-close:hover { color: var(--text); }
+  .contribute-success {
+    text-align: center;
+    padding: 20px 0;
+  }
+  .contribute-success .check-icon {
+    font-size: 3rem;
+    margin-bottom: 12px;
+  }
 </style>
 </head>
 <body>
@@ -601,6 +690,57 @@
     <div class="ranking-note">
       💡 <strong>如何贡献：</strong>完成审计后点击"🏆 贡献到排行榜"按钮，或在 GitHub 提交 Issue 分享你的审计结果。
       所有数据均为社区贡献，仅供参考，不构成投资或购买建议。
+    </div>
+  </div>
+
+  <!-- 贡献模态框 -->
+  <div class="modal-overlay" id="contribute-modal">
+    <div class="modal">
+      <button class="modal-close" onclick="closeContributeModal()">&times;</button>
+      <div id="contribute-modal-content">
+        <h3>🏆 贡献审计结果</h3>
+        <p class="modal-subtitle">选择一种方式提交你的审计结果，帮助更多用户避坑。所有贡献都会公开署名。</p>
+
+        <div class="contribute-option" onclick="contributeViaGitHub()">
+          <div class="icon">🐙</div>
+          <div class="content">
+            <div class="title">GitHub Issue <span class="badge-recommend">推荐</span></div>
+            <div class="desc">有GitHub账号首选，自动填充模板，一键提交，即时可见</div>
+          </div>
+        </div>
+
+        <div class="contribute-option" onclick="contributeViaCopy()">
+          <div class="icon">📋</div>
+          <div class="content">
+            <div class="title">复制 JSON 结果</div>
+            <div class="desc">无GitHub账号？复制完整审计数据，可通过邮件/社区/任何方式提交</div>
+          </div>
+        </div>
+
+        <div class="contribute-option" onclick="contributeViaEmail()">
+          <div class="icon">📧</div>
+          <div class="content">
+            <div class="title">邮件提交</div>
+            <div class="desc">一键打开邮件客户端，自动填充审计结果，发送到项目维护者邮箱</div>
+          </div>
+        </div>
+
+        <div class="contribute-option" onclick="contributeViaCommunity()">
+          <div class="icon">💬</div>
+          <div class="content">
+            <div class="title">社区发帖</div>
+            <div class="desc">在V2EX/知乎/掘金等社区分享你的审计发现，@项目维护者即可收录</div>
+          </div>
+        </div>
+
+        <div class="contribute-option" onclick="contributeViaAPI()">
+          <div class="icon">🔌</div>
+          <div class="content">
+            <div class="title">API 提交（高级）</div>
+            <div class="desc">如果你部署了后端服务，可直接调用 POST /api/contribute/audit 端点提交</div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -1396,7 +1536,22 @@ function copyResult() {
 }
 
 function contributeToRanking() {
-  // 生成 GitHub Issue 链接，用户点击后自动填充模板
+  // 打开贡献模态框，让用户选择提交方式
+  document.getElementById('contribute-modal').classList.add('active');
+}
+
+function closeContributeModal() {
+  document.getElementById('contribute-modal').classList.remove('active');
+}
+
+// 点击模态框背景关闭
+document.addEventListener('click', function(e) {
+  if (e.target.id === 'contribute-modal') {
+    closeContributeModal();
+  }
+});
+
+function generateGitHubIssueUrl() {
   const title = encodeURIComponent(`[audit-result] ${auditResult.relay_name} / ${auditResult.model} - ${auditResult.overall_score}分`);
   const body = encodeURIComponent(`## 审计结果\n\n` +
     `### 基本信息\n` +
@@ -1426,8 +1581,73 @@ function contributeToRanking() {
     `### 原始 JSON\n` +
     `\`\`\`json\n${JSON.stringify(auditResult, null, 2).substring(0, 3000)}\n\`\`\`\n\n` +
     `---\n*由 TransitTruth 纯前端版本自动生成*`);
+  return `https://github.com/dafahaha/transit-truth/issues/new?title=${title}&body=${body}&labels=audit-result`;
+}
 
-  window.open(`https://github.com/dafahaha/transit-truth/issues/new?title=${title}&body=${body}&labels=audit-result`, '_blank');
+function contributeViaGitHub() {
+  closeContributeModal();
+  window.open(generateGitHubIssueUrl(), '_blank');
+}
+
+function contributeViaCopy() {
+  const json = JSON.stringify(auditResult, null, 2);
+  navigator.clipboard.writeText(json).then(() => {
+    showContributeSuccess('✅ 已复制到剪贴板', '审计结果JSON已复制，你可以通过邮件、社区、即时通讯等任何方式发送给项目维护者。');
+  }).catch(() => {
+    // 降级方案：创建临时textarea
+    const textarea = document.createElement('textarea');
+    textarea.value = json;
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+    showContributeSuccess('✅ 已复制到剪贴板', '审计结果JSON已复制，你可以通过邮件、社区、即时通讯等任何方式发送给项目维护者。');
+  });
+}
+
+function contributeViaEmail() {
+  closeContributeModal();
+  const subject = encodeURIComponent(`[TransitTruth审计结果] ${auditResult.relay_name} / ${auditResult.model} - ${auditResult.overall_score}分`);
+  const body = encodeURIComponent(`你好，\n\n我使用TransitTruth审计了一个AI API中转站，结果如下：\n\n` +
+    `中转站: ${auditResult.relay_name}\n` +
+    `Base URL: ${auditResult.base_url}\n` +
+    `模型: ${auditResult.model}\n` +
+    `信任分: ${auditResult.overall_score}/100 (${auditResult.trust_level})\n` +
+    `Token差异率: ${auditResult.token_comparison.prompt_inflation_pct?.toFixed(1) || 'N/A'}%\n\n` +
+    `完整JSON数据：\n${JSON.stringify(auditResult, null, 2)}\n\n` +
+    `--\n由TransitTruth自动生成`);
+  window.location.href = `mailto:transit-truth@example.com?subject=${subject}&body=${body}`;
+}
+
+function contributeViaCommunity() {
+  showContributeSuccess('💬 社区发帖指南', '在V2EX/知乎/掘金/小红书等平台发布你的审计发现，标题包含"TransitTruth"或"AI中转站审计"，并@项目维护者（GitHub: @dafahaha）。我们会定期搜索社区内容，将验证通过的结果收录到排行榜。');
+}
+
+function contributeViaAPI() {
+  const apiDoc = `POST /api/contribute/audit\n\n` +
+    `Content-Type: application/json\n\n` +
+    `{\n` +
+    `  "relay_name": "${auditResult.relay_name}",\n` +
+    `  "base_url": "${auditResult.base_url}",\n` +
+    `  "model": "${auditResult.model}",\n` +
+    `  "overall_score": ${auditResult.overall_score},\n` +
+    `  "trust_level": "${auditResult.trust_level}",\n` +
+    `  "contributor_id": "your-email-or-id",\n` +
+    `  "audit_result": ${JSON.stringify(auditResult).substring(0, 500)}...\n` +
+    `}`;
+  showContributeSuccess('🔌 API 提交文档', '如果你部署了TransitTruth后端服务，可直接调用贡献API端点：\n\n' + apiDoc + '\n\n完整API文档请参考：https://github.com/dafahaha/transit-truth');
+}
+
+function showContributeSuccess(title, message) {
+  const content = document.getElementById('contribute-modal-content');
+  content.innerHTML = `
+    <div class="contribute-success">
+      <div class="check-icon">${title.split(' ')[0]}</div>
+      <h3>${title.substring(title.indexOf(' ') + 1)}</h3>
+      <p style="color:var(--muted);font-size:0.875rem;white-space:pre-wrap;text-align:left;margin:16px 0;">${message}</p>
+      <button class="btn" onclick="closeContributeModal()">完成</button>
+    </div>
+  `;
 }
 
 // ─── 分享卡片 ─────────────────────────────────────────────
@@ -1620,6 +1840,13 @@ window.startAudit = startAudit;
 window.exportJSON = exportJSON;
 window.copyResult = copyResult;
 window.contributeToRanking = contributeToRanking;
+window.closeContributeModal = closeContributeModal;
+window.contributeViaGitHub = contributeViaGitHub;
+window.contributeViaCopy = contributeViaCopy;
+window.contributeViaEmail = contributeViaEmail;
+window.contributeViaCommunity = contributeViaCommunity;
+window.contributeViaAPI = contributeViaAPI;
+window.showContributeSuccess = showContributeSuccess;
 window.generateShareCard = generateShareCard;
 window.downloadShareCard = downloadShareCard;
 window.copyShareCard = copyShareCard;
