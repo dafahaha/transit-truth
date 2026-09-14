@@ -55,4 +55,4 @@ if FRONTEND_DIR.exists():
 @app.get("/api/health")
 async def health():
     """Health check endpoint."""
-    return {"status": "ok", "service": "TransitTruth", "version": "0.1.0"}
+    return {"status": "ok", "service": "TransitTruth", "version": "0.2.0"}
