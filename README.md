@@ -1,4 +1,4 @@
-# TransitTruth 🛡️
+﻿# TransitTruth 🛡️
 
 ![TransitTruth Banner](docs/banner_1280x640.png)
 
@@ -268,7 +268,7 @@ MIT License
 ## 联系方式
 
 - GitHub Issues：https://github.com/dafahaha/transit-truth/issues
-- 邮箱：ldz@e.gzhu.edu.cn
+- 邮箱：156556011+dafahaha@users.noreply.github.com
 
 ---
 

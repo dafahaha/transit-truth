@@ -1,4 +1,4 @@
-[build-system]
+﻿[build-system]
 requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
@@ -10,7 +10,7 @@ readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
 authors = [
-    {name = "Daizhi Liao", email = "ldz@e.gzhu.edu.cn"},
+    {name = "Daizhi Liao", email = "156556011+dafahaha@users.noreply.github.com"},
 ]
 keywords = ["ai", "api", "llm", "audit", "security", "transit", "proxy"]
 classifiers = [

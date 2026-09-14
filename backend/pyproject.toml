@@ -1,4 +1,4 @@
-[build-system]
+﻿[build-system]
 requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
@@ -9,7 +9,7 @@ description = "AI API 中转站验真器 - 检测AI API中转站是否存在模�
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "Daizhi Liao", email = "ldz@e.gzhu.edu.cn"}
+    {name = "Daizhi Liao", email = "156556011+dafahaha@users.noreply.github.com"}
 ]
 keywords = ["ai", "api", "llm", "audit", "security", "openai", "transit"]
 classifiers = [

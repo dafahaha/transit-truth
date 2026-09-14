@@ -1,4 +1,4 @@
-# TransitTruth 多平台发布指南
+﻿# TransitTruth 多平台发布指南
 
 > 本文档包含各平台的发布文案、注意事项和最佳实践。
 
@@ -309,7 +309,7 @@ GitHub开源：https://github.com/dafahaha/transit-truth
 ## 📞 联系方式
 
 - GitHub Issues：https://github.com/dafahaha/transit-truth/issues
-- 邮箱：ldz@e.gzhu.edu.cn
+- 邮箱：156556011+dafahaha@users.noreply.github.com
 
 ---
 
