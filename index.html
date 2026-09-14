@@ -8,6 +8,8 @@
   :root {
     --bg: #f5f5f7;
     --card: #ffffff;
+    --card-bg: rgba(255, 255, 255, 0.72);
+    --bg-secondary: #ffffff;
     --border: #d2d2d7;
     --text: #1d1d1f;
     --muted: #86868b;
@@ -457,94 +459,155 @@
     background: var(--bg-secondary);
     border-radius: 8px;
   }
-  /* ─── 贡献模态框 ─── */
+  /* ─── 贡献模态框（苹果毛玻璃风格）─── */
   .modal-overlay {
     display: none;
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     z-index: 1000;
     justify-content: center;
     align-items: center;
+    animation: fadeIn 0.2s ease-out;
+  }
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px) scale(0.98); }
+    to { opacity: 1; transform: translateY(0) scale(1); }
   }
   .modal-overlay.active { display: flex; }
   .modal {
-    background: var(--card-bg);
-    border-radius: 16px;
-    padding: 24px;
+    background: rgba(255, 255, 255, 0.72);
+    backdrop-filter: blur(20px) saturate(180%);
+    -webkit-backdrop-filter: blur(20px) saturate(180%);
+    border-radius: 20px;
+    padding: 28px;
     max-width: 520px;
     width: 90%;
     max-height: 85vh;
     overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 0.5px rgba(255, 255, 255, 0.5) inset;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .modal h3 {
-    margin: 0 0 8px 0;
-    font-size: 1.25rem;
+    margin: 0 0 6px 0;
+    font-size: 1.3rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
   }
   .modal-subtitle {
     color: var(--muted);
     font-size: 0.875rem;
     margin-bottom: 20px;
+    line-height: 1.5;
   }
   .contribute-option {
     display: flex;
     align-items: flex-start;
-    gap: 12px;
-    padding: 14px;
-    border: 1px solid var(--border);
-    border-radius: 12px;
+    gap: 14px;
+    padding: 16px;
+    background: rgba(255, 255, 255, 0.6);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 14px;
     margin-bottom: 10px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   }
   .contribute-option:hover {
-    border-color: var(--accent);
-    background: rgba(59,130,246,0.04);
+    border-color: rgba(0, 113, 227, 0.3);
+    background: rgba(0, 113, 227, 0.06);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 113, 227, 0.1);
+  }
+  .contribute-option:active {
+    transform: translateY(0);
   }
   .contribute-option .icon {
-    font-size: 1.5rem;
+    font-size: 1.6rem;
     flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.04);
+    border-radius: 10px;
   }
   .contribute-option .content {
     flex: 1;
+    min-width: 0;
   }
   .contribute-option .title {
     font-weight: 600;
     font-size: 0.95rem;
-    margin-bottom: 2px;
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
   }
   .contribute-option .desc {
     font-size: 0.8rem;
     color: var(--muted);
+    line-height: 1.4;
   }
   .contribute-option .badge-recommend {
-    background: rgba(34,197,94,0.15);
-    color: #16a34a;
+    background: rgba(52, 199, 89, 0.15);
+    color: #248a3d;
     padding: 2px 8px;
-    border-radius: 4px;
-    font-size: 0.7rem;
+    border-radius: 6px;
+    font-size: 0.65rem;
     font-weight: 600;
     margin-left: 8px;
+    letter-spacing: 0.02em;
   }
   .modal-close {
     float: right;
-    background: none;
+    background: rgba(0, 0, 0, 0.05);
     border: none;
-    font-size: 1.5rem;
+    font-size: 1.2rem;
     cursor: pointer;
     color: var(--muted);
     padding: 0;
     line-height: 1;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+    margin-bottom: 8px;
   }
-  .modal-close:hover { color: var(--text); }
+  .modal-close:hover {
+    background: rgba(0, 0, 0, 0.1);
+    color: var(--text);
+  }
   .contribute-success {
     text-align: center;
-    padding: 20px 0;
+    padding: 24px 0;
   }
   .contribute-success .check-icon {
-    font-size: 3rem;
-    margin-bottom: 12px;
+    font-size: 3.5rem;
+    margin-bottom: 16px;
+    display: inline-block;
+    animation: bounceIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  @keyframes bounceIn {
+    0% { transform: scale(0); }
+    50% { transform: scale(1.2); }
+    100% { transform: scale(1); }
+  }
+  .contribute-success h3 {
+    margin-bottom: 8px;
+  }
+  .contribute-success p {
+    color: var(--muted);
+    font-size: 0.9rem;
+    line-height: 1.5;
   }
 </style>
 </head>
