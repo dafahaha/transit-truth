@@ -31,3 +31,22 @@ Thumbs.db
 # Env
 .env
 .env.local
+
+# Sensitive / private files (keep local only)
+backend/generate_wolfai_report.py
+docs/wolfai_audit_report.html
+
+# Temporary test scripts
+backend/test_new_features.py
+backend/test_real_baselines.py
+backend/batch_audit.py
+
+# Demo intermediate frames (already have demo.gif / demo.mp4)
+docs/demo_*.png
+
+# Banner source files (already have banner_1280x640.png)
+docs/banner.html
+docs/banner_apple.html
+
+# Old / duplicate frontend (use frontend/ or standalone/)
+web/
