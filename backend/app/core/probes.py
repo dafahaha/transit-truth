@@ -19,7 +19,9 @@ class Probe:
     description: str
     expected_tokens_range: tuple[int, int] | None = None  # for tokenizer probes
     max_tokens: int = 64
-    temperature: float = 1.0
+    temperature: float = 0.0  # Default to 0 for stable, reproducible outputs.
+    # Behavioral fingerprints require temperature=0 to ensure consistent output distributions.
+    # Academic papers (e.g. "One Token Is Enough") use temperature=0 for model fingerprinting.
 
 
 # ─── Tokenizer Probes ───────────────────────────────────────────────

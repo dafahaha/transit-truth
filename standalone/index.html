@@ -827,7 +827,8 @@ async function runFingerprint(apiKey, baseUrl, model, probeCount) {
           model,
           messages: [{ role: 'user', content: probe.prompt }],
           max_tokens: probe.max_tokens || 64,
-          temperature: probe.id.startsWith('beh') ? 1.0 : 0
+          temperature: 0  // All probes use temperature=0 for stable, reproducible outputs.
+          // Behavioral fingerprints require temperature=0 to ensure consistent output distributions.
         })
       });
 

@@ -41,9 +41,9 @@ class TestProbeDefinitions:
             lo, hi = probe.expected_tokens_range
             assert lo > 0 and hi > lo
 
-    def test_behavioral_probes_high_temperature(self):
+    def test_behavioral_probes_low_temperature(self):
         for probe in BEHAVIORAL_PROBES:
-            assert probe.temperature >= 0.5, "Behavioral probes should use high temperature for randomness"
+            assert probe.temperature <= 0.1, "Behavioral probes should use low temperature (0) for stable, reproducible fingerprints. Academic papers (e.g. 'One Token Is Enough') use temperature=0 for model fingerprinting."
 
     def test_capability_probes_low_temperature(self):
         for probe in CAPABILITY_PROBES:
