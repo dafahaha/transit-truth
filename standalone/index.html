@@ -237,6 +237,65 @@
   .check-name { font-weight: 600; font-size: 0.9rem; }
   .check-details { font-size: 0.8rem; color: var(--muted); margin-top: 2px; }
   .check-score { margin-left: auto; font-weight: 700; font-size: 0.9rem; }
+
+  /* 模型参考数据样式 */
+  .model-reference {
+    background: #f5f5f7;
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin: 20px 0;
+  }
+  .ref-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .ref-title { font-weight: 600; font-size: 1rem; color: var(--text); }
+  .ref-source { font-size: 0.75rem; color: var(--muted); }
+  .ref-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 12px;
+  }
+  .ref-item {
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 12px 14px;
+  }
+  .ref-label { font-size: 0.75rem; color: var(--muted); margin-bottom: 4px; }
+  .ref-value { font-size: 0.95rem; font-weight: 600; color: var(--text); }
+  .ref-unit { font-size: 0.7rem; color: var(--muted); font-weight: 400; margin-left: 2px; }
+  .tier-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+  .tier-旗舰 { background: rgba(0, 113, 227, 0.1); color: var(--accent); }
+  .tier-中端 { background: rgba(255, 149, 0, 0.1); color: var(--orange); }
+  .tier-轻量 { background: rgba(52, 199, 89, 0.1); color: var(--green); }
+  .ref-compare {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e8e8ed;
+  }
+  .ref-compare-title { font-size: 0.85rem; font-weight: 600; margin-bottom: 8px; }
+  .ref-compare-row {
+    display: flex;
+    gap: 16px;
+    font-size: 0.85rem;
+    color: var(--muted);
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .ref-compare-result { font-weight: 600; }
+  .ref-compare-result.good { color: var(--green); }
+  .ref-compare-result.bad { color: var(--red); }
+
   .detail-section { margin-top: 20px; }
   .detail-section h3 {
     font-size: 1rem;
@@ -357,6 +416,8 @@
         <div class="label" id="score-label">信任分</div>
       </div>
     </div>
+
+    <div class="model-reference hidden" id="model-reference-container"></div>
 
     <div id="checks-container"></div>
 
@@ -968,6 +1029,74 @@ function showResult() {
   document.getElementById('score-value').textContent = auditResult.overall_score;
   document.getElementById('score-label').textContent =
     { high: '高信任', medium: '中等信任', low: '低信任', critical: '风险' }[auditResult.trust_level];
+
+  // 模型参考数据（来自公开权威数据源）
+  const modelRef = getModelReference(auditResult.model);
+  const refContainer = document.getElementById('model-reference-container');
+  if (modelRef) {
+    refContainer.classList.remove('hidden');
+    refContainer.innerHTML = `
+      <div class="ref-header">
+        <span class="ref-title">📊 模型参考数据</span>
+        <span class="ref-source">来源：Artificial Analysis / LMArena / 官方文档</span>
+      </div>
+      <div class="ref-grid">
+        <div class="ref-item">
+          <div class="ref-label">官方名称</div>
+          <div class="ref-value">${modelRef.name}</div>
+        </div>
+        <div class="ref-item">
+          <div class="ref-label">提供商</div>
+          <div class="ref-value">${modelRef.provider}</div>
+        </div>
+        <div class="ref-item">
+          <div class="ref-label">等级</div>
+          <div class="ref-value"><span class="tier-badge tier-${modelRef.tier}">${modelRef.tier}</span></div>
+        </div>
+        <div class="ref-item">
+          <div class="ref-label">智能指数</div>
+          <div class="ref-value">${modelRef.intelligence}<span class="ref-unit">/100</span></div>
+        </div>
+        <div class="ref-item">
+          <div class="ref-label">LMArena ELO</div>
+          <div class="ref-value">${modelRef.elo}</div>
+        </div>
+        <div class="ref-item">
+          <div class="ref-label">官方价格</div>
+          <div class="ref-value">$${modelRef.inputPrice} / $${modelRef.outputPrice}<span class="ref-unit">/1M tok</span></div>
+        </div>
+        <div class="ref-item">
+          <div class="ref-label">官方 TTFT</div>
+          <div class="ref-value">${modelRef.ttft}s</div>
+        </div>
+        <div class="ref-item">
+          <div class="ref-label">输出速度</div>
+          <div class="ref-value">${modelRef.speed}<span class="ref-unit"> tok/s</span></div>
+        </div>
+        <div class="ref-item">
+          <div class="ref-label">上下文窗口</div>
+          <div class="ref-value">${modelRef.context}</div>
+        </div>
+        <div class="ref-item">
+          <div class="ref-label">发布时间</div>
+          <div class="ref-value">${modelRef.release}</div>
+        </div>
+      </div>
+      ${auditResult.latency && auditResult.latency.avg_latency_ms ? `
+      <div class="ref-compare">
+        <div class="ref-compare-title">⚡ 延迟对比</div>
+        <div class="ref-compare-row">
+          <span>官方 TTFT：${modelRef.ttft}s</span>
+          <span>实测延迟：${(auditResult.latency.avg_latency_ms / 1000).toFixed(2)}s</span>
+          <span class="ref-compare-result ${auditResult.latency.avg_latency_ms > modelRef.ttft * 1000 * 3 ? 'bad' : 'good'}">
+            ${auditResult.latency.avg_latency_ms > modelRef.ttft * 1000 * 3 ? '⚠ 偏慢' : '✓ 正常'}
+          </span>
+        </div>
+      </div>` : ''}
+    `;
+  } else {
+    refContainer.classList.add('hidden');
+  }
 
   // 检查项
   const checksContainer = document.getElementById('checks-container');
