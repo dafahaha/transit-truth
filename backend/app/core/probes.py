@@ -22,6 +22,9 @@ class Probe:
     temperature: float = 0.0  # Default to 0 for stable, reproducible outputs.
     # Behavioral fingerprints require temperature=0 to ensure consistent output distributions.
     # Academic papers (e.g. "One Token Is Enough") use temperature=0 for model fingerprinting.
+    system_prompt: str = "You are a helpful, precise assistant. Follow instructions exactly and output only what is requested, with no extra explanation."
+    # Explicit system prompt ensures behavioral fingerprint stability and reproducibility.
+    # Different system prompts can change output distributions, so we fix it across all probes.
 
 
 # ─── Tokenizer Probes ───────────────────────────────────────────────

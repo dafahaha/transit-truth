@@ -96,7 +96,10 @@ class ModelFingerprinter:
             async with semaphore:
                 result = await self.client.chat_completion(
                     model=self.model,
-                    messages=[{"role": "user", "content": probe.prompt}],
+                    messages=[
+                        {"role": "system", "content": probe.system_prompt},
+                        {"role": "user", "content": probe.prompt},
+                    ],
                     temperature=0,
                     max_tokens=128,
                 )
@@ -133,7 +136,10 @@ class ModelFingerprinter:
                 async with semaphore:
                     result = await self.client.chat_completion(
                         model=self.model,
-                        messages=[{"role": "user", "content": probe.prompt}],
+                        messages=[
+                        {"role": "system", "content": probe.system_prompt},
+                        {"role": "user", "content": probe.prompt},
+                    ],
                         temperature=probe.temperature,
                         max_tokens=probe.max_tokens,
                     )
@@ -158,7 +164,10 @@ class ModelFingerprinter:
             async with semaphore:
                 result = await self.client.chat_completion(
                     model=self.model,
-                    messages=[{"role": "user", "content": probe.prompt}],
+                    messages=[
+                        {"role": "system", "content": probe.system_prompt},
+                        {"role": "user", "content": probe.prompt},
+                    ],
                     temperature=probe.temperature,
                     max_tokens=probe.max_tokens,
                 )
