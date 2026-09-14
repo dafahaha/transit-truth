@@ -284,38 +284,90 @@ class AuditEngine:
         return "\n".join(parts)
 
     def _generate_recommendations(self, result: AuditResult) -> list[str]:
-        """Generate recommendations based on audit findings."""
+        """Generate actionable recommendations based on audit findings."""
         recs = []
 
+        # Token inflation - specific actionable steps
         if result.token_comparison and result.token_comparison.suspicious:
+            inflation = result.token_comparison.prompt_inflation_pct or 0
             recs.append(
-                "Token count inflation detected - consider switching to a different "
-                "relay or using official API directly for cost-sensitive workloads."
+                f"⚠ Token 差异率 {inflation:+.1f}% - 中转站可能多计 token。"
+                f"建议：1) 用官方 API 跑同样请求对比 token 数；"
+                f"2) 计算实际成本差异（每 1M tokens 多花 ${inflation/100*2.5:.2f}）；"
+                f"3) 如确认多计，联系中转站客服或更换服务商。"
             )
 
+        # Model fingerprint mismatch - specific verification steps
         if result.fingerprint and result.fingerprint.suspicious:
+            confidence = result.fingerprint.confidence or 0
+            detected = result.fingerprint.detected_family or "未知"
             recs.append(
-                "Model identity mismatch - the endpoint may be serving a lower-tier "
-                "model. Verify with additional probes or contact the relay operator."
+                f"⚠ 模型身份不匹配（置信度 {confidence*100:.0f}%）- 检测到家族：{detected}。"
+                f"建议：1) 切换到深度模式（10个探针）重新审计；"
+                f"2) 用行为探针手动验证（如'选1-10数字'，gpt-4o-mini 100% 返回 7）；"
+                f"3) 询问中转站客服确认实际使用的模型；"
+                f"4) 如确认降级，保留证据并考虑投诉或更换。"
             )
 
+        # High latency - specific thresholds
         latency_checks = [c for c in result.checks if c.check_type == CheckType.RESPONSE_LATENCY]
         if latency_checks and not latency_checks[0].passed:
             recs.append(
-                "High latency or error rate - this relay may not be suitable for "
-                "production workloads requiring low latency."
+                "⚠ 延迟过高或错误率高 - 不适合生产环境。"
+                "建议：1) 检查网络连接（换节点/代理）；"
+                "2) 对比官方 API 延迟（gpt-4o 官方 TTFT ~0.65s）；"
+                "3) 如中转站持续高延迟，考虑更换或使用官方 API。"
             )
 
+        # Protocol non-compliance
         proto_checks = [c for c in result.checks if c.check_type == CheckType.PROTOCOL_COMPLIANCE]
         if proto_checks and proto_checks[0].score < 70:
             recs.append(
-                "API protocol non-compliance - some response fields may be missing "
-                "or malformed, which could break client libraries."
+                "⚠ API 协议不兼容 - 可能缺少 usage 字段或 model 回显。"
+                "建议：1) 检查客户端库是否依赖这些字段；"
+                "2) 如字段缺失，可能导致 token 计数、模型识别等功能异常；"
+                "3) 联系中转站修复或更换兼容的服务商。"
             )
 
+        # Capability test failure
+        cap_checks = [c for c in result.checks if c.check_type == CheckType.CAPABILITY]
+        if cap_checks and cap_checks[0].score < 60:
+            recs.append(
+                "⚠ 能力测试失败率高 - 模型可能被降级。"
+                "建议：1) 用官方 API 跑同样的能力测试对比；"
+                "2) 简单数学题（17*23=391）和逻辑题应该所有模型都能答对；"
+                "3) 如频繁答错，模型很可能被降级到更低档次。"
+            )
+
+        # Positive recommendations
         if result.trust_level == "high":
-            recs.append("This relay appears trustworthy based on our checks. Continue monitoring periodically.")
+            recs.append(
+                "✓ 该中转站通过所有检查，看起来可信。"
+                "建议：1) 定期（每周）重新审计监控变化；"
+                "2) 关注余额变化，防止突然涨价；"
+                "3) 可考虑贡献审计结果到社区排行榜帮助他人。"
+            )
+        elif result.trust_level == "medium":
+            recs.append(
+                "⚡ 该中转站有一些小问题，但基本可用。"
+                "建议：1) 不用于关键生产环境；"
+                "2) 定期监控问题是否恶化；"
+                "3) 准备备选中转站以防问题加重。"
+            )
+        elif result.trust_level == "low":
+            recs.append(
+                "⚠ 该中转站问题较多，谨慎使用。"
+                "建议：1) 仅用于非关键测试；"
+                "2) 不要充值过多余额；"
+                "3) 尽快寻找替代方案。"
+            )
         elif result.trust_level == "critical":
-            recs.append("CRITICAL: This relay has serious issues. We recommend discontinuing use immediately.")
+            recs.append(
+                "🚨 严重警告：该中转站有严重问题，建议立即停止使用！"
+                "建议：1) 不要继续充值；"
+                "2) 如有余额，尽快用完或申请退款；"
+                "3) 切换到官方 API 或可信中转站；"
+                "4) 保留审计证据，必要时在社区曝光。"
+            )
 
         return recs
