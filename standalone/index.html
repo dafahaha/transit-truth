@@ -3,121 +3,141 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>TransitTruth - AI API 中转站验真器</title>
+<title>TransitTruth - AI API 安全审计平台</title>
 <style>
   :root {
-    --bg: #0f172a;
-    --card: #1e293b;
-    --border: #334155;
-    --text: #e2e8f0;
-    --muted: #94a3b8;
-    --accent: #3b82f6;
-    --accent-hover: #2563eb;
-    --green: #22c55e;
-    --yellow: #eab308;
-    --orange: #f97316;
-    --red: #ef4444;
-    --purple: #a855f7;
+    --bg: #f5f5f7;
+    --card: #ffffff;
+    --border: #d2d2d7;
+    --text: #1d1d1f;
+    --muted: #86868b;
+    --accent: #0071e3;
+    --accent-hover: #0077ed;
+    --green: #34c759;
+    --yellow: #ffcc00;
+    --orange: #ff9500;
+    --red: #ff3b30;
+    --purple: #af52de;
+    --shadow: 0 4px 24px rgba(0, 0, 0, 0.06);
+    --shadow-hover: 0 8px 32px rgba(0, 0, 0, 0.1);
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
     line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
-  .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+  .container { max-width: 860px; margin: 0 auto; padding: 24px; }
   header {
     text-align: center;
-    padding: 40px 20px 30px;
-    background: linear-gradient(135deg, #1e3a5f 0%, #0f172a 100%);
+    padding: 60px 20px 48px;
+    background: #ffffff;
     border-bottom: 1px solid var(--border);
   }
   header h1 {
-    font-size: 2.2rem;
-    background: linear-gradient(90deg, #60a5fa, #a78bfa);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    margin-bottom: 8px;
+    font-size: 2.8rem;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -1px;
+    margin-bottom: 12px;
   }
-  header p { color: var(--muted); font-size: 1rem; }
+  header h1 .accent { color: var(--accent); }
+  header p { color: var(--muted); font-size: 1.1rem; font-weight: 400; }
   .badge {
     display: inline-block;
-    padding: 2px 10px;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    margin-top: 10px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-top: 16px;
+    background: rgba(0, 113, 227, 0.1);
+    color: var(--accent);
   }
-  .badge-green { background: rgba(34,197,94,0.15); color: var(--green); }
+  .badge-green { background: rgba(52, 199, 89, 0.12); color: var(--green); }
   .card {
     background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 24px;
+    border: none;
+    border-radius: 20px;
+    padding: 32px;
     margin: 20px 0;
+    box-shadow: var(--shadow);
+    transition: box-shadow 0.3s ease;
   }
+  .card:hover { box-shadow: var(--shadow-hover); }
   .card h2 {
-    font-size: 1.2rem;
-    margin-bottom: 16px;
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 20px;
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
+    letter-spacing: -0.3px;
   }
-  .form-group { margin-bottom: 16px; }
+  .form-group { margin-bottom: 20px; }
   .form-group label {
     display: block;
-    font-size: 0.875rem;
-    font-weight: 600;
-    margin-bottom: 6px;
-    color: var(--muted);
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: var(--text);
   }
   .form-group label .required { color: var(--red); }
   input, select {
     width: 100%;
-    padding: 10px 14px;
-    background: var(--bg);
-    border: 1px solid var(--border);
-    border-radius: 8px;
+    padding: 14px 16px;
+    background: #f5f5f7;
+    border: 1.5px solid transparent;
+    border-radius: 12px;
     color: var(--text);
-    font-size: 0.9rem;
-    transition: border-color 0.2s;
+    font-size: 0.95rem;
+    transition: all 0.2s ease;
+    font-family: inherit;
   }
   input:focus, select:focus {
     outline: none;
     border-color: var(--accent);
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
   }
-  input::placeholder { color: #475569; }
-  .row { display: flex; gap: 12px; }
+  input::placeholder { color: #aeaeb2; }
+  .row { display: flex; gap: 16px; }
   .row .form-group { flex: 1; }
   .mode-toggle {
     display: flex;
     gap: 8px;
-    margin-bottom: 16px;
+    margin-bottom: 20px;
+    background: #f5f5f7;
+    padding: 4px;
+    border-radius: 12px;
   }
   .mode-btn {
     flex: 1;
     padding: 10px;
-    background: var(--bg);
-    border: 1px solid var(--border);
+    background: transparent;
+    border: none;
     border-radius: 8px;
     color: var(--muted);
     cursor: pointer;
-    font-size: 0.85rem;
-    transition: all 0.2s;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    font-family: inherit;
   }
   .mode-btn.active {
-    background: rgba(59,130,246,0.15);
-    border-color: var(--accent);
-    color: var(--accent);
+    background: #ffffff;
+    color: var(--text);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
   }
   .btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 12px 24px;
+    padding: 14px 28px;
     background: var(--accent);
     color: white;
     border: none;
@@ -125,50 +145,59 @@
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
-    transition: background 0.2s;
+    transition: all 0.2s ease;
     width: 100%;
+    border: none;
+    border-radius: 14px;
+    background: var(--accent);
+    color: #ffffff;
+    font-family: inherit;
+    letter-spacing: -0.2px;
   }
-  .btn:hover { background: var(--accent-hover); }
-  .btn:disabled { background: var(--border); cursor: not-allowed; }
+  .btn:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { background: #aeaeb2; cursor: not-allowed; transform: none; box-shadow: none; }
   .btn-secondary {
-    background: transparent;
-    border: 1px solid var(--border);
-    color: var(--muted);
+    background: #f5f5f7;
+    border: none;
+    color: var(--text);
   }
-  .btn-secondary:hover { background: var(--bg); color: var(--text); }
+  .btn-secondary:hover { background: #e8e8ed; color: var(--text); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08); }
   .progress-container {
-    margin: 20px 0;
+    margin: 24px 0;
     display: none;
   }
   .progress-bar {
     width: 100%;
-    height: 8px;
-    background: var(--bg);
-    border-radius: 4px;
+    height: 6px;
+    background: #e8e8ed;
+    border-radius: 3px;
     overflow: hidden;
   }
   .progress-fill {
     height: 100%;
-    background: linear-gradient(90deg, var(--accent), var(--purple));
-    border-radius: 4px;
-    transition: width 0.3s;
+    background: var(--accent);
+    border-radius: 3px;
+    transition: width 0.3s ease;
     width: 0%;
   }
   .progress-text {
     text-align: center;
     font-size: 0.85rem;
     color: var(--muted);
-    margin-top: 8px;
+    margin-top: 10px;
   }
   .result-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 20px;
+    margin-bottom: 24px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid #f0f0f0;
   }
   .score-circle {
-    width: 100px;
-    height: 100px;
+    width: 96px;
+    height: 96px;
     border-radius: 50%;
     display: flex;
     flex-direction: column;
@@ -176,28 +205,28 @@
     justify-content: center;
     font-weight: 700;
   }
-  .score-circle .score { font-size: 1.8rem; }
-  .score-circle .label { font-size: 0.7rem; opacity: 0.8; }
-  .score-high { background: rgba(34,197,94,0.15); color: var(--green); border: 3px solid var(--green); }
-  .score-medium { background: rgba(234,179,8,0.15); color: var(--yellow); border: 3px solid var(--yellow); }
-  .score-low { background: rgba(249,115,22,0.15); color: var(--orange); border: 3px solid var(--orange); }
-  .score-critical { background: rgba(239,68,68,0.15); color: var(--red); border: 3px solid var(--red); }
+  .score-circle .score { font-size: 1.8rem; letter-spacing: -1px; }
+  .score-circle .label { font-size: 0.7rem; opacity: 0.7; font-weight: 500; }
+  .score-high { background: rgba(52, 199, 89, 0.12); color: var(--green); }
+  .score-medium { background: rgba(255, 204, 0, 0.15); color: #b8860b; }
+  .score-low { background: rgba(255, 149, 0, 0.12); color: var(--orange); }
+  .score-critical { background: rgba(255, 59, 48, 0.1); color: var(--red); }
   .check-item {
     display: flex;
     align-items: center;
-    padding: 12px;
-    background: var(--bg);
-    border-radius: 8px;
+    padding: 14px 16px;
+    background: #f5f5f7;
+    border-radius: 12px;
     margin-bottom: 8px;
   }
   .check-icon {
-    width: 24px;
-    height: 24px;
+    width: 28px;
+    height: 28px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 0.75rem;
+    font-size: 0.8rem;
     font-weight: 700;
     margin-right: 12px;
     flex-shrink: 0;
@@ -219,27 +248,30 @@
   .data-table { width: 100%; font-size: 0.85rem; border-collapse: collapse; }
   .data-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); }
   .data-table td:first-child { color: var(--muted); font-weight: 600; width: 40%; }
-  .actions { display: flex; gap: 10px; margin-top: 20px; }
-  .actions .btn { flex: 1; font-size: 0.85rem; padding: 10px; }
+  .actions { display: flex; gap: 12px; margin-top: 24px; flex-wrap: wrap; }
+  .actions .btn { flex: 1; min-width: 140px; font-size: 0.9rem; padding: 12px 16px; }
   .disclaimer {
-    background: rgba(234,179,8,0.08);
-    border: 1px solid rgba(234,179,8,0.3);
-    border-radius: 8px;
-    padding: 16px;
-    margin: 20px 0;
-    font-size: 0.8rem;
-    color: var(--muted);
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin: 24px 0;
+    font-size: 0.85rem;
+    color: #92400e;
+    line-height: 1.7;
   }
-  .disclaimer strong { color: var(--yellow); }
+  .disclaimer strong { color: #78350f; }
   footer {
     text-align: center;
-    padding: 30px 20px;
+    padding: 40px 20px;
     color: var(--muted);
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     border-top: 1px solid var(--border);
-    margin-top: 40px;
+    margin-top: 48px;
+    background: #ffffff;
   }
-  footer a { color: var(--accent); text-decoration: none; }
+  footer a { color: var(--accent); text-decoration: none; font-weight: 500; }
+  footer a:hover { text-decoration: underline; }
   .hidden { display: none !important; }
   .loading-dots::after {
     content: '';
@@ -1076,149 +1108,155 @@ function generateShareCard() {
   const ctx = canvas.getContext('2d');
   const W = 1200, H = 630;
 
-  // 背景渐变
-  const bgGrad = ctx.createLinearGradient(0, 0, W, H);
-  bgGrad.addColorStop(0, '#0f172a');
-  bgGrad.addColorStop(0.5, '#1e293b');
-  bgGrad.addColorStop(1, '#1e3a5f');
-  ctx.fillStyle = bgGrad;
+  // 纯白背景（苹果风格）
+  ctx.fillStyle = '#ffffff';
   ctx.fillRect(0, 0, W, H);
 
-  // 网格纹理
-  ctx.strokeStyle = 'rgba(59, 130, 246, 0.05)';
-  ctx.lineWidth = 1;
-  for (let x = 0; x < W; x += 40) {
-    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
-  }
-  for (let y = 0; y < H; y += 40) {
-    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
-  }
+  // 极淡的背景纹理（只有仔细看才会注意到）
+  const subtleGrad = ctx.createRadialGradient(W * 0.8, H * 0.2, 0, W * 0.8, H * 0.2, 400);
+  subtleGrad.addColorStop(0, 'rgba(0, 113, 227, 0.02)');
+  subtleGrad.addColorStop(1, 'rgba(0, 113, 227, 0)');
+  ctx.fillStyle = subtleGrad;
+  ctx.fillRect(0, 0, W, H);
 
-  // 顶部光晕
-  const glow = ctx.createRadialGradient(W/2, 0, 0, W/2, 0, 500);
-  glow.addColorStop(0, 'rgba(59, 130, 246, 0.15)');
-  glow.addColorStop(1, 'rgba(59, 130, 246, 0)');
-  ctx.fillStyle = glow;
-  ctx.fillRect(0, 0, W, 300);
-
-  // 顶部标题栏
-  ctx.fillStyle = '#60a5fa';
-  ctx.font = 'bold 28px -apple-system, sans-serif';
-  ctx.fillText('🛡️ TransitTruth', 60, 60);
-  ctx.fillStyle = '#94a3b8';
-  ctx.font = '18px -apple-system, sans-serif';
-  ctx.fillText('AI API 安全审计报告', 60, 90);
-
-  // 右上角标签
   const score = auditResult.overall_score;
   const level = auditResult.trust_level;
-  let levelColor = '#22c55e';
-  if (level === '中风险' || level === 'medium') levelColor = '#eab308';
-  if (level === '高风险' || level === 'high' || level === 'critical') levelColor = '#ef4444';
-  ctx.fillStyle = levelColor;
-  ctx.font = 'bold 20px -apple-system, sans-serif';
-  ctx.textAlign = 'right';
-  ctx.fillText(level, W - 60, 65);
-  ctx.textAlign = 'left';
 
-  // 分割线
-  ctx.strokeStyle = 'rgba(148, 163, 184, 0.2)';
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(60, 110); ctx.lineTo(W - 60, 110); ctx.stroke();
-
-  // 模型信息
-  ctx.fillStyle = '#e2e8f0';
-  ctx.font = 'bold 36px -apple-system, sans-serif';
-  ctx.fillText(auditResult.model, 60, 170);
-  ctx.fillStyle = '#94a3b8';
-  ctx.font = '20px -apple-system, sans-serif';
-  ctx.fillText(auditResult.relay_name || auditResult.base_url, 60, 205);
-
-  // 信任分大数字
+  // 顶部：Logo + 品牌名
+  // Logo（黑色圆角方块）
+  ctx.fillStyle = '#1d1d1f';
+  ctx.beginPath();
+  ctx.roundRect(70, 56, 40, 40, 10);
+  ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.font = '600 20px -apple-system, BlinkMacSystemFont, sans-serif';
   ctx.textAlign = 'center';
-  ctx.fillStyle = levelColor;
-  ctx.font = 'bold 96px -apple-system, sans-serif';
-  ctx.fillText(score, W - 180, 195);
-  ctx.fillStyle = '#94a3b8';
-  ctx.font = '20px -apple-system, sans-serif';
-  ctx.fillText('/ 100 信任分', W - 180, 230);
+  ctx.fillText('🛡', 90, 83);
   ctx.textAlign = 'left';
 
-  // 指标卡片
+  // 品牌名
+  ctx.fillStyle = '#1d1d1f';
+  ctx.font = '600 20px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText('TransitTruth', 122, 82);
+
+  // 右上角：信任等级标签
+  let levelColor = '#34c759'; // 苹果绿
+  if (level === '中风险' || level === 'medium') levelColor = '#ff9500'; // 苹果橙
+  if (level === '高风险' || level === 'high' || level === 'critical') levelColor = '#ff3b30'; // 苹果红
+  ctx.fillStyle = levelColor;
+  ctx.font = '600 16px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.fillText(level, W - 70, 80);
+  ctx.textAlign = 'left';
+
+  // 主标题区：模型名称 + 中转站
+  ctx.fillStyle = '#1d1d1f';
+  ctx.font = '700 48px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText(auditResult.model, 70, 180);
+
+  ctx.fillStyle = '#86868b';
+  ctx.font = '400 22px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText(auditResult.relay_name || auditResult.base_url, 70, 218);
+
+  // 信任分大数字（右侧）
+  ctx.textAlign = 'right';
+  ctx.fillStyle = '#1d1d1f';
+  ctx.font = '700 96px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText(score, W - 70, 200);
+  ctx.fillStyle = '#86868b';
+  ctx.font = '400 24px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText('/ 100 信任分', W - 70, 235);
+  ctx.textAlign = 'left';
+
+  // 指标卡片（浅灰背景，苹果风格）
   const cards = [
-    { label: 'Token 差异率', value: (auditResult.token_comparison.prompt_inflation_pct?.toFixed(1) || 'N/A') + '%', color: auditResult.token_comparison.suspicious ? '#ef4444' : '#22c55e' },
-    { label: '平均延迟', value: (auditResult.latency.avg_latency_ms?.toFixed(0) || 'N/A') + 'ms', color: '#60a5fa' },
-    { label: '模型家族', value: auditResult.fingerprint.detected_family || '未知', color: '#a855f7' },
-    { label: '指纹置信度', value: (auditResult.fingerprint.confidence * 100).toFixed(0) + '%', color: '#f97316' },
+    { label: 'Token 差异率', value: (auditResult.token_comparison.prompt_inflation_pct?.toFixed(1) || 'N/A') + '%', suspicious: auditResult.token_comparison.suspicious },
+    { label: '平均延迟', value: (auditResult.latency.avg_latency_ms?.toFixed(0) || 'N/A') + 'ms' },
+    { label: '模型家族', value: auditResult.fingerprint.detected_family || '未知' },
+    { label: '指纹置信度', value: (auditResult.fingerprint.confidence * 100).toFixed(0) + '%' },
   ];
 
-  const cardW = 240, cardH = 120, cardY = 290, gap = 24;
+  const cardW = 235, cardH = 110, cardY = 290, gap = 20;
   const totalW = cards.length * cardW + (cards.length - 1) * gap;
   const startX = (W - totalW) / 2;
 
   cards.forEach((card, i) => {
     const x = startX + i * (cardW + gap);
-    // 卡片背景
-    ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
-    ctx.lineWidth = 1;
+    // 浅灰卡片背景
+    ctx.fillStyle = '#f5f5f7';
     ctx.beginPath();
-    ctx.roundRect(x, cardY, cardW, cardH, 12);
-    ctx.fill(); ctx.stroke();
+    ctx.roundRect(x, cardY, cardW, cardH, 16);
+    ctx.fill();
     // 标签
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '16px -apple-system, sans-serif';
+    ctx.fillStyle = '#86868b';
+    ctx.font = '500 14px -apple-system, BlinkMacSystemFont, sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(card.label, x + cardW/2, cardY + 35);
+    ctx.fillText(card.label, x + cardW / 2, cardY + 35);
     // 值
-    ctx.fillStyle = card.color;
-    ctx.font = 'bold 32px -apple-system, sans-serif';
-    ctx.fillText(card.value, x + cardW/2, cardY + 80);
+    let valueColor = '#1d1d1f';
+    if (card.suspicious) valueColor = '#ff3b30';
+    ctx.fillStyle = valueColor;
+    ctx.font = '700 32px -apple-system, BlinkMacSystemFont, sans-serif';
+    ctx.fillText(card.value, x + cardW / 2, cardY + 78);
     ctx.textAlign = 'left';
   });
 
-  // 底部行为指纹亮点
+  // 行为指纹亮点（简洁列表）
   if (auditResult.fingerprint.behavioral && auditResult.fingerprint.behavioral.signatures) {
     const sigs = auditResult.fingerprint.behavioral.signatures;
     const topProbes = Object.entries(sigs)
       .filter(([_, v]) => v.top3 && v.top3.length > 0)
-      .slice(0, 3);
+      .slice(0, 2);
     if (topProbes.length > 0) {
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '16px -apple-system, sans-serif';
-      ctx.fillText('🔍 行为指纹亮点：', 60, 460);
+      ctx.fillStyle = '#86868b';
+      ctx.font = '500 14px -apple-system, BlinkMacSystemFont, sans-serif';
+      ctx.fillText('行为指纹亮点', 70, 450);
+
+      const probeNames = {
+        'beh-number-1-10': '选1-10数字',
+        'beh-dice-roll': '掷骰子',
+        'beh-random-animal': '选动物',
+        'beh-random-color': '选颜色',
+        'beh-random-letter': '选字母',
+        'beh-coin-flip': '抛硬币',
+        'beh-random-100': '选1-100数字',
+        'beh-random-day': '选星期',
+      };
+
       topProbes.forEach(([probeId, data], i) => {
         const top = data.top3[0];
-        const probeNames = {
-          'beh-number-1-10': '选1-10数字',
-          'beh-dice-roll': '掷骰子',
-          'beh-random-animal': '选动物',
-          'beh-random-color': '选颜色',
-          'beh-random-letter': '选字母',
-          'beh-coin-flip': '抛硬币',
-          'beh-random-100': '选1-100数字',
-          'beh-random-day': '选星期',
-        };
         const name = probeNames[probeId] || probeId;
-        ctx.fillStyle = '#e2e8f0';
-        ctx.font = '15px -apple-system, sans-serif';
-        ctx.fillText(`• ${name}：最常返回「${top[0]}」(${top[1]}次)`, 80, 490 + i * 26);
+        const y = 485 + i * 32;
+        // 圆点
+        ctx.fillStyle = '#0071e3';
+        ctx.beginPath();
+        ctx.arc(78, y - 5, 4, 0, Math.PI * 2);
+        ctx.fill();
+        // 文本
+        ctx.fillStyle = '#1d1d1f';
+        ctx.font = '400 17px -apple-system, BlinkMacSystemFont, sans-serif';
+        ctx.fillText(`${name}：最常返回「${top[0]}」（${top[1]}次）`, 92, y);
       });
     }
   }
 
-  // 底部信息栏
-  ctx.fillStyle = 'rgba(15, 23, 42, 0.8)';
-  ctx.fillRect(0, H - 70, W, 70);
-  ctx.strokeStyle = 'rgba(148, 163, 184, 0.1)';
-  ctx.beginPath(); ctx.moveTo(0, H - 70); ctx.lineTo(W, H - 70); ctx.stroke();
+  // 底部分割线
+  ctx.strokeStyle = '#f0f0f0';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(70, H - 70);
+  ctx.lineTo(W - 70, H - 70);
+  ctx.stroke();
 
-  ctx.fillStyle = '#94a3b8';
-  ctx.font = '16px -apple-system, sans-serif';
-  ctx.fillText(`检测时间：${new Date(auditResult.timestamp).toLocaleString()}`, 60, H - 30);
+  // 底部信息
+  ctx.fillStyle = '#86868b';
+  ctx.font = '400 15px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText(`检测时间：${new Date(auditResult.timestamp).toLocaleString()}`, 70, H - 38);
+
   ctx.textAlign = 'right';
-  ctx.fillStyle = '#60a5fa';
-  ctx.fillText('github.com/dafahaha/transit-truth', W - 60, H - 30);
+  ctx.fillStyle = '#0071e3';
+  ctx.font = '500 15px -apple-system, BlinkMacSystemFont, sans-serif';
+  ctx.fillText('github.com/dafahaha/transit-truth', W - 70, H - 38);
   ctx.textAlign = 'left';
 
   // 显示分享卡片区域
