@@ -83,7 +83,11 @@ TransitTruth 是一个开源的 **AI API 安全审计平台**，基于学术前�
 
 ### 🚀 零安装在线Demo（推荐）
 
-打开 [standalone/index.html](standalone/index.html)，输入API Key，30秒出结果。所有请求直接从浏览器发出，**不需要后端服务器，不需要安装任何东西**。
+打开 [在线Demo](https://dafahaha.github.io/transit-truth/)，两种体验方式：
+- **🎬 先看演示（无需 Key）**：一键体验完整审计流程，看到“声称 gpt-4o 实际降级”的典型场景
+- 输入自己的 API Key：对你正在使用的中转站进行真实审计
+
+所有请求直接从浏览器发出，**不需要后端服务器，不需要安装任何东西，API Key 不会经过任何服务器**。
 
 ### 🐳 使用Docker
 
