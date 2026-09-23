@@ -159,6 +159,10 @@
   .btn:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3); }
   .btn:active { transform: translateY(0); }
   .btn:disabled { background: #aeaeb2; cursor: not-allowed; transform: none; box-shadow: none; }
+  .btn-row { display: flex; gap: 10px; }
+  .btn-row .btn { flex: 1; }
+  .btn-demo { background: #34c759; }
+  .btn-demo:hover { background: #28a745; box-shadow: 0 4px 12px rgba(52, 199, 89, 0.3); }
   .btn-secondary {
     background: #f5f5f7;
     border: none;
@@ -651,7 +655,10 @@
       </div>
     </div>
 
-    <button class="btn" id="start-btn" onclick="startAudit()">🚀 开始审计</button>
+    <div class="btn-row">
+      <button class="btn" id="start-btn" onclick="startAudit()">🚀 开始审计</button>
+      <button class="btn btn-demo" id="demo-btn" onclick="runDemo()">🎬 先看演示（无需 Key）</button>
+    </div>
   </div>
 
   <!-- 进度 -->
@@ -1013,6 +1020,90 @@ async function loadModels() {
 }
 
 // ─── 主审计流程 ─────────────────────────────────────────────
+
+// ─── 演示模式（无需 API Key） ─────────────────────
+async function runDemo() {
+  const btn = document.getElementById('demo-btn');
+  const progressContainer = document.getElementById('progress-container');
+  const resultCard = document.getElementById('result-card');
+
+  btn.disabled = true;
+  btn.textContent = '演示中...';
+  resultCard.classList.add('hidden');
+  progressContainer.style.display = 'block';
+
+  // 演示场景：声称 gpt-4o 但发现降级迹象
+  const demoSteps = [
+    [10, '正在进行 Token 计数验证...'],
+    [30, '正在运行模型指纹探针...'],
+    [70, '正在检测延迟和协议...'],
+    [90, '正在计算审计结果...'],
+  ];
+  for (const [pct, txt] of demoSteps) {
+    updateProgress(pct, txt);
+    await sleep(900);
+  }
+
+  // 构造模拟审计结果（可疑中转站场景）
+  auditResult = {
+    model: 'gpt-4o',
+    base_url: 'https://demo-relay.example.com/v1',
+    relay_name: '演示中转站',
+    mode: 'quick',
+    timestamp: new Date().toISOString(),
+    duration_ms: 3600,
+    checks: [
+      {
+        name: 'Token 计数验证',
+        score: 30,
+        passed: false,
+        details: '实际预期 34 tokens，中转站报呂 42 tokens，差异率 +23.5%（扣除 chat template 后仍疑似虚高）',
+      },
+      {
+        name: '模型指纹检测',
+        score: 35,
+        passed: false,
+        details: '行为指纹更接近 gpt-4o-mini 的分布特征（随机数偏好 7的概率显著低于 gpt-4o 基准），家族匹配失败，置信度 82%',
+      },
+      {
+        name: '延迟与协议',
+        score: 70,
+        passed: true,
+        details: '平均延迟 1240ms（偏慢）；OpenAI 协议兼容、Usage 返回、Model 回显均正常',
+      },
+    ],
+    token_comparison: {
+      prompt_tokens_reported: 42,
+      prompt_tokens_expected: 34,
+      chat_template_overhead: 0,
+      prompt_inflation_pct: 23.5,
+      suspicious: true,
+      discrepancy_note: '演示数据：已扣除 chat template 开销后仍存在差异，可疑',
+    },
+    fingerprint: {
+      claimed_model: 'gpt-4o',
+      detected_family: 'openai-gpt（偏向 gpt-4o-mini 特征）',
+      family_match: false,
+      confidence: 0.82,
+      capability: { passed: 3, total: 6, failure_rate: 0.5 },
+    },
+    latency: {
+      avg_latency_ms: 1240,
+      latencies: [1120, 1380, 1220],
+      protocol_checks: { openai_compatible: true, usage_returned: true, model_echo: true },
+    },
+  };
+
+  calculateFinalScore();
+  updateProgress(100, '审计完成！（演示数据）');
+  await sleep(500);
+  progressContainer.style.display = 'none';
+  showResult();
+
+  btn.disabled = false;
+  btn.textContent = '🎬 先看演示（无需 Key）';
+}
+
 async function startAudit() {
   const apiKey = document.getElementById('api-key').value.trim();
   const baseUrl = document.getElementById('base-url').value.trim();
@@ -1899,6 +1990,7 @@ function copyShareCard() {
 }
 
 // 暴露到全局
+window.runDemo = runDemo;
 window.startAudit = startAudit;
 window.exportJSON = exportJSON;
 window.copyResult = copyResult;
