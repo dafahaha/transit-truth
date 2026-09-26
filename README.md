@@ -187,6 +187,7 @@ transit-truth sk-your-api-key --base-url https://your-relay.com/v1 --model gpt-4
 - 📄 **PDF版**：[Behavioral Fingerprinting of Large Language Models](docs/tech_report.pdf)（申请/引用用）
 - 🌐 **HTML版**：[tech_report.html](docs/tech_report.html)（在线阅读）
 - 📝 **Markdown源**：[experiment_report.md](docs/experiment_report.md)
+- 🧾 **Workshop投稿版（4页，可编译LaTeX）**：[paper/](paper/) · [paper/main.pdf](paper/main.pdf)
 
 **核心结论**：
 - 行为指纹能区分同家族不同模型（tokenizer指纹做不到）
