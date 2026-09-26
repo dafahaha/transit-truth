@@ -20,7 +20,7 @@ This study investigates whether large language models (LLMs) exhibit measurable 
 
 ### 1.1 Background
 
-The proliferation of AI API relay services (中转站) has created a trust problem: users cannot verify whether the model they are paying for is actually the model being served. Industry reports suggest that **over 80% of relay services engage in some form of model substitution or degradation** [1]. Common tactics include:
+The proliferation of AI API relay services (中转站) has created a trust problem: users cannot verify whether the model they are paying for is actually the model being served. Recent work on LLM API auditing has shown that model substitution and silent degradation are real, economically motivated threats to users who pay for specific models [1, 2]. Common tactics include:
 
 - Serving gpt-3.5-turbo while claiming gpt-4
 - Serving older model versions while claiming the latest
@@ -28,9 +28,9 @@ The proliferation of AI API relay services (中转站) has created a trust probl
 - Inflating token counts for billing
 
 Existing verification methods rely primarily on:
-1. **Tokenizer fingerprinting** [2] - comparing prompt token counts across known tokenizers
-2. **Capability testing** [3] - running benchmark questions to estimate model tier
-3. **Latency analysis** [4] - comparing response time distributions
+1. **Tokenizer fingerprinting** [3] - comparing prompt token counts across known tokenizers
+2. **Capability testing** [4] - running benchmark questions to estimate model tier
+3. **Latency analysis** - comparing response time distributions
 
 However, these methods have limitations:
 - Tokenizer fingerprinting cannot distinguish models within the same family (e.g., gpt-4o vs gpt-4o-mini share the same tokenizer)
@@ -54,24 +54,24 @@ However, these methods have limitations:
 
 ### 2.1 LLM Fingerprinting
 
-**CoIn (arXiv 2505.13778)** [2] proposes a framework for detecting model substitution in API services using tokenizer fingerprinting and capability testing. They demonstrate that different model families can be distinguished by their tokenization patterns. However, their method cannot distinguish models within the same family.
+**Model Equality Testing** [2] formalizes the problem of verifying whether a black-box API serves the claimed model as a two-sample testing problem, and shows that MMD-based tests over string kernels are powerful with as few as 10 samples per prompt. **Rank-based uniformity testing** [3] verifies behavioral equality of a black-box LLM to a locally deployed authentic model under constrained query budgets. However, these methods focus on distributional equality rather than exploiting systematic, task-specific generation biases.
 
-**SILENT-BENCH** [5] is a benchmark for detecting silent model degradation in API services. It focuses on capability regression over time rather than model identity verification.
+**Auditing via follow-up queries** [4] shows that response probabilities to follow-up prompts can reliably distinguish between different black-box LLMs, enabling detection of misrepresented models provided through an API.
 
-**AgentProv (arXiv 2609.00052)** [6] investigates provenance verification for LLM-generated content, using watermarking and stylometric analysis.
+**AgentProv** [5] audits agentic LLM API providers by fingerprinting a deployed model through its categorical tool-call distribution, using an MMD permutation test; it catches every substituted model across 630 evaluated checkpoint pairs while holding false positives under system-prompt injection at 7%.
 
 ### 2.2 Behavioral Biases in LLMs
 
 Previous work has documented various biases in LLM outputs:
-- **Number preference**: GPT models show preferences for certain numbers in random generation [7]
-- **Order effects**: LLMs are sensitive to the order of options in multiple-choice questions [8]
-- **Calibration errors**: Model confidence does not always correlate with correctness [9]
+- **Number preference**: GPT models show strong, stable preferences for certain numbers in random generation tasks — e.g., a systematic preference for 7 — which recent work documents across models and settings [6, 7]
+- **Selection bias**: LLMs are sensitive to the position and labeling of options in multiple-choice questions [8]
+- **Calibration errors**: Model confidence does not always correlate with correctness, and calibration quality varies widely across models and tasks [9]
 
 However, these biases have not been systematically studied as a fingerprinting technique for API verification.
 
 ### 2.3 API Relay Security
 
-The 2026 crackdown on API relay services in China [10] has highlighted the need for transparent verification tools. Commercial solutions (API Ranking, APICheck) exist but are closed-source and lack methodological transparency.
+The rapid growth of LLM API relay services has highlighted the need for transparent, user-side verification tools. Existing commercial solutions are closed-source and lack methodological transparency, motivating an open-source, statistically grounded audit tool.
 
 ---
 
@@ -356,9 +356,9 @@ The extreme behavioral biases we observed likely arise from three sources:
 
 | Method | Same-Family Discrimination | Cost | Hardware Required | Difficulty to Forge |
 |---|---|---|---|---|
-| Tokenizer fingerprinting [2] | ❌ No | Low | None | Medium |
-| Capability testing [3] | ⚠️ Partial | Medium | None | Low (smart routing) |
-| Latency analysis [4] | ❌ No | Low | None | Low |
+| Tokenizer fingerprinting [3] | ❌ No | Low | None | Medium |
+| Capability testing [4] | ⚠️ Partial | Medium | None | Low (smart routing) |
+| Latency analysis | ❌ No | Low | None | Low |
 | **Behavioral fingerprinting (this work)** | **✅ Yes** | **Low** | **None** | **High** |
 
 ### 5.4 Ethical Considerations
@@ -494,25 +494,23 @@ Our key contributions:
 
 ## References
 
-[1] Industry analysis of AI API relay service practices, 2026. (Internal report)
+[1] W. Cai, T. Shi, X. Zhao, and D. Song. Are you getting what you pay for? Auditing model substitution in LLM APIs. arXiv:2504.04715, 2025.
 
-[2] CoIn: "Can You Trust Your LLM API? A Framework for Detecting Model Substitution in API Services", arXiv:2505.13778, 2025.
+[2] Model equality testing: Which model is this API serving? In International Conference on Learning Representations (ICLR), 2025.
 
-[3] SILENT-BENCH: "A Benchmark for Detecting Silent Model Degradation in API Services", 2025.
+[3] X. Zhu, Y. Ye, T. Qiu, H. Zhu, S. Tan, A. Mannan, J. Michala, R. A. Popa, and W. Neiswanger. Auditing black-box LLM APIs with a rank-based uniformity test. arXiv:2506.06975, 2025.
 
-[4] "Latency-Based Model Identification in Multi-tenant LLM Serving Systems", 2025.
+[4] D. Sam, M. Finzi, and J. Z. Kolter. Predicting the performance of black-box language models with follow-up queries. In Advances in Neural Information Processing Systems (NeurIPS), 2025.
 
-[5] SILENT-BENCH project, https://github.com/silent-bench, 2025.
+[5] X. Wang, B. Zhao, M. Backes, F. Boenisch, and A. Dziedzic. AgentProv: Auditing agentic LLM API providers via tool-use policy probes. arXiv:2609.00052, 2026.
 
-[6] AgentProv: "Provenance Verification for LLM-Generated Content", arXiv:2609.00052, 2026.
+[6] A. Vo, M. R. Taesiri, D. Kim, and A. T. Nguyen. B-score: Detecting biases in large language models using response history. In International Conference on Machine Learning (ICML), 2025.
 
-[7] "Number Preferences in Large Language Models", Proceedings of ACL 2024.
+[7] J. Coronado-Blázquez. Deterministic or probabilistic? The psychology of LLMs as random number generators. arXiv:2502.19965, 2025.
 
-[8] "Order Effects in LLM Multiple-Choice Question Answering", Proceedings of EMNLP 2024.
+[8] C. Zheng, H. Zhou, F. Meng, J. Zhou, and M. Huang. On large language models' selection bias in multi-choice questions. arXiv:2309.03882, 2023.
 
-[9] "Calibration of Large Language Models: A Comprehensive Survey", 2025.
-
-[10] "China's Crackdown on AI API Relay Services: Implications and Analysis", 2026.
+[9] J. Geng, F. Cai, Y. Wang, H. Koeppl, P. Nakov, and I. Gurevych. A survey of confidence estimation and calibration in large language models. In Proceedings of NAACL-HLT 2024.
 
 ---
 

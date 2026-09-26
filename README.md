@@ -159,7 +159,7 @@ transit-truth sk-your-api-key --base-url https://your-relay.com/v1 --model gpt-4
 本项目基于以下学术研究：
 
 - **[One Token Is Enough](https://arxiv.org/abs/2607.10252)** (arXiv:2607.10252, 2026) — 单token输出分布的模型指纹方法，165个模型验证，EER 7.3%
-- **[CoIn](https://arxiv.org/abs/2505.13778)** (arXiv:2505.13778, 2025) — API模型替换检测框架
+- **[CoIn](https://arxiv.org/abs/2505.13778)** (arXiv:2505.13778, 2025) — 隐藏推理token计数审计框架，检测token数膨胀（94.7%成功率）
 - **[RoFL](https://arxiv.org/abs/2505.12682)** (arXiv:2505.12682, 2025) — 鲁棒模型指纹，抗微调/剪枝/量化
 - **[Model Provenance Testing](https://arxiv.org/abs/2502.00706)** (arXiv:2502.00706, 2025) — 黑盒模型来源测试
 
@@ -180,15 +180,21 @@ transit-truth sk-your-api-key --base-url https://your-relay.com/v1 --model gpt-4
 
 数据采集脚本：`collect_baseline.py`（支持并发，零成本，用任何OpenAI兼容API即可）
 
-## 实验报告
+## 学术产出（Tech Report）
 
-完整的实验报告（含方法论、数据分析、跨模型对比、统计检验）：[docs/experiment_report.md](docs/experiment_report.md)
+本项目的实验方法、数据与结论已整理为正式技术报告（Tech Report，20页，含方法论/统计检验/跨模型对比）：
 
-核心结论：
+- 📄 **PDF版**：[Behavioral Fingerprinting of Large Language Models](docs/tech_report.pdf)（申请/引用用）
+- 🌐 **HTML版**：[tech_report.html](docs/tech_report.html)（在线阅读）
+- 📝 **Markdown源**：[experiment_report.md](docs/experiment_report.md)
+
+**核心结论**：
 - 行为指纹能区分同家族不同模型（tokenizer指纹做不到）
 - 最强区分探针TVD=0.900，单探针90%准确率
 - 统计方法验证：91.3%后验概率正确识别
 - 零成本：2600次API请求，用免费中转站key即可完成
+
+**与前沿工作的关系**：我们的行为指纹方法与 [One Token Is Enough](https://arxiv.org/abs/2607.10252)（单token输出分布指纹，EER 7.3%）互为补充——它聚焦跨家族识别，我们系统性验证了**同家族细粒度区分**（gpt-4o vs gpt-4o-mini），这是tokenizer指纹无法做到的。
 
 ## 项目结构
 

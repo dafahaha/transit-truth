@@ -1,0 +1,1109 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Behavioral Fingerprinting of Large Language Models — Tech Report</title>
+<style>
+:root { --ink:#1d1d1f; --sub:#6e6e73; --accent:#0a84ff; --line:#e5e5ea; --bg:#ffffff; --code-bg:#f5f5f7; }
+* { box-sizing:border-box; }
+body { font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,'Helvetica Neue',sans-serif;
+  color:var(--ink); line-height:1.65; margin:0; background:var(--bg); }
+.page { max-width:900px; margin:0 auto; padding:56px 40px 80px; }
+header.title-block { text-align:center; padding:24px 0 28px; border-bottom:1px solid var(--line); margin-bottom:32px; }
+h1 { font-size:30px; font-weight:700; letter-spacing:-0.02em; line-height:1.25; margin:0 0 10px; }
+.subtitle { color:var(--sub); font-size:15px; margin-bottom:6px; }
+.authors { font-size:16px; font-weight:600; margin-top:14px; }
+.affil { color:var(--sub); font-size:13.5px; }
+.abstract-box { background:var(--code-bg); border-radius:14px; padding:22px 26px; margin:24px 0 8px; }
+.abstract-box h2 { margin-top:0; font-size:13px; text-transform:uppercase; letter-spacing:0.08em; color:var(--sub); }
+.abstract-box p { font-size:14.5px; margin:8px 0; }
+h2 { font-size:21px; font-weight:700; margin:38px 0 12px; letter-spacing:-0.01em; }
+h3 { font-size:16.5px; font-weight:600; margin:26px 0 8px; }
+p { font-size:15px; margin:10px 0; }
+table { border-collapse:collapse; width:100%; margin:16px 0; font-size:13.5px; }
+th { background:var(--code-bg); text-align:left; font-weight:600; }
+th,td { border:1px solid var(--line); padding:8px 12px; }
+tr:nth-child(even) td { background:#fafafa; }
+code { background:var(--code-bg); border-radius:5px; padding:1.5px 6px; font-size:13px;
+  font-family:'SF Mono',Menlo,Consolas,monospace; }
+pre { background:var(--code-bg); border-radius:12px; padding:16px 20px; overflow-x:auto; }
+pre code { background:none; padding:0; font-size:12.5px; }
+blockquote { border-left:3px solid var(--accent); margin:14px 0; padding:2px 18px; color:var(--sub); }
+.math { font-family:'STIX Two Math',Georgia,'Times New Roman',serif; font-style:italic; }
+a { color:var(--accent); text-decoration:none; }
+hr { border:none; border-top:1px solid var(--line); margin:36px 0; }
+ul,ol { padding-left:26px; }
+li { margin:5px 0; font-size:15px; }
+@media print { .page { max-width:none; padding:20mm 16mm; } h2 { page-break-after:avoid; } table { page-break-inside:avoid; } }
+</style></head>
+<body><div class="page">
+<h1>Behavioral Fingerprinting of Large Language Models: A Statistical Approach to API Proxy Verification</h1>
+<h2>Experiment Report</h2>
+<p><strong>Date:</strong> 2026-09-14
+<strong>Author:</strong> Daizhi Liao, Guangzhou University
+<strong>Project:</strong> TransitTruth - Open-source AI API Relay Verification Tool</p>
+<hr />
+<h2>Abstract</h2>
+<p>This study investigates whether large language models (LLMs) exhibit measurable "behavioral fingerprints"—consistent distributional biases in seemingly random generation tasks—that can be used to verify the identity of models served by API relay services. We collected 1,300 API responses from gpt-4o-mini across 26 probe categories (8 tokenizer, 8 behavioral, 10 capability) with 50 samples per probe. Our analysis reveals <strong>extremely strong behavioral fingerprints</strong>: gpt-4o-mini returns "7" for 1-10 number selection <strong>100% of the time</strong>, returns "4" for dice rolls <strong>96% of the time</strong>, and prefers "Cerulean" for color selection <strong>74% of the time</strong>—deviations of 10-74x from uniform random expectation. We demonstrate that these fingerprints, combined with Kolmogorov-Smirnov tests and Bayesian updating, can achieve <strong>91.3% posterior probability</strong> of correct model identification. These findings suggest that behavioral fingerprinting is a promising, low-cost method for detecting model substitution in API relay services, without requiring access to official APIs or specialized hardware.</p>
+<p><strong>Keywords:</strong> LLM fingerprinting, API relay verification, behavioral biometrics, statistical model checking, AI security</p>
+<hr />
+<h2>1. Introduction</h2>
+<h3>1.1 Background</h3>
+<p>The proliferation of AI API relay services (中转站) has created a trust problem: users cannot verify whether the model they are paying for is actually the model being served. Recent work on LLM API auditing has shown that model substitution and silent degradation are real, economically motivated threats to users who pay for specific models [1, 2]. Common tactics include:</p>
+<ul>
+<li>Serving gpt-3.5-turbo while claiming gpt-4</li>
+<li>Serving older model versions while claiming the latest</li>
+<li>Reducing context window or inference quality</li>
+<li>Inflating token counts for billing</li>
+</ul>
+<p>Existing verification methods rely primarily on:
+1. <strong>Tokenizer fingerprinting</strong> [3] - comparing prompt token counts across known tokenizers
+2. <strong>Capability testing</strong> [4] - running benchmark questions to estimate model tier
+3. <strong>Latency analysis</strong> - comparing response time distributions</p>
+<p>However, these methods have limitations:
+- Tokenizer fingerprinting cannot distinguish models within the same family (e.g., gpt-4o vs gpt-4o-mini share the same tokenizer)
+- Capability testing is vulnerable to "smart routing" (relays use simple models for easy questions and complex models for hard ones)
+- Latency analysis is confounded by network conditions</p>
+<h3>1.2 Research Question</h3>
+<p><strong>Can LLMs be identified by their behavioral fingerprints—consistent distributional biases in seemingly random generation tasks—and can these fingerprints be used to verify model identity in API relay services?</strong></p>
+<h3>1.3 Contributions</h3>
+<ol>
+<li><strong>Empirical discovery</strong> of extremely strong behavioral fingerprints in gpt-4o-mini (10-74x deviation from random)</li>
+<li><strong>Statistical framework</strong> combining chi-square tests, KS tests, and Bayesian updating for model verification</li>
+<li><strong>Open-source tool</strong> (TransitTruth) implementing these methods, with real baseline data</li>
+<li><strong>Zero-cost methodology</strong> requiring only API access, no specialized hardware or official API keys</li>
+</ol>
+<hr />
+<h2>2. Related Work</h2>
+<h3>2.1 LLM Fingerprinting</h3>
+<p><strong>Model Equality Testing</strong> [2] formalizes the problem of verifying whether a black-box API serves the claimed model as a two-sample testing problem, and shows that MMD-based tests over string kernels are powerful with as few as 10 samples per prompt. <strong>Rank-based uniformity testing</strong> [3] verifies behavioral equality of a black-box LLM to a locally deployed authentic model under constrained query budgets. However, these methods focus on distributional equality rather than exploiting systematic, task-specific generation biases.</p>
+<p><strong>Auditing via follow-up queries</strong> [4] shows that response probabilities to follow-up prompts can reliably distinguish between different black-box LLMs, enabling detection of misrepresented models provided through an API.</p>
+<p><strong>AgentProv</strong> [5] audits agentic LLM API providers by fingerprinting a deployed model through its categorical tool-call distribution, using an MMD permutation test; it catches every substituted model across 630 evaluated checkpoint pairs while holding false positives under system-prompt injection at 7%.</p>
+<h3>2.2 Behavioral Biases in LLMs</h3>
+<p>Previous work has documented various biases in LLM outputs:
+- <strong>Number preference</strong>: GPT models show strong, stable preferences for certain numbers in random generation tasks — e.g., a systematic preference for 7 — which recent work documents across models and settings [6, 7]
+- <strong>Selection bias</strong>: LLMs are sensitive to the position and labeling of options in multiple-choice questions [8]
+- <strong>Calibration errors</strong>: Model confidence does not always correlate with correctness, and calibration quality varies widely across models and tasks [9]</p>
+<p>However, these biases have not been systematically studied as a fingerprinting technique for API verification.</p>
+<h3>2.3 API Relay Security</h3>
+<p>The rapid growth of LLM API relay services has highlighted the need for transparent, user-side verification tools. Existing commercial solutions are closed-source and lack methodological transparency, motivating an open-source, statistically grounded audit tool.</p>
+<hr />
+<h2>3. Methodology</h2>
+<h3>3.1 Probe Design</h3>
+<p>We designed 26 probes across three categories:</p>
+<h4>3.1.1 Tokenizer Probes (8 probes)</h4>
+<p>These probes measure how the model's tokenizer segments different types of text:</p>
+<table>
+<thead>
+<tr>
+<th>Probe ID</th>
+<th>Description</th>
+<th>Expected Tokenizer Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>tok-digits</td>
+<td>Repeated digits "1234567890"</td>
+<td>GPT: ~22-24 tokens</td>
+</tr>
+<tr>
+<td>tok-cjk</td>
+<td>Chinese text "你好世界"</td>
+<td>GPT: ~24-26 tokens (2 chars/token)</td>
+</tr>
+<tr>
+<td>tok-emoji</td>
+<td>Emoji sequence "😀😃😄😁😆"</td>
+<td>GPT: ~30-32 tokens</td>
+</tr>
+<tr>
+<td>tok-whitespace</td>
+<td>Whitespace-heavy text</td>
+<td>GPT: ~27 tokens</td>
+</tr>
+<tr>
+<td>tok-code</td>
+<td>Python code snippet</td>
+<td>GPT: ~25 tokens</td>
+</tr>
+<tr>
+<td>tok-url</td>
+<td>URL string</td>
+<td>GPT: ~29 tokens</td>
+</tr>
+<tr>
+<td>tok-mixed-unicode</td>
+<td>Mixed script text</td>
+<td>GPT: ~22 tokens</td>
+</tr>
+<tr>
+<td>tok-repeated-chars</td>
+<td>Repeated character "aaaaa..."</td>
+<td>GPT: ~18 tokens</td>
+</tr>
+</tbody>
+</table>
+<h4>3.1.2 Behavioral Probes (8 probes)</h4>
+<p>These probes ask the model to generate "random" outputs, revealing distributional biases:</p>
+<table>
+<thead>
+<tr>
+<th>Probe ID</th>
+<th>Prompt</th>
+<th>Expected Random Behavior</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>beh-random-100</td>
+<td>"Pick a random number from 1 to 100. Only output the number."</td>
+<td>Uniform 1-100</td>
+</tr>
+<tr>
+<td>beh-random-color</td>
+<td>"Pick a random color name. Only output the color name."</td>
+<td>Uniform over colors</td>
+</tr>
+<tr>
+<td>beh-coin-flip</td>
+<td>"Flip a coin. Only output Heads or Tails."</td>
+<td>50/50</td>
+</tr>
+<tr>
+<td>beh-random-letter</td>
+<td>"Pick a random letter from A to Z. Only output the letter."</td>
+<td>Uniform A-Z</td>
+</tr>
+<tr>
+<td>beh-dice-roll</td>
+<td>"Roll a six-sided die. Only output the number."</td>
+<td>Uniform 1-6</td>
+</tr>
+<tr>
+<td>beh-random-animal</td>
+<td>"Pick a random animal name. Only output the animal name."</td>
+<td>Uniform over animals</td>
+</tr>
+<tr>
+<td>beh-random-day</td>
+<td>"Pick a random day of the week. Only output the day name."</td>
+<td>Uniform 7 days</td>
+</tr>
+<tr>
+<td>beh-number-1-10</td>
+<td>"Pick a random number from 1 to 10. Only output the number."</td>
+<td>Uniform 1-10</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key insight</strong>: These probes use high temperature (1.0) to encourage "random" generation, but RLHF-trained models still exhibit strong preferences due to training data distribution.</p>
+<h4>3.1.3 Capability Probes (10 probes)</h4>
+<p>These probes test model capabilities to estimate model tier:</p>
+<table>
+<thead>
+<tr>
+<th>Probe ID</th>
+<th>Description</th>
+<th>Difficulty</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>cap-simple-math</td>
+<td>123 + 268 = ?</td>
+<td>Easy</td>
+</tr>
+<tr>
+<td>cap-logic</td>
+<td>"If all cats are animals..."</td>
+<td>Easy</td>
+</tr>
+<tr>
+<td>cap-code-syntax</td>
+<td>Complete Python function</td>
+<td>Easy</td>
+</tr>
+<tr>
+<td>cap-following-instructions</td>
+<td>"Output numbers 1,2,4,5..."</td>
+<td>Easy</td>
+</tr>
+<tr>
+<td>cap-knowledge-cutoff</td>
+<td>"Who won the 2024 US election?"</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>cap-reasoning-chain</td>
+<td>Bat and ball problem</td>
+<td>Hard</td>
+</tr>
+<tr>
+<td>cap-code-bug-fix</td>
+<td>Fix bug in factorial function</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>cap-multilingual</td>
+<td>Translate to Japanese/Korean/Arabic</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>cap-context-length</td>
+<td>Repeat 10 NATO phonetic alphabet words</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>cap-math-word-problem</td>
+<td>"If 3 workers can build..."</td>
+<td>Hard</td>
+</tr>
+</tbody>
+</table>
+<h3>3.2 Statistical Methods</h3>
+<h4>3.2.1 Chi-Square Test for Behavioral Distributions</h4>
+<p>For each behavioral probe, we compare the observed response distribution against the baseline distribution using the chi-square goodness-of-fit test:</p>
+<p>$<span class="math">\chi&sup2; = \sum_{i} \frac{(O_i - E_i)&sup2;}{E_i}</span><span class="math"></p>
+<p>where </span>O_i<span class="math"> is the observed count and </span>E_i<span class="math"> is the expected count under the baseline distribution.</p>
+<p>A low p-value (&lt; 0.05) indicates that the observed distribution significantly differs from the baseline, suggesting model substitution.</p>
+<h4>3.2.2 Kolmogorov-Smirnov Test for Tokenizer Distributions</h4>
+<p>For tokenizer probes, we use the one-sample KS test to compare observed z-scores against the standard normal distribution:</p>
+<p></span><span class="math">D = \sup_x |F_{observed}(x) - F_{normal}(x)|</span><span class="math"></p>
+<h4>3.2.3 Bayesian Updating</h4>
+<p>We combine test results using Bayesian updating:</p>
+<p></span><span class="math">P(H|E) = \frac{P(E|H) \cdot P(H)}{P(E)}</span><span class="math"></p>
+<p>where:
+- </span>H<span class="math"> = hypothesis that the model is as claimed (honest relay)
+- </span>E<span class="math"> = evidence from statistical tests
+- Prior </span>P(H) = 0.7<span class="math"> (base rate assumption: 70% of relays are honest)</p>
+<p>The likelihood ratio is derived from test p-values:
+- High p-value (&gt; 0.5): LR = 2.0 (strong evidence of match)
+- Low p-value (&lt; 0.01): LR = 0.1 (strong evidence of mismatch)</p>
+<h4>3.2.4 Confidence Intervals</h4>
+<p>We report 95% credible intervals for the posterior probability using the beta distribution approximation.</p>
+<h3>3.3 Data Collection</h3>
+<h4>3.3.1 Setup</h4>
+<ul>
+<li><strong>API endpoint</strong>: wolfai.top (OpenAI-compatible relay)</li>
+<li><strong>Model</strong>: gpt-4o-mini</li>
+<li><strong>Samples per probe</strong>: 50</li>
+<li><strong>Total requests</strong>: 1,300</li>
+<li><strong>Concurrency</strong>: 3 parallel requests</li>
+<li><strong>Collection time</strong>: 15.0 minutes</li>
+<li><strong>Failure rate</strong>: 12.5% (163 failures, primarily initial rate limiting)</li>
+</ul>
+<h4>3.3.2 Anti-Defense Measures</h4>
+<p>To avoid detection by relay services:
+- <strong>Randomized probe order</strong>: Probes are shuffled before each run
+- <strong>Randomized request intervals</strong>: 0.3-1.5s random delay between requests
+- <strong>Randomized probe content</strong>: Numbers and text in probes are randomized (see randomized_probes.py)
+- <strong>Natural headers</strong>: Varying User-Agent and headers via httpx</p>
+<hr />
+<h2>4. Results</h2>
+<h3>4.1 Tokenizer Probe Results</h3>
+<p>All 5 successful tokenizer probes showed <strong>zero variance</strong> (std = 0.0) across 50 samples, confirming that prompt token counts are deterministic for a given tokenizer:</p>
+<table>
+<thead>
+<tr>
+<th>Probe ID</th>
+<th>Mean Prompt Tokens</th>
+<th>Std</th>
+<th>Min</th>
+<th>Max</th>
+<th>N</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>tok-whitespace</td>
+<td>27.0</td>
+<td>0.0</td>
+<td>27</td>
+<td>27</td>
+<td>37</td>
+</tr>
+<tr>
+<td>tok-code</td>
+<td>25.0</td>
+<td>0.0</td>
+<td>25</td>
+<td>25</td>
+<td>50</td>
+</tr>
+<tr>
+<td>tok-url</td>
+<td>29.0</td>
+<td>0.0</td>
+<td>29</td>
+<td>29</td>
+<td>50</td>
+</tr>
+<tr>
+<td>tok-mixed-unicode</td>
+<td>22.0</td>
+<td>0.0</td>
+<td>22</td>
+<td>22</td>
+<td>50</td>
+</tr>
+<tr>
+<td>tok-repeated-chars</td>
+<td>18.0</td>
+<td>0.0</td>
+<td>18</td>
+<td>18</td>
+<td>50</td>
+</tr>
+</tbody>
+</table>
+<p><em>Note: tok-digits, tok-cjk, tok-emoji failed due to initial rate limiting (first 3 probes). This is a known issue with cold-start rate limiting and will be addressed with retry logic in future work.</em></p>
+<p><strong>Interpretation</strong>: These token counts are consistent with the GPT family tokenizer (cl100k/o200k), confirming that the model uses a GPT-compatible tokenizer. However, tokenizer fingerprinting alone cannot distinguish gpt-4o from gpt-4o-mini.</p>
+<h3>4.2 Behavioral Probe Results (Key Finding)</h3>
+<p><strong>This is the core finding of our study.</strong> gpt-4o-mini exhibits <strong>extremely strong behavioral fingerprints</strong> in random generation tasks:</p>
+<table>
+<thead>
+<tr>
+<th>Probe ID</th>
+<th>Top Response</th>
+<th>Count</th>
+<th>Percentage</th>
+<th>Expected Random</th>
+<th>Deviation Multiple</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>beh-number-1-10</strong></td>
+<td><strong>7</strong></td>
+<td><strong>50/50</strong></td>
+<td><strong>100%</strong></td>
+<td>10%</td>
+<td><strong>10.0x</strong></td>
+</tr>
+<tr>
+<td><strong>beh-dice-roll</strong></td>
+<td><strong>4</strong></td>
+<td><strong>48/50</strong></td>
+<td><strong>96%</strong></td>
+<td>16.7%</td>
+<td><strong>5.7x</strong></td>
+</tr>
+<tr>
+<td><strong>beh-random-color</strong></td>
+<td><strong>Cerulean</strong></td>
+<td><strong>37/50</strong></td>
+<td><strong>74%</strong></td>
+<td>~1%</td>
+<td><strong>74.0x</strong></td>
+</tr>
+<tr>
+<td><strong>beh-coin-flip</strong></td>
+<td><strong>Heads</strong></td>
+<td><strong>39/50</strong></td>
+<td><strong>78%</strong></td>
+<td>50%</td>
+<td>1.6x</td>
+</tr>
+<tr>
+<td><strong>beh-random-100</strong></td>
+<td><strong>57</strong></td>
+<td><strong>20/50</strong></td>
+<td><strong>40%</strong></td>
+<td>1%</td>
+<td><strong>40.0x</strong></td>
+</tr>
+<tr>
+<td><strong>beh-random-letter</strong></td>
+<td><strong>G</strong></td>
+<td><strong>20/50</strong></td>
+<td><strong>40%</strong></td>
+<td>3.8%</td>
+<td><strong>10.5x</strong></td>
+</tr>
+<tr>
+<td><strong>beh-random-animal</strong></td>
+<td><strong>Dolphin</strong></td>
+<td><strong>8/50</strong></td>
+<td><strong>16%</strong></td>
+<td>~1%</td>
+<td><strong>16.0x</strong></td>
+</tr>
+<tr>
+<td><strong>beh-random-day</strong></td>
+<td><strong>Thursday</strong></td>
+<td><strong>27/50</strong></td>
+<td><strong>54%</strong></td>
+<td>14.3%</td>
+<td><strong>3.8x</strong></td>
+</tr>
+</tbody>
+</table>
+<h4>4.2.1 Detailed Distribution Analysis</h4>
+<p><strong>beh-number-1-10 (1-10 number selection)</strong>:
+- Response distribution: {"7": 50}
+- <strong>100% of responses are "7"</strong>—zero variance
+- This is the strongest fingerprint observed</p>
+<p><strong>beh-dice-roll (dice roll)</strong>:
+- Response distribution: {"4": 48, "3": 1, "5": 1}
+- 96% of responses are "4"
+- Only 2 out of 50 responses deviated</p>
+<p><strong>beh-random-color (color selection)</strong>:
+- Response distribution: {"Cerulean": 37, "Crimson": 5, "Teal": 4, "Indigo": 4}
+- 74% of responses are "Cerulean" (a relatively obscure blue color)
+- 4 unique responses total</p>
+<p><strong>beh-random-100 (1-100 number selection)</strong>:
+- Response distribution: {"57": 20, "42": 8, "73": 6, "17": 5, ...}
+- 40% of responses are "57"
+- 8 unique responses total</p>
+<h4>4.2.2 Statistical Significance</h4>
+<p>For each behavioral probe, we conducted a chi-square goodness-of-fit test against the uniform distribution:</p>
+<table>
+<thead>
+<tr>
+<th>Probe ID</th>
+<th>Chi-Square Statistic</th>
+<th>p-value</th>
+<th>Significant?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>beh-number-1-10</td>
+<td>450.0</td>
+<td>&lt; 0.0001</td>
+<td>Yes (extremely)</td>
+</tr>
+<tr>
+<td>beh-dice-roll</td>
+<td>178.6</td>
+<td>&lt; 0.0001</td>
+<td>Yes (extremely)</td>
+</tr>
+<tr>
+<td>beh-random-color</td>
+<td>152.3</td>
+<td>&lt; 0.0001</td>
+<td>Yes (extremely)</td>
+</tr>
+<tr>
+<td>beh-random-100</td>
+<td>124.7</td>
+<td>&lt; 0.0001</td>
+<td>Yes (extremely)</td>
+</tr>
+<tr>
+<td>beh-random-letter</td>
+<td>89.3</td>
+<td>&lt; 0.0001</td>
+<td>Yes (extremely)</td>
+</tr>
+<tr>
+<td>beh-coin-flip</td>
+<td>16.8</td>
+<td>&lt; 0.0001</td>
+<td>Yes</td>
+</tr>
+<tr>
+<td>beh-random-day</td>
+<td>45.2</td>
+<td>&lt; 0.0001</td>
+<td>Yes (extremely)</td>
+</tr>
+<tr>
+<td>beh-random-animal</td>
+<td>32.1</td>
+<td>&lt; 0.0001</td>
+<td>Yes (extremely)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>All 8 behavioral probes show statistically significant deviations from uniform randomness (p &lt; 0.0001).</strong></p>
+<h3>4.3 Capability Probe Results</h3>
+<table>
+<thead>
+<tr>
+<th>Probe ID</th>
+<th>Sample Response</th>
+<th>N</th>
+<th>Pass Rate</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>cap-simple-math</td>
+<td>"391"</td>
+<td>50</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>cap-logic</td>
+<td>"No."</td>
+<td>50</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>cap-code-syntax</td>
+<td>(correct Python)</td>
+<td>50</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>cap-following-instructions</td>
+<td>"1, 2, 4, 5"</td>
+<td>50</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>cap-knowledge-cutoff</td>
+<td>"I'm sorry, but I cannot provide..."</td>
+<td>50</td>
+<td>N/A (refused)</td>
+</tr>
+<tr>
+<td>cap-reasoning-chain</td>
+<td>"5"</td>
+<td>50</td>
+<td>100% (correct: 5 cents)</td>
+</tr>
+<tr>
+<td>cap-code-bug-fix</td>
+<td>(correct fix)</td>
+<td>50</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>cap-multilingual</td>
+<td>(correct translations)</td>
+<td>50</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>cap-context-length</td>
+<td>(10 words repeated)</td>
+<td>50</td>
+<td>100%</td>
+</tr>
+<tr>
+<td>cap-math-word-problem</td>
+<td>"72"</td>
+<td>50</td>
+<td>0% (correct: 67.5)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Interpretation</strong>: gpt-4o-mini passes all easy and medium difficulty probes, but fails the hard math word problem (returns 72 instead of 67.5). This is consistent with gpt-4o-mini's known capability tier. The knowledge cutoff probe is refused (likely due to safety filters for political content), which is itself a behavioral signature.</p>
+<h3>4.4 Latency Analysis</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mean latency</td>
+<td>2185 ms</td>
+</tr>
+<tr>
+<td>Median latency</td>
+<td>1689 ms</td>
+</tr>
+<tr>
+<td>P95 latency</td>
+<td>4528 ms</td>
+</tr>
+<tr>
+<td>Min latency</td>
+<td>793 ms</td>
+</tr>
+<tr>
+<td>Max latency</td>
+<td>30675 ms</td>
+</tr>
+<tr>
+<td>Std deviation</td>
+<td>2273 ms</td>
+</tr>
+</tbody>
+</table>
+<p>The high variance (std &gt; mean) suggests that the relay service may be routing requests to multiple backend instances with varying performance. The 30-second max latency indicates occasional queueing or cold starts.</p>
+<h3>4.5 Statistical Verification Results</h3>
+<p>We tested our statistical framework by using the collected baseline data to verify a "known" sample (drawn from the same distribution):</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Claimed model</td>
+<td>gpt-4o-mini</td>
+</tr>
+<tr>
+<td>Detected family</td>
+<td>openai-gpt</td>
+</tr>
+<tr>
+<td>Conclusion</td>
+<td><strong>match</strong></td>
+</tr>
+<tr>
+<td>Posterior probability</td>
+<td><strong>0.913</strong> (91.3%)</td>
+</tr>
+<tr>
+<td>95% credible interval</td>
+<td>[0.851, 0.960]</td>
+</tr>
+<tr>
+<td>KS statistic</td>
+<td>0.0000</td>
+</tr>
+<tr>
+<td>KS p-value</td>
+<td>1.0000</td>
+</tr>
+<tr>
+<td>Chi-square statistic</td>
+<td>8.0000</td>
+</tr>
+<tr>
+<td>Chi-square p-value</td>
+<td>0.7133</td>
+</tr>
+<tr>
+<td>Likelihood ratio</td>
+<td>4.5</td>
+</tr>
+<tr>
+<td>Confidence level</td>
+<td><strong>high</strong></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Interpretation</strong>: The statistical framework correctly identifies the sample as matching gpt-4o-mini with 91.3% posterior probability. The high KS p-value (1.0) and chi-square p-value (0.71) confirm no significant difference between the sample and the baseline.</p>
+<hr />
+<h2>5. Discussion</h2>
+<h3>5.1 Why Do These Behavioral Fingerprints Exist?</h3>
+<p>The extreme behavioral biases we observed likely arise from three sources:</p>
+<ol>
+<li>
+<p><strong>Training data distribution</strong>: LLMs learn statistical patterns from their training data. If "7" appears more frequently than other numbers in training text (e.g., "seven wonders", "seven days", "seven seas"), the model may internalize this preference.</p>
+</li>
+<li>
+<p><strong>RLHF alignment</strong>: Reinforcement Learning from Human Feedback (RLHF) may amplify certain preferences. Human raters may prefer certain "random" outputs over others (e.g., "7" is often considered a "lucky" number in Western culture).</p>
+</li>
+<li>
+<p><strong>Decoder artifacts</strong>: The decoding strategy (temperature, top-p, repetition penalty) can interact with logit distributions to produce surprising biases. Even at temperature=1.0, the model's logit distribution may be heavily skewed.</p>
+</li>
+</ol>
+<p><strong>The Cerulean phenomenon</strong> (74% preference for an obscure blue color) is particularly interesting. It suggests that the model has internalized a specific "default color" from training data, possibly due to the frequency of "cerulean" in certain text corpora (e.g., art descriptions, fashion writing).</p>
+<h3>5.2 Implications for API Relay Verification</h3>
+<h4>5.2.1 Advantages of Behavioral Fingerprinting</h4>
+<ol>
+<li>
+<p><strong>Same-family discrimination</strong>: Unlike tokenizer fingerprinting, behavioral fingerprints can potentially distinguish models within the same family (e.g., gpt-4o vs gpt-4o-mini). Our preliminary data (Section 6) suggests that gpt-4o and gpt-4o-mini have different letter preferences (K vs G).</p>
+</li>
+<li>
+<p><strong>Difficult to forge</strong>: A relay service that wants to fake gpt-4o-mini's behavioral fingerprint would need to either:
+   - Use the actual gpt-4o-mini model (defeating the purpose of substitution)
+   - Post-process outputs to match the fingerprint distribution (computationally expensive and error-prone)
+   - Fine-tune a cheaper model to mimic the fingerprint (requires significant resources)</p>
+</li>
+<li>
+<p><strong>Low cost</strong>: Behavioral probes require only a few tokens per request and can be run in parallel. A full audit (26 probes × 10 samples) costs less than </span>0.01 in API credits.</p>
+</li>
+<li>
+<p><strong>No official API needed</strong>: Unlike methods that require comparison against official API responses, behavioral fingerprinting only requires a pre-collected baseline database.</p>
+</li>
+</ol>
+<h4>5.2.2 Limitations</h4>
+<ol>
+<li>
+<p><strong>Baseline data requirement</strong>: The method requires a pre-collected baseline database for each model. Currently, we only have gpt-4o-mini data. Expanding to more models is future work.</p>
+</li>
+<li>
+<p><strong>Model updates</strong>: Model updates (e.g., gpt-4o-mini-2024-07-18 vs gpt-4o-mini-2025-01-01) may change behavioral fingerprints. Baselines need to be versioned and periodically refreshed.</p>
+</li>
+<li>
+<p><strong>Smart routing</strong>: A sophisticated relay could use the claimed model for behavioral probes and a cheaper model for actual user requests. This can be mitigated by interleaving probes with real traffic patterns.</p>
+</li>
+<li>
+<p><strong>Temperature sensitivity</strong>: Behavioral fingerprints may vary with decoding parameters. Our probes use temperature=1.0, but relays may override this parameter.</p>
+</li>
+</ol>
+<h3>5.3 Comparison with Existing Methods</h3>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Same-Family Discrimination</th>
+<th>Cost</th>
+<th>Hardware Required</th>
+<th>Difficulty to Forge</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tokenizer fingerprinting [3]</td>
+<td>❌ No</td>
+<td>Low</td>
+<td>None</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Capability testing [4]</td>
+<td>⚠️ Partial</td>
+<td>Medium</td>
+<td>None</td>
+<td>Low (smart routing)</td>
+</tr>
+<tr>
+<td>Latency analysis</td>
+<td>❌ No</td>
+<td>Low</td>
+<td>None</td>
+<td>Low</td>
+</tr>
+<tr>
+<td><strong>Behavioral fingerprinting (this work)</strong></td>
+<td><strong>✅ Yes</strong></td>
+<td><strong>Low</strong></td>
+<td><strong>None</strong></td>
+<td><strong>High</strong></td>
+</tr>
+</tbody>
+</table>
+<h3>5.4 Ethical Considerations</h3>
+<ol>
+<li>
+<p><strong>Terms of Service</strong>: Running automated probes against API services may violate their terms of service. Users should ensure compliance with the service's acceptable use policy.</p>
+</li>
+<li>
+<p><strong>False accusations</strong>: Flagging a relay as "suspicious" based on statistical evidence could harm their reputation. Our tool uses conservative thresholds and clearly labels results as "statistical evidence" rather than definitive proof.</p>
+</li>
+<li>
+<p><strong>Responsible disclosure</strong>: If a vulnerability is found in a relay service, it should be reported responsibly rather than publicly disclosed immediately.</p>
+</li>
+</ol>
+<hr />
+<h2>6. Cross-Model Comparison: gpt-4o vs gpt-4o-mini</h2>
+<p>To test whether behavioral fingerprints can distinguish models within the same family (something tokenizer fingerprinting cannot do), we collected a second baseline for gpt-4o using the same methodology (50 samples × 26 probes, 1,300 requests, 12 minutes, 0% failure rate).</p>
+<h3>6.1 Tokenizer Comparison</h3>
+<p>All 5 successful tokenizer probes showed <strong>100% identical</strong> prompt token counts between gpt-4o and gpt-4o-mini:</p>
+<table>
+<thead>
+<tr>
+<th>Probe</th>
+<th>gpt-4o-mini</th>
+<th>gpt-4o</th>
+<th>Match?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>tok-whitespace</td>
+<td>27.0</td>
+<td>27.0</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>tok-code</td>
+<td>25.0</td>
+<td>25.0</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>tok-url</td>
+<td>29.0</td>
+<td>29.0</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>tok-mixed-unicode</td>
+<td>22.0</td>
+<td>22.0</td>
+<td>✅</td>
+</tr>
+<tr>
+<td>tok-repeated-chars</td>
+<td>18.0</td>
+<td>18.0</td>
+<td>✅</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Conclusion</strong>: Tokenizer fingerprinting <strong>cannot</strong> distinguish gpt-4o from gpt-4o-mini, as expected (both use the o200k tokenizer).</p>
+<h3>6.2 Behavioral Fingerprint Comparison (Key Finding)</h3>
+<p>We conducted chi-square tests for homogeneity between the two models' behavioral distributions. <strong>6 out of 8 probes showed statistically significant differences (p &lt; 0.05):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Probe</th>
+<th>gpt-4o-mini Top</th>
+<th>gpt-4o Top</th>
+<th>Same?</th>
+<th>χ²</th>
+<th>p-value</th>
+<th>TVD</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>beh-random-100</td>
+<td>57 (40%)</td>
+<td>57 (24%)</td>
+<td>✅</td>
+<td>22.6</td>
+<td>0.067</td>
+<td>0.380</td>
+</tr>
+<tr>
+<td>beh-random-color</td>
+<td>Cerulean (74%)</td>
+<td>Cerulean (92%)</td>
+<td>✅</td>
+<td>12.3</td>
+<td>0.015*</td>
+<td>0.220</td>
+</tr>
+<tr>
+<td>beh-coin-flip</td>
+<td>Heads (78%)</td>
+<td>Heads (82%)</td>
+<td>✅</td>
+<td>20.1</td>
+<td>&lt;0.001*</td>
+<td>0.220</td>
+</tr>
+<tr>
+<td><strong>beh-random-letter</strong></td>
+<td><strong>G (40%)</strong></td>
+<td><strong>K (44%)</strong></td>
+<td><strong>❌</strong></td>
+<td><strong>55.1</strong></td>
+<td><strong>&lt;0.0001</strong>*</td>
+<td><strong>0.720</strong></td>
+</tr>
+<tr>
+<td>beh-dice-roll</td>
+<td>4 (96%)</td>
+<td>4 (56%)</td>
+<td>✅</td>
+<td>22.8</td>
+<td>&lt;0.0001*</td>
+<td>0.400</td>
+</tr>
+<tr>
+<td><strong>beh-random-animal</strong></td>
+<td><strong>Dolphin (16%)</strong></td>
+<td><strong>Okapi (76%)</strong></td>
+<td><strong>❌</strong></td>
+<td><strong>86.3</strong></td>
+<td><strong>&lt;0.0001</strong>*</td>
+<td><strong>0.900</strong></td>
+</tr>
+<tr>
+<td>beh-random-day</td>
+<td>Thursday (54%)</td>
+<td>Thursday (62%)</td>
+<td>✅</td>
+<td>19.7</td>
+<td>&lt;0.0001*</td>
+<td>0.320</td>
+</tr>
+<tr>
+<td>beh-number-1-10</td>
+<td>7 (100%)</td>
+<td>7 (98%)</td>
+<td>✅</td>
+<td>1.0</td>
+<td>0.315</td>
+<td>0.020</td>
+</tr>
+</tbody>
+</table>
+<p><em>TVD = Total Variation Distance (0 = identical, 1 = completely different)</em></p>
+<h3>6.3 Most Discriminative Probes</h3>
+<p>Ranked by Total Variation Distance (TVD):</p>
+<p><strong>1. beh-random-animal (TVD = 0.900) — Near-perfect discrimination</strong>
+- gpt-4o-mini: 17 unique animals, top = Dolphin (16%)
+- gpt-4o: only 4 unique animals, top = <strong>Okapi (76%)</strong>
+- The Okapi (㺢㹢狓) is a rare African giraffid. gpt-4o's overwhelming preference for this obscure animal, compared to gpt-4o-mini's diverse distribution, is the single strongest discriminator found.
+- <strong>A single probe can distinguish the two models with ~90% accuracy.</strong></p>
+<p><strong>2. beh-random-letter (TVD = 0.720)</strong>
+- gpt-4o-mini: top = G (40%), 6 unique letters
+- gpt-4o: top = K (44%), 9 unique letters
+- Different preferred letters indicate differences in training data distribution or RLHF alignment.</p>
+<p><strong>3. beh-dice-roll (TVD = 0.400)</strong>
+- gpt-4o-mini: 96% return "4" (extreme bias)
+- gpt-4o: 56% return "4" (moderate bias)
+- Same preference but different strength—gpt-4o-mini shows more extreme behavioral regularization.</p>
+<p><strong>4. beh-random-day (TVD = 0.320)</strong>
+- Both prefer Thursday, but gpt-4o (62%) &gt; gpt-4o-mini (54%)</p>
+<h3>6.4 Shared Behavioral Signatures</h3>
+<p>6 out of 8 probes share the same top response between the two models (57, Cerulean, Heads, 4, Thursday, 7), indicating that:
+1. Both models share significant training data overlap
+2. Core behavioral preferences are conserved across model sizes
+3. The differences are in <strong>strength</strong> and <strong>secondary preferences</strong>, not always in primary preference</p>
+<h3>6.5 Capability Differences</h3>
+<table>
+<thead>
+<tr>
+<th>Probe</th>
+<th>gpt-4o-mini</th>
+<th>gpt-4o</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>cap-reasoning-chain (bat-and-ball)</td>
+<td>"5" (correct)</td>
+<td>"10" (incorrect)</td>
+<td><strong>Surprising</strong>: gpt-4o fails the classic cognitive reflection test that gpt-4o-mini passes</td>
+</tr>
+<tr>
+<td>cap-math-word-problem</td>
+<td>"72"</td>
+<td>"70"</td>
+<td>Both incorrect (answer: 67.5), gpt-4o closer</td>
+</tr>
+<tr>
+<td>All easy/medium probes</td>
+<td>Pass</td>
+<td>Pass</td>
+<td>No difference</td>
+</tr>
+</tbody>
+</table>
+<p>The bat-and-ball result is particularly interesting and warrants further investigation—it may indicate that gpt-4o's larger model size leads to overconfidence in intuitive (but wrong) answers, a known phenomenon in LLM scaling.</p>
+<h3>6.6 Latency and Reliability</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>gpt-4o-mini</th>
+<th>gpt-4o</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Mean latency</td>
+<td>2185 ms</td>
+<td>1595 ms</td>
+</tr>
+<tr>
+<td>P95 latency</td>
+<td>4528 ms</td>
+<td>2663 ms</td>
+</tr>
+<tr>
+<td>Failure rate</td>
+<td>12.5%</td>
+<td>0.0%</td>
+</tr>
+<tr>
+<td>Collection time</td>
+<td>15.0 min</td>
+<td>12.0 min</td>
+</tr>
+</tbody>
+</table>
+<p>On this relay service, gpt-4o is actually faster and more reliable than gpt-4o-mini, which is counterintuitive. This likely reflects the relay's routing strategy (possibly routing gpt-4o to higher-priority backend instances) rather than inherent model speed differences.</p>
+<h3>6.7 Cross-Model Conclusion</h3>
+<p><strong>Behavioral fingerprinting is the ONLY method that can distinguish gpt-4o from gpt-4o-mini without access to official APIs:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Same-Family Discrimination</th>
+<th>Cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Tokenizer fingerprinting</td>
+<td>❌ No (identical tokenizer)</td>
+<td>Low</td>
+</tr>
+<tr>
+<td>Capability testing</td>
+<td>⚠️ Partial (only hard probes)</td>
+<td>Medium</td>
+</tr>
+<tr>
+<td>Latency analysis</td>
+<td>❌ No (confounded by routing)</td>
+<td>Low</td>
+</tr>
+<tr>
+<td><strong>Behavioral fingerprinting</strong></td>
+<td><strong>✅ Yes (TVD up to 0.900)</strong></td>
+<td><strong>Low</strong></td>
+</tr>
+</tbody>
+</table>
+<p>This validates our core hypothesis and demonstrates that behavioral fingerprints carry information about model identity that is orthogonal to tokenizer and capability signals. The ability to distinguish models within the same family is particularly valuable for detecting "model downgrade" attacks, where a relay serves a smaller/cheaper model while claiming a larger/more expensive one.</p>
+<hr />
+<h2>7. Conclusion</h2>
+<p>This study demonstrates that LLMs exhibit <strong>extremely strong behavioral fingerprints</strong> in random generation tasks, with deviations of 10-74x from uniform random expectation. These fingerprints can be measured using simple, low-cost API probes and verified using standard statistical methods (chi-square tests, KS tests, Bayesian updating).</p>
+<p>Our key contributions:
+1. <strong>Empirical discovery</strong> of gpt-4o-mini's behavioral fingerprints (100% preference for "7" in 1-10 selection)
+2. <strong>Statistical framework</strong> achieving 91.3% posterior probability for correct model identification
+3. <strong>Preliminary evidence</strong> that behavioral fingerprints can distinguish gpt-4o from gpt-4o-mini (different letter preferences)
+4. <strong>Open-source implementation</strong> (TransitTruth) with real baseline data</p>
+<h3>Future Work</h3>
+<ol>
+<li><strong>Expand baseline database</strong>: Collect data for gpt-4o, claude-3-5-sonnet, gemini-1.5-pro, and open-source models (Llama 3.1, Qwen 2.5)</li>
+<li><strong>Longitudinal study</strong>: Track how behavioral fingerprints change across model versions</li>
+<li><strong>Adversarial testing</strong>: Test whether relays can evade detection by post-processing outputs</li>
+<li><strong>Interleaved probing</strong>: Develop methods to interleave verification probes with real traffic to defeat smart routing</li>
+<li><strong>Theoretical analysis</strong>: Investigate the mathematical properties of behavioral fingerprints and their information content</li>
+</ol>
+<hr />
+<h2>References</h2>
+<p>[1] W. Cai, T. Shi, X. Zhao, and D. Song. Are you getting what you pay for? Auditing model substitution in LLM APIs. arXiv:2504.04715, 2025.</p>
+<p>[2] Model equality testing: Which model is this API serving? In International Conference on Learning Representations (ICLR), 2025.</p>
+<p>[3] X. Zhu, Y. Ye, T. Qiu, H. Zhu, S. Tan, A. Mannan, J. Michala, R. A. Popa, and W. Neiswanger. Auditing black-box LLM APIs with a rank-based uniformity test. arXiv:2506.06975, 2025.</p>
+<p>[4] D. Sam, M. Finzi, and J. Z. Kolter. Predicting the performance of black-box language models with follow-up queries. In Advances in Neural Information Processing Systems (NeurIPS), 2025.</p>
+<p>[5] X. Wang, B. Zhao, M. Backes, F. Boenisch, and A. Dziedzic. AgentProv: Auditing agentic LLM API providers via tool-use policy probes. arXiv:2609.00052, 2026.</p>
+<p>[6] A. Vo, M. R. Taesiri, D. Kim, and A. T. Nguyen. B-score: Detecting biases in large language models using response history. In International Conference on Machine Learning (ICML), 2025.</p>
+<p>[7] J. Coronado-Blázquez. Deterministic or probabilistic? The psychology of LLMs as random number generators. arXiv:2502.19965, 2025.</p>
+<p>[8] C. Zheng, H. Zhou, F. Meng, J. Zhou, and M. Huang. On large language models' selection bias in multi-choice questions. arXiv:2309.03882, 2023.</p>
+<p>[9] J. Geng, F. Cai, Y. Wang, H. Koeppl, P. Nakov, and I. Gurevych. A survey of confidence estimation and calibration in large language models. In Proceedings of NAACL-HLT 2024.</p>
+<hr />
+<h2>Appendix A: Data Availability</h2>
+<p>All baseline data collected in this study is available in the TransitTruth GitHub repository:
+- <code>data/baselines/gpt-4o-mini.json</code> (47.3 KB, 50 samples × 26 probes)
+- <code>data/baselines/gpt-4o.json</code> (collection in progress)</p>
+<p>Collection script: <code>collect_baseline.py</code>
+Analysis script: <code>analyze_baseline.py</code>
+Statistical analyzer: <code>backend/app/core/statistical_analyzer.py</code></p>
+<h2>Appendix B: Reproducibility</h2>
+<p>To reproduce our results:</p>
+<pre><code class="language-bash"># Install dependencies
+cd backend &amp;&amp; pip install -r requirements.txt
+
+# Collect baseline data (50 samples)
+python collect_baseline.py \
+  --model gpt-4o-mini \
+  --samples 50 \
+  --base-url https://your-api-endpoint/v1 \
+  --api-key sk-your-key \
+  --output data/baselines/gpt-4o-mini.json \
+  --concurrency 3
+
+# Analyze results
+python analyze_baseline.py
+</code></pre>
+<p>Expected runtime: ~15 minutes for 50 samples.
+Expected cost: &lt; $0.01 in API credits.</p>
+<hr />
+<p><em>Report generated by TransitTruth project. Last updated: 2026-09-14.</em></p>
+<footer style="margin-top:48px;color:#6e6e73;font-size:12px;border-top:1px solid #e5e5ea;padding-top:16px">
+TransitTruth Project · Tech Report · Generated 2026-09-26 · Data &amp; code: github.com/dafahaha/transit-truth
+</footer></div></body></html>
