@@ -1,0 +1,297 @@
+\documentclass[11pt]{article}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{enumitem}
+\hypersetup{colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue}
+\setlist{itemsep=2pt}
+
+\title{Behavioral Fingerprinting of Large Language Models:\\A Statistical Approach to Same-Family API Verification\\[6pt]
+\large Extended Technical Report (anonymous for review)}
+\author{dafahaha (independent)}
+\date{Updated 2026-10-01}
+
+\begin{document}
+\maketitle
+
+\begin{quotation}
+\small\noindent\textbf{Scope and validity note.} All baselines were collected through a single OpenAI-compatible relay (wolfai.top), \emph{not} through official provider endpoints. This report characterizes two \emph{nominal} endpoints on that relay; it does not measure provider-ground-truth model fingerprints, and any baseline inherits whatever model the relay actually served. The 0.913 posterior is an \emph{in-distribution resubstitution check} (a baseline scored against its own reference), not held-out generalization.
+\end{quotation}
+
+\begin{abstract}
+We collect 1{,}300 responses per model (50 samples $\times$ 26 probes, temperature 1.0) for gpt-4o-mini and gpt-4o through one OpenAI-compatible relay. Trivial ``random generation'' prompts elicit highly stereotyped distributions: gpt-4o-mini returns ``7'' for a 1--10 choice 100\% of the time, ``4'' on a die roll 96\%, and ``Cerulean'' for a color 74\%. After normalizing variant responses (e.g.\ ``Heads.'' vs.\ ``Heads''), 5 of 8 behavioral probes separate the two endpoints at $p<0.05$ in a chi-square homogeneity test; the animal probe reaches total variation distance (TVD) 0.90 (Okapi 76\% for gpt-4o vs.\ Dolphin 16\% for gpt-4o-mini), while tokenizer probes are identical. A simple ``response names Okapi'' rule gives resubstitution accuracy 88\% (95\% Wilson CI [0.80, 0.93]). The combined pipeline returns an in-distribution resubstitution posterior of 0.913 (95\% credible interval [0.851, 0.960]). We do not claim held-out or provider-ground-truth performance. All tables in this report are generated from \texttt{data/baselines/*.json} by \texttt{docs/generate\_tables.py}.
+\end{abstract}
+
+\section{Introduction}
+\label{sec:intro}
+
+Large language models (LLMs) are increasingly consumed through opaque serving chains---aggregators, resellers, and relay services---in which the client cannot confirm that the model answering is the model being paid for. Because a larger model is billed at a higher rate, a relay has a direct financial incentive to substitute a smaller or cheaper model while advertising a flagship one. Audits of commercial endpoints indicate that such substitution and silent degradation occur in practice~\cite{cai2025pay,met2025}.
+
+Verifying identity through a black box is difficult. Proposed methods require long generated texts, token-level log-probabilities, adversarially crafted prompts, watermarks embedded at training time, or the model owner's cooperation. Recent single-token fingerprinting~\cite{bruckner2026token} and rank-based uniformity tests~\cite{zhu2025rank} reduce query cost substantially and recover model \emph{lineage} across families, but they are not designed to tell apart two models from the same family---which is exactly the situation in a downgrade attack. Same-family siblings often share an identical tokenizer and overlapping capabilities, so tokenizer fingerprints and capability tests fail by construction.
+
+\paragraph{Research question.}
+\emph{Do LLMs exhibit measurable behavioral fingerprints---consistent distributional biases under seemingly random generation---that (i) discriminate same-family siblings where tokenizer fingerprints cannot, and (ii) can be verified with standard statistics at near-zero cost?}
+
+This report is the extended technical companion to a short workshop paper. It gives the full probe taxonomy, statistical derivations, per-probe results, and a detailed threats-to-validity discussion.
+
+\section{Related Work}
+\label{sec:related}
+
+\paragraph{LLM fingerprinting and provenance.}
+Single-token fingerprinting~\cite{bruckner2026token} builds an empirical distribution over answers to trivial one-word prompts across 165 models, recovering lineage at a 7.3\% equal error rate, but focuses on cross-family identification. RAFP~\cite{tsai2025rofl} constructs non-invasive black-box fingerprints from rare-region prompts that remain stable under fine-tuning, LoRA, and quantization. Model provenance testing~\cite{nikolic2025provenance} uses multiple-hypothesis testing to decide whether one model derives from another. Model equality testing~\cite{met2025} frames ``is this the claimed API model?'' as a two-sample problem and shows MMD-based tests outperform rank-based uniformity on locally deployed models. We target the complementary fine-grained same-family setting these methods do not isolate.
+
+\paragraph{Auditing and follow-up probing.}
+Cai et al.~\cite{cai2025pay} audit model substitution directly; Zhu et al.~\cite{zhu2025rank} use a rank-based uniformity test; Sam et al.~\cite{sam2025followup} predict black-box performance from follow-up queries; AgentProv~\cite{wang2026agentprov} audits agentic providers through tool-use policy probes. CoIn~\cite{sun2025coin} addresses a different transparency gap---inflated counts of hidden reasoning tokens. Our work shares the auditing goal but uses free-form behavioral biases rather than ranks, capabilities, or tool calls.
+
+\paragraph{Behavioral biases in LLMs.}
+LLMs show documented biases in random number generation~\cite{coronado2025rng}, multi-choice selection~\cite{zheng2023selection}, and response-history bias; calibration and confidence are surveyed in the literature. We treat these biases not merely as defects but as identifying biometric signals, and quantify their discriminative value within a model family.
+
+\section{Data Collection}
+\label{sec:collect}
+
+For each nominal model endpoint we collect 50 responses per probe (1{,}300 responses) through the OpenAI-compatible relay at temperature 1.0. To avoid triggering anti-bot defenses we shuffle probe order, randomize inter-request intervals (0.3--1.5\,s), vary the number of probes per batch, and rotate natural User-Agent headers. Wall time is about 15 minutes per model at a cost below \$0.01.
+
+\paragraph{Response normalization.} Raw responses are text and may carry punctuation or case variants (``Heads.'' vs.\ ``Heads'', ``heads'' vs.\ ``Heads''). Before any statistic we strip trailing punctuation and lowercase keys and merge equivalent variants. This matters: the coin-flip probe is \emph{not} significant after normalization (TVD 0.08, $p=0.092$), whereas an unnormalized table that splits ``Heads'' and ``Heads.'' would spuriously report it as significant. We therefore report all homogeneity results on normalized counts.
+
+\section{Probe Design}
+\label{sec:probes}
+
+We use 26 probes in three groups.
+
+\subsection{Tokenizer probes (8)}
+These measure deterministic tokenizer behavior---e.g.\ the prompt-token count of a fixed whitespace, code, URL, mixed-unicode, repeated-digit, CJK, emoji, or repeated-character string. Because two same-family models share a tokenizer, these act as a \emph{negative control} that should not discriminate. On our relay, five of the eight succeeded (the first three failed under cold-start rate limiting); the successful ones returned zero-variance, identical counts for both nominal models.
+
+\subsection{Behavioral probes (8)}
+Each asks the model to produce a ``random'' token under high temperature: pick a number 1--10 or 1--100, roll a die, flip a coin, choose a color, letter, weekday, or animal. Under uniform sampling the output should be near-uniform; systematic deviation is the fingerprint.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{llc}
+\toprule
+Probe & Prompt (paraphrase) & Domain \\
+\midrule
+beh-number-1-10 & pick a number 1--10, output only the number & closed ($J{=}10$) \\
+beh-random-100 & pick a number 1--100 & closed ($J{=}100$) \\
+beh-dice-roll & roll a six-sided die & closed ($J{=}6$) \\
+beh-coin-flip & flip a coin, Heads/Tails & closed ($J{=}2$) \\
+beh-random-letter & pick a letter A--Z & closed ($J{=}26$) \\
+beh-random-day & pick a weekday & closed ($J{=}7$) \\
+beh-random-color & pick a color name & open-ended \\
+beh-random-animal & pick an animal name & open-ended \\
+\bottomrule
+\end{tabular}
+\caption{The eight behavioral probes and their reference domain. Closed-set probes admit a theoretical uniform expectation; open-ended color/animal probes are reported descriptively.}
+\end{table}
+
+\subsection{Capability probes (10)}
+These estimate model tier via simple math, logic, code syntax, bug fixing, multilingual translation, instruction following, knowledge cutoff, and context length. These are coarse and shared within a family, so they serve as corroborating rather than identifying evidence.
+
+\section{Statistical Framework}
+\label{sec:stats}
+
+\subsection{Chi-square goodness of fit}
+For a behavioral probe with expected uniform counts $E_j=n/J$ over $J$ categories and observed counts $O_j$,
+\begin{equation}
+\chi^2_{\mathrm{GoF}} = \sum_{j=1}^{J} \frac{(O_j - E_j)^2}{E_j}, \qquad E_j = n/J .
+\end{equation}
+Under the null of uniformity this is asymptotically $\chi^2$ on $J-1$ degrees of freedom. We use it to quantify how far a single model deviates from random. For open-ended probes (color, animal) there is no natural finite uniform reference, so we report them descriptively rather than as a GoF test.
+
+\subsection{Two-model homogeneity and TVD}
+To compare two models directly we build the joint $2\times J$ contingency table of normalized counts and run the Pearson chi-square test for homogeneity (no continuity correction). We also report total variation distance
+\begin{equation}
+\mathrm{TVD} = \frac{1}{2}\sum_{j=1}^{J} \left| p_j - q_j \right|,
+\end{equation}
+with $p_j,q_j$ the two empirical category proportions. TVD ranges from 0 (identical distributions) to 1 (disjoint). \emph{TVD is a distributional distance, not a classification accuracy}; we report a separate rule-based classifier with its own confusion matrix and confidence interval.
+
+\subsection{Kolmogorov--Smirnov test}
+For deterministic tokenizer-normalized scores we use a one-sample KS test against the baseline distribution; a high $p$-value supports a match.
+
+\subsection{Bayesian updating}
+Across probes we update the posterior that an endpoint matches a claimed model:
+\begin{equation}
+P(H{=}1 \mid E) = \frac{P(E \mid H{=}1)\,P(H{=}1)}{P(E)},
+\end{equation}
+where the denominator expands as
+\begin{equation}
+P(E) = P(E\mid H{=}1)P(H{=}1) + P(E\mid H{=}0)P(H{=}0),
+\end{equation}
+i.e.\ a weighted average of the match and mismatch likelihoods. Each probe's $p$-value maps to a likelihood ratio (e.g.\ $p>0.5 \Rightarrow \mathrm{LR}\approx 2.0$ under the match hypothesis; $p<0.01 \Rightarrow \mathrm{LR}\approx 0.1$ under mismatch), with a prior $P(H{=}1)=0.7$. We report a 95\% credible interval for the posterior using a beta approximation.
+
+\subsection{Classifier confidence interval}
+For the Okapi rule we report the Wilson score interval
+\begin{equation}
+\frac{\hat p + \frac{z^2}{2n} \pm z\sqrt{\frac{\hat p(1-\hat p)}{n} + \frac{z^2}{4n^2}}}{1 + \frac{z^2}{n}},
+\end{equation}
+with $\hat p = $ accuracy, $n=100$ scored samples, $z=1.96$, alongside a bootstrap percentile interval.
+
+\section{Results}
+
+\subsection{Strong single-model fingerprints}
+\label{sec:single}
+
+On gpt-4o-mini the behavioral deviations from uniformity are extreme (Table~\ref{tab:single}). The 1--10 choice returns ``7'' in all 50 samples, the die roll returns ``4'' in 48/50, and the color choice returns the relatively obscure ``Cerulean'' in 37/50. For closed-set probes the Pearson $\chi^2$ against a theoretical uniform reference ranges from 46.1 (coin) to 1238 (1--100); these are 10--74$\times$ deviations from the uniform expectation.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lccc}
+\toprule
+Probe & Top response & Count & Rate \\
+\midrule
+Number 1--10 & 7 & 50/50 & 100\% \\
+Die roll & 4 & 48/50 & 96\% \\
+Color & Cerulean & 37/50 & 74\% \\
+Coin flip & Heads & 49/50 & 98\% \\
+Number 1--100 & 57 & 20/50 & 40\% \\
+Letter & G (tie M) & 20/50 & 40\% \\
+Animal & Dolphin & 8/50 & 16\% \\
+Weekday & Thursday & 27/50 & 54\% \\
+\bottomrule
+\end{tabular}
+\caption{Strong behavioral fingerprints on gpt-4o-mini (50 samples each, responses normalized).}\label{tab:single}
+\end{table}
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lrr}
+\toprule
+Probe & $J$ & $\chi^2_{\mathrm{GoF}}$ \\
+\midrule
+Number 1--10 & 10 & 450.0 \\
+Number 1--100 & 100 & 1238.0 \\
+Letter & 26 & 387.8 \\
+Die roll & 6 & 226.7 \\
+Weekday & 7 & 120.0 \\
+Coin flip & 2 & 46.1 \\
+Color & open & descriptive \\
+Animal & open & descriptive \\
+\bottomrule
+\end{tabular}
+\caption{GoF chi-square against a theoretical uniform reference. Open-ended color/animal probes have no unique uniform reference.}\label{tab:gof}
+\end{table}
+
+\subsection{Same-family discrimination}
+\label{sec:same}
+
+The central result is the gpt-4o vs.\ gpt-4o-mini comparison. \emph{Tokenizer probes cannot separate them}: all five successful tokenizer probes return identical prompt-token counts (27.0, 25.0, 29.0, 22.0, 18.0), as expected for two models sharing the o200k tokenizer.
+
+\emph{Behavioral probes can, after normalization.} Table~\ref{tab:tvd} ranks the probes by TVD. Five of eight behavioral probes show statistically significant differences. The animal probe is a near-perfect separator at TVD $=0.90$: gpt-4o concentrates on a single obscure animal, ``Okapi,'' 76\% of the time (only 4 unique animals), whereas gpt-4o-mini is spread over 17 animals with top ``Dolphin'' at 16\%. The letter probe reaches TVD $=0.72$ (gpt-4o ``K'' 44\% vs.\ gpt-4o-mini, where ``G'' and ``M'' tie at 40\%), and the die probe TVD $=0.40$ (shared ``4'' but 56\% vs.\ 96\%). The coin-flip probe, in contrast, is \emph{not} significant once ``Heads.'' and ``Heads'' are merged (TVD 0.08, $p=0.092$).
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lcccr}
+\toprule
+Probe & mini top & gpt-4o top & TVD & $p$ \\
+\midrule
+Animal & Dolphin 16\% & Okapi 76\% & 0.90 & $<0.0001$ \\
+Letter & G/M 40\% & K 44\% & 0.72 & $<0.0001$ \\
+Die roll & 4 96\% & 4 56\% & 0.40 & $<0.0001$ \\
+Number 1--100 & 57 40\% & 57 24\% & 0.38 & 0.067 \\
+Weekday & Thu 54\% & Thu 62\% & 0.32 & $<0.0001$ \\
+Color & Cerulean 74\% & Cerulean 92\% & 0.22 & 0.015 \\
+Coin flip & Heads 98\% & Heads 90\% & 0.08 & 0.092 \\
+Number 1--10 & 7 100\% & 7 98\% & 0.02 & 0.315 \\
+\bottomrule
+\end{tabular}
+\caption{Same-family comparison of behavioral probes (responses normalized). Five of eight differ significantly at $p<0.05$.}\label{tab:tvd}
+\end{table}
+
+\paragraph{Animal classifier.} Using the simple rule ``predict gpt-4o iff the response names Okapi,'' we obtain on the same baseline (resubstitution): TP$=38$, FP$=0$, FN$=12$, TN$=50$, accuracy $88\%$, Wilson 95\% CI $[0.80,0.93]$, bootstrap $[0.81,0.94]$. We stress this is in-distribution resubstitution, not held-out accuracy, and that TVD measures distributional separation rather than classification performance.
+
+\subsection{End-to-end verification}
+\label{sec:e2e}
+
+Scoring a baseline sample against its own reference (in-distribution resubstitution, not an independent held-out set), the pipeline returns posterior probability 0.913 (95\% credible interval [0.851, 0.960]). The KS test returns a high $p$-value (1.000) and the chi-square test $p=0.713$, indicating no significant difference from the claimed baseline, with an aggregate likelihood ratio of 4.5. Because the scored sample is drawn from the same baseline used as reference, this verifies that the pipeline is internally self-consistent; it does \emph{not} estimate real-world detection accuracy, which requires a separately collected evaluation set.
+
+\subsection{Comparison with other signals}
+Tokenizer and latency signals cannot discriminate within a family and are relatively easy to evade with smart routing; capability testing is only partially informative; behavioral fingerprints uniquely support same-family discrimination at low cost and are comparatively hard to forge, because matching the distribution requires serving the genuine model, post-processing outputs, or fine-tuning a surrogate.
+
+\subsection{Per-probe analysis}
+\paragraph{Animal (TVD 0.90).} The strongest separator. gpt-4o concentrates on ``Okapi'' in 38/50 responses with only four unique animals; gpt-4o-mini spreads over 17 animals (top ``Dolphin'' 8/50). The Okapi rule (TP 38 / FP 0 / FN 12 / TN 50) yields resubstitution accuracy 88\%.
+\paragraph{Letter (TVD 0.72).} gpt-4o-mini shows ``G'' and ``M'' tied at 40\% across 6 unique letters; gpt-4o prefers ``K'' at 44\% across 9 unique letters.
+\paragraph{Die roll (TVD 0.40).} Both prefer ``4'', but gpt-4o-mini returns it 96\% of the time versus 56\% for gpt-4o---a difference in strength, not in the preferred value.
+\paragraph{Number 1--100 (TVD 0.38).} Both peak on ``57'' (mini 40\%, gpt-4o 24\%); the homogeneity $p=0.067$ is not significant at 0.05.
+\paragraph{Weekday (TVD 0.32).} Both prefer Thursday (mini 54\%, gpt-4o 62\%); significant in proportion but not in identity.
+\paragraph{Color (TVD 0.22).} Both prefer the relatively obscure ``Cerulean'' (mini 74\%, gpt-4o 92\%); secondary responses for mini include Turquoise, Cyan, and Teal.
+\paragraph{Coin flip (TVD 0.08).} After merging ``Heads.''/``Heads'', both call Heads about 90--98\% of the time; $p=0.092$, \emph{not} significant. This probe would have been spuriously significant under raw, unnormalized keys.
+\paragraph{Number 1--10 (TVD 0.02).} Both return ``7'' near-uniformly (100\% vs.\ 98\%); no separation.
+
+\subsection{Tokenizer probe results}
+The five successful tokenizer probes returned zero-variance, identical prompt-token counts for both nominal models (Table~\ref{tab:tok}), confirming they are a negative control that cannot separate same-family siblings.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabular}{lcccc}
+\toprule
+Probe & mini mean & gpt-4o mean & Std & Match \\
+\midrule
+tok-whitespace & 27.0 & 27.0 & 0.0 & yes \\
+tok-code & 25.0 & 25.0 & 0.0 & yes \\
+tok-url & 29.0 & 29.0 & 0.0 & yes \\
+tok-mixed-unicode & 22.0 & 22.0 & 0.0 & yes \\
+tok-repeated-chars & 18.0 & 18.0 & 0.0 & yes \\
+\bottomrule
+\end{tabular}
+\caption{Tokenizer probes are identical across the two nominal endpoints (o200k tokenizer).}\label{tab:tok}
+\end{table}
+
+\subsection{Capability and latency comparison}
+On easy/medium capability probes both endpoints pass; the notable difference is the bat-and-ball reflection test, which gpt-4o-mini answers correctly but gpt-4o answers incorrectly. Latency on this relay is confounded by routing (gpt-4o was actually faster and more reliable), so latency is not used as an identity signal.
+
+\section{Why Do These Fingerprints Exist?}
+The biases likely arise from three sources: training-data frequencies (e.g.\ cultural salience of ``seven''), RLHF alignment that amplifies human-preferred ``defaults,'' and decoder artifacts that skew logits even at temperature 1.0. The striking ``Okapi'' concentration in gpt-4o---an obscure African giraffid---suggests a strongly learned default that differs from the smaller sibling, which is precisely why the signal carries identity information orthogonal to the tokenizer.
+
+\section{Limitations and Threats to Validity}
+\label{sec:threats}
+\begin{enumerate}
+\item \textbf{Collection channel.} Both baselines were collected through one OpenAI-compatible relay (wolfai.top), not through official provider endpoints. We therefore claim only that the two \emph{nominal} endpoints presented distinguishable behavioral profiles on that relay; we do not claim to have measured provider-ground-truth model fingerprints.
+\item \textbf{Baseline honesty.} Any baseline inherits whatever model the relay actually served---if the relay itself substituted models, the baseline would encode that substitution. Establishing an official gold-standard baseline requires official API access and is future work.
+\item \textbf{Resubstitution.} The 0.913 posterior and the 88\% Okapi-classifier accuracy are computed in-sample; held-out accuracy on independently collected traffic is unmeasured.
+\item \textbf{Baseline coverage.} A pre-collected baseline is needed per model, and we currently cover two siblings on one relay.
+\item \textbf{Model updates.} Versions and snapshots may shift fingerprints, so baselines must be versioned and refreshed.
+\item \textbf{Smart routing.} A relay could answer probes with the genuine model and serve a cheaper one for real traffic; interleaving probes with realistic traffic mitigates this.
+\item \textbf{Decoder/normalization sensitivity.} Relays may override temperature or normalize outputs (``Heads.'' vs.\ ``Heads''), changing the distribution; we normalize post hoc and report both the normalized and (in the source script) raw counts.
+\end{enumerate}
+We frame results as conservative statistical evidence rather than definitive proof.
+
+\section{Ethical Considerations}
+Automated probing may conflict with a service's terms of use; users should verify compliance. Because a ``suspicious'' label can harm a provider's reputation, the tool uses conservative thresholds, labels outputs as statistical evidence, and favors responsible disclosure over immediate publication.
+
+\section{Reproducibility Appendix}
+\label{sec:repro}
+All numbers in this report are regenerated from the raw JSON by:
+\begin{itemize}
+\item \texttt{docs/generate\_tables.py} --- prints the single-model fingerprints, GoF table, same-family TVD/$p$ table, and the Okapi classifier confusion matrix with Wilson CI.
+\item \texttt{docs/make\_fig.py} --- redraws \texttt{paper/fig\_results.png} from the corrected numbers.
+\end{itemize}
+To reproduce:
+\begin{verbatim}
+python docs/generate_tables.py
+python docs/make_fig.py
+cd paper && pdflatex main.tex   # short double-blind version
+\end{verbatim}
+Data: \texttt{data/baselines/gpt-4o-mini.json} and \texttt{gpt-4o.json} (50 samples $\times$ 26 probes each).
+
+\section*{References (selected)}
+\small
+\begin{enumerate}
+\item W. Cai, T. Shi, X. Zhao, D. Song. Are you getting what you pay for? arXiv:2504.04715, 2025.
+\item I. Gao, P. Liang, C. Guestrin. Model equality testing. ICLR 2025; arXiv:2410.20247.
+\item X. Zhu et al. Auditing black-box LLM APIs with a rank-based uniformity test. arXiv:2506.06975, 2025.
+\item D. Sam, M. Finzi, J. Z. Kolter. Predicting the performance of black-box language models with follow-up queries. NeurIPS 2025.
+\item X. Wang et al. AgentProv: Auditing agentic LLM API providers via tool-use policy probes. arXiv:2609.00052, 2026.
+\item T. Bruckner. One token is enough: Fingerprinting and verifying LLMs from single-token output distributions. arXiv:2607.10252, 2026.
+\item Y.-Y. Tsai, J. H. Liang, C. Guo, J. Yang, L. van der Maaten. RAFP: Identifying LLM lineages via rare-region fingerprints. arXiv:2505.12682, 2025.
+\item G. Sun et al. CoIn: Counting the invisible reasoning tokens in commercial opaque LLM APIs. arXiv:2505.13778, 2025.
+\item I. Nikoli\'c, T. Baluta, P. Saxena. Model provenance testing for large language models. arXiv:2502.00706, 2025.
+\item C. Zheng et al. Large language models are not robust multiple choice selectors. arXiv:2309.03882, 2023.
+\end{enumerate}
+
+\end{document}

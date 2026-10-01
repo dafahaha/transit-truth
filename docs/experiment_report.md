@@ -3,14 +3,16 @@
 ## Experiment Report
 
 **Date:** 2026-09-14
-**Author:** dafahaha, Anonymous Institution
+**Author:** dafahaha (independent; anonymous for review)
 **Project:** TransitTruth - Open-source AI API Relay Verification Tool
+
+> **Scope and validity note.** All baselines were collected through a single OpenAI-compatible relay (wolfai.top), **not** through official provider endpoints. This report characterizes two *nominal* endpoints on that relay; it does not measure provider-ground-truth model fingerprints, and any baseline inherits whatever model the relay actually served. The 91.3% posterior is an **in-distribution resubstitution check** (a baseline scored against its own reference), not held-out generalization; a separately collected evaluation set is needed to estimate real detection accuracy.
 
 ---
 
 ## Abstract
 
-This study investigates whether large language models (LLMs) exhibit measurable "behavioral fingerprints"—consistent distributional biases in seemingly random generation tasks—that can be used to verify the identity of models served by API relay services. We collected 1,300 API responses from gpt-4o-mini across 26 probe categories (8 tokenizer, 8 behavioral, 10 capability) with 50 samples per probe. Our analysis reveals **extremely strong behavioral fingerprints**: gpt-4o-mini returns "7" for 1-10 number selection **100% of the time**, returns "4" for dice rolls **96% of the time**, and prefers "Cerulean" for color selection **74% of the time**—deviations of 10-74x from uniform random expectation. We demonstrate that these fingerprints, combined with Kolmogorov-Smirnov tests and Bayesian updating, can achieve **91.3% posterior probability** of correct model identification. These findings suggest that behavioral fingerprinting is a promising, low-cost method for detecting model substitution in API relay services, without requiring access to official APIs or specialized hardware.
+This study investigates whether large language models (LLMs) exhibit measurable "behavioral fingerprints"—consistent distributional biases in seemingly random generation tasks—that can be used to verify the identity of models served by API relay services. We collected 1,300 API responses from gpt-4o-mini across 26 probe categories (8 tokenizer, 8 behavioral, 10 capability) with 50 samples per probe. Our analysis reveals **extremely strong behavioral fingerprints**: gpt-4o-mini returns "7" for 1-10 number selection **100% of the time**, returns "4" for dice rolls **96% of the time**, and prefers "Cerulean" for color selection **74% of the time**—deviations of 10-74x from uniform random expectation. We demonstrate that these fingerprints, combined with Kolmogorov-Smirnov tests and Bayesian updating, yield an **in-distribution resubstitution posterior of 91.3%** (a baseline scored against its own reference; not held-out accuracy). All data were collected through a single OpenAI-compatible relay, not official provider endpoints. These findings suggest that behavioral fingerprinting is a promising, low-cost method for screening model substitution in API relay services; establishing an official, provider-ground-truth baseline is future work.
 
 **Keywords:** LLM fingerprinting, API relay verification, behavioral biometrics, statistical model checking, AI security
 
@@ -46,7 +48,7 @@ However, these methods have limitations:
 1. **Empirical discovery** of extremely strong behavioral fingerprints in gpt-4o-mini (10-74x deviation from random)
 2. **Statistical framework** combining chi-square tests, KS tests, and Bayesian updating for model verification
 3. **Open-source tool** (TransitTruth) implementing these methods, with real baseline data
-4. **Zero-cost methodology** requiring only API access, no specialized hardware or official API keys
+4. **Low-cost methodology** requiring only OpenAI-compatible API access; note it relies on a pre-collected baseline rather than an official reference endpoint
 
 ---
 
@@ -216,9 +218,9 @@ All 5 successful tokenizer probes showed **zero variance** (std = 0.0) across 50
 | **beh-number-1-10** | **7** | **50/50** | **100%** | 10% | **10.0x** |
 | **beh-dice-roll** | **4** | **48/50** | **96%** | 16.7% | **5.7x** |
 | **beh-random-color** | **Cerulean** | **37/50** | **74%** | ~1% | **74.0x** |
-| **beh-coin-flip** | **Heads** | **39/50** | **78%** | 50% | 1.6x |
+| **beh-coin-flip** | **Heads** | **49/50** | **98%** | 50% | 1.96x |
 | **beh-random-100** | **57** | **20/50** | **40%** | 1% | **40.0x** |
-| **beh-random-letter** | **G** | **20/50** | **40%** | 3.8% | **10.5x** |
+| **beh-random-letter** | **G (tie with M)** | **20/50** | **40%** | 3.8% | **10.5x** |
 | **beh-random-animal** | **Dolphin** | **8/50** | **16%** | ~1% | **16.0x** |
 | **beh-random-day** | **Thursday** | **27/50** | **54%** | 14.3% | **3.8x** |
 
@@ -235,31 +237,31 @@ All 5 successful tokenizer probes showed **zero variance** (std = 0.0) across 50
 - Only 2 out of 50 responses deviated
 
 **beh-random-color (color selection)**:
-- Response distribution: {"Cerulean": 37, "Crimson": 5, "Teal": 4, "Indigo": 4}
-- 74% of responses are "Cerulean" (a relatively obscure blue color)
+- Response distribution (from raw JSON): {"Cerulean": 37, "Turquoise": 11, "Cyan": 1, "Teal": 1}
+- 74% of responses are "Cerulean" (a relatively obscure blue color); secondary response is Turquoise (22%)
 - 4 unique responses total
 
 **beh-random-100 (1-100 number selection)**:
-- Response distribution: {"57": 20, "42": 8, "73": 6, "17": 5, ...}
+- Response distribution (from raw JSON): {"57": 20, "42": 11, "47": 10, "37": 4, "67": 2, "73": 1, "27": 1, "72": 1}
 - 40% of responses are "57"
 - 8 unique responses total
 
 #### 4.2.2 Statistical Significance
 
-For each behavioral probe, we conducted a chi-square goodness-of-fit test against the uniform distribution:
+For each behavioral probe, we conducted a chi-square goodness-of-fit test against the uniform distribution. For closed-set probes we use the theoretical category space $J$ (10 numbers, 6 die faces, 2 coin sides, 26 letters, 7 weekdays, 100 numbers); these values are reproducible directly from the raw JSON. The open-ended color and animal probes have no unique uniform reference and are reported descriptively.
 
-| Probe ID | Chi-Square Statistic | p-value | Significant? |
-|---|---|---|---|
-| beh-number-1-10 | 450.0 | < 0.0001 | Yes (extremely) |
-| beh-dice-roll | 178.6 | < 0.0001 | Yes (extremely) |
-| beh-random-color | 152.3 | < 0.0001 | Yes (extremely) |
-| beh-random-100 | 124.7 | < 0.0001 | Yes (extremely) |
-| beh-random-letter | 89.3 | < 0.0001 | Yes (extremely) |
-| beh-coin-flip | 16.8 | < 0.0001 | Yes |
-| beh-random-day | 45.2 | < 0.0001 | Yes (extremely) |
-| beh-random-animal | 32.1 | < 0.0001 | Yes (extremely) |
+| Probe ID | $J$ (uniform space) | Chi-Square Statistic | p-value | Significant? |
+|---|---|---|---|---|
+| beh-number-1-10 | 10 | 450.0 | < 0.0001 | Yes (extremely) |
+| beh-random-100 | 100 | 1238.0 | < 0.0001 | Yes (extremely) |
+| beh-random-letter | 26 | 387.8 | < 0.0001 | Yes (extremely) |
+| beh-dice-roll | 6 | 226.7 | < 0.0001 | Yes (extremely) |
+| beh-random-day | 7 | 120.0 | < 0.0001 | Yes (extremely) |
+| beh-coin-flip | 2 | 46.1 | < 0.0001 | Yes |
+| beh-random-color | open-ended | n/a (descriptive) | < 0.0001 | Yes |
+| beh-random-animal | open-ended | n/a (descriptive) | < 0.0001 | Yes |
 
-**All 8 behavioral probes show statistically significant deviations from uniform randomness (p < 0.0001).**
+**All 8 behavioral probes reject uniformity at p < 0.0001.** Note: an earlier draft reported non-reproducible $\chi^2$ values (178.6, 152.3, 124.7, 89.3, 16.8, 45.2, 32.1) from an unspecified normalization; those have been replaced by the values above, computed directly from `data/baselines/gpt-4o-mini.json`.
 
 ### 4.3 Capability Probe Results
 
@@ -291,15 +293,15 @@ For each behavioral probe, we conducted a chi-square goodness-of-fit test agains
 
 The high variance (std > mean) suggests that the relay service may be routing requests to multiple backend instances with varying performance. The 30-second max latency indicates occasional queueing or cold starts.
 
-### 4.5 Statistical Verification Results
+### 4.5 Statistical Verification Results (in-distribution resubstitution)
 
-We tested our statistical framework by using the collected baseline data to verify a "known" sample (drawn from the same distribution):
+We tested our statistical framework by scoring the collected baseline against its own reference (an **in-distribution resubstitution check**, not an independent held-out set):
 
 | Metric | Value |
 |---|---|
 | Claimed model | gpt-4o-mini |
 | Detected family | openai-gpt |
-| Conclusion | **match** |
+| Conclusion | **match (self-consistent)** |
 | Posterior probability | **0.913** (91.3%) |
 | 95% credible interval | [0.851, 0.960] |
 | KS statistic | 0.0000 |
@@ -307,9 +309,9 @@ We tested our statistical framework by using the collected baseline data to veri
 | Chi-square statistic | 8.0000 |
 | Chi-square p-value | 0.7133 |
 | Likelihood ratio | 4.5 |
-| Confidence level | **high** |
+| Confidence level | **high (in-distribution)** |
 
-**Interpretation**: The statistical framework correctly identifies the sample as matching gpt-4o-mini with 91.3% posterior probability. The high KS p-value (1.0) and chi-square p-value (0.71) confirm no significant difference between the sample and the baseline.
+**Interpretation**: The statistical framework is internally self-consistent: a baseline sample scored against its own reference returns a high posterior (0.913) and non-significant KS (p=1.0) / chi-square (p=0.71). This verifies the pipeline does not flag a sample that comes from the same distribution it was calibrated on. It does **not** estimate real-world detection accuracy, which requires scoring independently collected traffic against the baseline.
 
 ---
 
@@ -340,17 +342,23 @@ The extreme behavioral biases we observed likely arise from three sources:
 
 3. **Low cost**: Behavioral probes require only a few tokens per request and can be run in parallel. A full audit (26 probes × 10 samples) costs less than $0.01 in API credits.
 
-4. **No official API needed**: Unlike methods that require comparison against official API responses, behavioral fingerprinting only requires a pre-collected baseline database.
+4. **Deployment convenience**: Unlike methods that require a side-by-side comparison against official API responses, behavioral fingerprinting only needs a pre-collected baseline database. The caveat is that the baseline itself is only as trustworthy as the relay it was collected from; an official, provider-ground-truth baseline is future work.
 
-#### 5.2.2 Limitations
+#### 5.2.2 Limitations and threats to validity
 
-1. **Baseline data requirement**: The method requires a pre-collected baseline database for each model. Currently, we only have gpt-4o-mini data. Expanding to more models is future work.
+1. **Collection channel / external validity**: Both baselines were collected through a single OpenAI-compatible relay (wolfai.top), not through official provider endpoints. We claim only that the two *nominal* endpoints showed distinguishable behavioral profiles on that relay; we do not claim provider-ground-truth model fingerprints.
 
-2. **Model updates**: Model updates (e.g., gpt-4o-mini-2024-07-18 vs gpt-4o-mini-2025-01-01) may change behavioral fingerprints. Baselines need to be versioned and periodically refreshed.
+2. **Baseline honesty**: A baseline inherits whatever model the relay actually served. If the relay itself substituted models, the baseline would encode that substitution. Establishing an official gold-standard baseline requires official API access and is future work.
 
-3. **Smart routing**: A sophisticated relay could use the claimed model for behavioral probes and a cheaper model for actual user requests. This can be mitigated by interleaving probes with real traffic patterns.
+3. **Resubstitution, not held-out**: The 91.3% posterior (Section 4.5) and the ~88% Okapi-classifier accuracy (Section 6.3) are computed in-sample on the same baseline. Held-out accuracy on independently collected traffic is unmeasured.
 
-4. **Temperature sensitivity**: Behavioral fingerprints may vary with decoding parameters. Our probes use temperature=1.0, but relays may override this parameter.
+4. **Baseline data requirement**: The method requires a pre-collected baseline database for each model. We currently have gpt-4o-mini and gpt-4o on one relay; expanding to more models and relays is future work.
+
+5. **Model updates**: Model updates (e.g., gpt-4o-mini-2024-07-18 vs gpt-4o-mini-2025-01-01) may change behavioral fingerprints. Baselines need to be versioned and periodically refreshed.
+
+6. **Smart routing**: A sophisticated relay could use the claimed model for behavioral probes and a cheaper model for actual user requests. This can be mitigated by interleaving probes with real traffic patterns.
+
+7. **Temperature / output normalization sensitivity**: Behavioral fingerprints may vary with decoding parameters. Our probes use temperature=1.0, but relays may override this; relays may also normalize variant responses (e.g., "Heads." vs. "Heads"), which our analysis normalizes post hoc.
 
 ### 5.3 Comparison with Existing Methods
 
@@ -391,14 +399,14 @@ All 5 successful tokenizer probes showed **100% identical** prompt token counts 
 
 ### 6.2 Behavioral Fingerprint Comparison (Key Finding)
 
-We conducted chi-square tests for homogeneity between the two models' behavioral distributions. **6 out of 8 probes showed statistically significant differences (p < 0.05):**
+We conducted chi-square tests for homogeneity between the two models' behavioral distributions, after normalizing variant responses (e.g., "Heads."/"Heads"). **5 out of 8 probes showed statistically significant differences (p < 0.05):**
 
 | Probe | gpt-4o-mini Top | gpt-4o Top | Same? | χ² | p-value | TVD |
 |---|---|---|---|---|---|---|
 | beh-random-100 | 57 (40%) | 57 (24%) | ✅ | 22.6 | 0.067 | 0.380 |
 | beh-random-color | Cerulean (74%) | Cerulean (92%) | ✅ | 12.3 | 0.015* | 0.220 |
-| beh-coin-flip | Heads (78%) | Heads (82%) | ✅ | 20.1 | <0.001* | 0.220 |
-| **beh-random-letter** | **G (40%)** | **K (44%)** | **❌** | **55.1** | **<0.0001*** | **0.720** |
+| beh-coin-flip | Heads (98%) | Heads (90%) | ✅ | 2.8 | 0.092 | 0.080 |
+| **beh-random-letter** | **G (40%, tie M)** | **K (44%)** | **❌** | **55.1** | **<0.0001*** | **0.720** |
 | beh-dice-roll | 4 (96%) | 4 (56%) | ✅ | 22.8 | <0.0001* | 0.400 |
 | **beh-random-animal** | **Dolphin (16%)** | **Okapi (76%)** | **❌** | **86.3** | **<0.0001*** | **0.900** |
 | beh-random-day | Thursday (54%) | Thursday (62%) | ✅ | 19.7 | <0.0001* | 0.320 |
@@ -410,14 +418,14 @@ We conducted chi-square tests for homogeneity between the two models' behavioral
 
 Ranked by Total Variation Distance (TVD):
 
-**1. beh-random-animal (TVD = 0.900) — Near-perfect discrimination**
+**1. beh-random-animal (TVD = 0.900) — Near-perfect distributional separation**
 - gpt-4o-mini: 17 unique animals, top = Dolphin (16%)
 - gpt-4o: only 4 unique animals, top = **Okapi (76%)**
 - The Okapi (㺢㹢狓) is a rare African giraffid. gpt-4o's overwhelming preference for this obscure animal, compared to gpt-4o-mini's diverse distribution, is the single strongest discriminator found.
-- **A single probe can distinguish the two models with ~90% accuracy.**
+- **Simple rule "predict gpt-4o iff the response names Okapi"** yields on the same baseline (resubstitution): TP=38, FP=0, FN=12, TN=50 → **accuracy 88% (95% Wilson CI [0.80, 0.93]; bootstrap [0.81, 0.94])**. This is in-distribution resubstitution, not held-out accuracy; TVD measures distributional separation, not classification rate.
 
 **2. beh-random-letter (TVD = 0.720)**
-- gpt-4o-mini: top = G (40%), 6 unique letters
+- gpt-4o-mini: top = G (40%), tied with M (40%), 6 unique letters
 - gpt-4o: top = K (44%), 9 unique letters
 - Different preferred letters indicate differences in training data distribution or RLHF alignment.
 
@@ -459,7 +467,7 @@ On this relay service, gpt-4o is actually faster and more reliable than gpt-4o-m
 
 ### 6.7 Cross-Model Conclusion
 
-**Behavioral fingerprinting is the ONLY method that can distinguish gpt-4o from gpt-4o-mini without access to official APIs:**
+**On this single relay, behavioral profiling is the only low-cost signal that separated the two nominal endpoints** (tokenizer counts were identical; capability differences appeared only on hard probes; latency was confounded by routing):
 
 | Method | Same-Family Discrimination | Cost |
 |---|---|---|
@@ -478,9 +486,9 @@ This study demonstrates that LLMs exhibit **extremely strong behavioral fingerpr
 
 Our key contributions:
 1. **Empirical discovery** of gpt-4o-mini's behavioral fingerprints (100% preference for "7" in 1-10 selection)
-2. **Statistical framework** achieving 91.3% posterior probability for correct model identification
-3. **Preliminary evidence** that behavioral fingerprints can distinguish gpt-4o from gpt-4o-mini (different letter preferences)
-4. **Open-source implementation** (TransitTruth) with real baseline data
+2. **Statistical framework** yielding an in-distribution resubstitution posterior of 0.913 (self-consistency, not held-out accuracy)
+3. **Cross-model evidence** that behavioral profiles distinguish gpt-4o from gpt-4o-mini on one relay (animal TVD=0.900; Okapi-rule resubstitution accuracy 88%, Wilson 95% CI [0.80, 0.93])
+4. **Open-source implementation** (TransitTruth) with real baseline data collected through an OpenAI-compatible relay
 
 ### Future Work
 
@@ -496,7 +504,7 @@ Our key contributions:
 
 [1] W. Cai, T. Shi, X. Zhao, and D. Song. Are you getting what you pay for? Auditing model substitution in LLM APIs. arXiv:2504.04715, 2025.
 
-[2] Model equality testing: Which model is this API serving? In International Conference on Learning Representations (ICLR), 2025.
+[2] I. Gao, P. Liang, and C. Guestrin. Model equality testing: Which model is this API serving? In International Conference on Learning Representations (ICLR), 2025. arXiv:2410.20247.
 
 [3] X. Zhu, Y. Ye, T. Qiu, H. Zhu, S. Tan, A. Mannan, J. Michala, R. A. Popa, and W. Neiswanger. Auditing black-box LLM APIs with a rank-based uniformity test. arXiv:2506.06975, 2025.
 
@@ -508,7 +516,7 @@ Our key contributions:
 
 [7] J. Coronado-Blázquez. Deterministic or probabilistic? The psychology of LLMs as random number generators. arXiv:2502.19965, 2025.
 
-[8] C. Zheng, H. Zhou, F. Meng, J. Zhou, and M. Huang. On large language models' selection bias in multi-choice questions. arXiv:2309.03882, 2023.
+[8] C. Zheng, H. Zhou, F. Meng, J. Zhou, and M. Huang. Large language models are not robust multiple choice selectors. arXiv:2309.03882, 2023.
 
 [9] J. Geng, F. Cai, Y. Wang, H. Koeppl, P. Nakov, and I. Gurevych. A survey of confidence estimation and calibration in large language models. In Proceedings of NAACL-HLT 2024.
 
@@ -517,8 +525,8 @@ Our key contributions:
 ## Appendix A: Data Availability
 
 All baseline data collected in this study is available in the TransitTruth GitHub repository:
-- `data/baselines/gpt-4o-mini.json` (47.3 KB, 50 samples × 26 probes)
-- `data/baselines/gpt-4o.json` (collection in progress)
+- `data/baselines/gpt-4o-mini.json` (47.3 KB, 50 samples × 26 probes, 12.5% request failure rate)
+- `data/baselines/gpt-4o.json` (56.1 KB, 50 samples × 26 probes, 0% failure rate; used for the Section 6 cross-model comparison)
 
 Collection script: `collect_baseline.py`
 Analysis script: `analyze_baseline.py`
