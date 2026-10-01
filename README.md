@@ -56,7 +56,7 @@ TransitTruth 是一个开源的 **AI API 安全审计平台**，基于学术前�
 **实测效果（同一中转站两个标称端点）：**
 - gpt-4o-mini vs gpt-4o：**5/8 探针**统计显著差异（p<0.05；抛硬币探针在归一化后 TVD=0.08、p=0.092，不再显著）
 - 最强区分探针（选动物）：TVD=0.90；"是否为 Okapi"规则的重代入准确率 **88%**（Wilson [0.80,0.93]）。TVD 是分布距离，不等于准确率。
-- 整体管线：后验概率 **0.913**，95% 可信区间 [0.851, 0.960]。这是**基线样本对自身参考的 in-distribution resubstitution（自洽性检验）**，用于验证管线内部一致；**不是**独立数据上的 held-out 检测准确率。
+- 整体管线：后验概率 **0.913**，95% 可信区间 [0.885, 0.937]。这是**基线样本对自身参考的 in-distribution resubstitution（自洽性检验）**，用于验证管线内部一致；**不是**独立数据上的 held-out 检测准确率。
 
 ### 2. 🔤 Tokenizer指纹
 
@@ -198,7 +198,7 @@ transit-truth sk-your-key --base-url https://your-relay.com/v1 --model gpt-4o
 **核心结论（均为同一中转站、in-distribution 结果）：**
 - 行为画像能区分同家族两个标称端点（tokenizer 指纹做不到）
 - 最强探针 TVD=0.90；"是否为 Okapi"规则重代入准确率 88%（Wilson [0.80,0.93]）；TVD≠准确率
-- 管线自洽检验后验 0.913（CrI [0.851,0.960]），为 resubstitution，非 held-out
+- 管线自洽检验后验 0.913（CrI [0.885,0.937]），为 resubstitution，非 held-out
 - 单次审计成本 < $0.01
 
 **与前沿工作的关系**：我们的行为画像方法与 [One Token Is Enough](https://arxiv.org/abs/2607.10252)（单 token 输出分布指纹，EER 7.3%）互为补充——它聚焦跨家族谱系识别，我们在同家族两个标称端点上展示了可区分性；官方金标准基线与 held-out 泛化验证属未来工作。

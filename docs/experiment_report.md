@@ -303,15 +303,15 @@ We tested our statistical framework by scoring the collected baseline against it
 | Detected family | openai-gpt |
 | Conclusion | **match (self-consistent)** |
 | Posterior probability | **0.913** (91.3%) |
-| 95% credible interval | [0.851, 0.960] |
+| 95% credible interval | [0.885, 0.937] |
 | KS statistic | 0.0000 |
 | KS p-value | 1.0000 |
-| Chi-square statistic | 8.0000 |
-| Chi-square p-value | 0.7133 |
+| Chi-square statistic | 0.0000 |
+| Chi-square p-value | 1.0000 |
 | Likelihood ratio | 4.5 |
 | Confidence level | **high (in-distribution)** |
 
-**Interpretation**: The statistical framework is internally self-consistent: a baseline sample scored against its own reference returns a high posterior (0.913) and non-significant KS (p=1.0) / chi-square (p=0.71). This verifies the pipeline does not flag a sample that comes from the same distribution it was calibrated on. It does **not** estimate real-world detection accuracy, which requires scoring independently collected traffic against the baseline.
+**Interpretation**: The statistical framework is internally self-consistent: a baseline sample scored against its own reference returns a high posterior (0.913) and non-significant KS (p=1.0) / chi-square (p=1.000). This verifies the pipeline does not flag a sample that comes from the same distribution it was calibrated on. It does **not** estimate real-world detection accuracy, which requires scoring independently collected traffic against the baseline.
 
 ---
 
