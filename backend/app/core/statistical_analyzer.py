@@ -173,6 +173,12 @@ class StatisticalAnalyzer:
             return
 
         loaded = 0
+        # Remember which keys came from synthetic defaults (if any). After a
+        # successful real load we will drop synthetic placeholders that are
+        # NOT backed by a real file, so a claim like "gpt-4" can never silently
+        # fall back to the n=10 synthetic distribution.
+        synthetic_keys = set(self.baseline_db.keys())
+        real_keys: set[str] = set()
         for json_file in sorted(baseline_path.glob("*.json")):
             if "test" in json_file.name.lower():
                 continue  # Skip test files
@@ -214,9 +220,11 @@ class StatisticalAnalyzer:
                 )
 
                 self.baseline_db[model_name] = baseline
+                real_keys.add(model_name)
                 # Also add common aliases
                 if "gpt-4o-mini" in model_name:
                     self.baseline_db["gpt-4o-mini"] = baseline
+                    real_keys.add("gpt-4o-mini")
                 loaded += 1
                 n_tok = len(tokenizer_dist)
                 n_beh = len(behavioral_dist)
@@ -226,6 +234,13 @@ class StatisticalAnalyzer:
                 print(f"  Error loading {json_file.name}: {e}")
 
         if loaded > 0:
+            # Drop synthetic-only placeholders that no real file overwrote
+            # (e.g. the synthetic "gpt-4" alias of the old demo gpt4). A real
+            # audit must compare against real data or be honestly inconclusive,
+            # never against a tiny fabricated distribution.
+            for k in list(synthetic_keys):
+                if k not in real_keys:
+                    self.baseline_db.pop(k, None)
             print(f"Loaded {loaded} real baselines from {data_dir}")
 
     def _infer_family(self, model_name: str) -> str:
@@ -328,20 +343,33 @@ class StatisticalAnalyzer:
             if n_baseline == 0 or n_observed == 0:
                 continue
 
+            # Include BOTH directions in the test and in df:
+            #   - baseline-only categories (observed count = 0): kept.
+            #   - observed-only categories (baseline count = 0): a response the
+            #     baseline NEVER produced is strong mismatch evidence and must
+            #     NOT be silently dropped. We keep the plain empirical expected
+            #     for categories the baseline actually observed (so an exact
+            #     resubstitution still yields chi2 ~ 0), and only apply a small
+            #     Jeffreys-style floor expected for never-seen categories so the
+            #     cell contributes without dividing by zero.
+            alpha = 0.5
+            k_cats = len(all_categories)
             probe_chi2 = 0.0
             probe_cells = 0
             for cat in all_categories:
-                expected = (baseline_counts.get(cat, 0) / n_baseline) * n_observed
+                bc = baseline_counts.get(cat, 0)
                 actual = observed_counts.get(cat, 0)
-                if expected > 0:
-                    probe_chi2 += (actual - expected) ** 2 / expected
-                    probe_cells += 1
+                if bc > 0:
+                    expected = (bc / n_baseline) * n_observed
+                else:
+                    # baseline count == 0 -> novel response; floor expected.
+                    expected = (alpha / (n_baseline + alpha * k_cats)) * n_observed
+                probe_chi2 += (actual - expected) ** 2 / expected
+                probe_cells += 1
 
-            # Per-probe goodness-of-fit df = (number of categories with
-            # expected>0) - 1. Pool across probes by summing both the
-            # statistics and the degrees of freedom (sum(k_i - 1)), instead
-            # of the previous (sum k_i - 1) which over-counted df by
-            # (n_probes - 1).
+            # Per-probe goodness-of-fit df = (number of union categories) - 1.
+            # Pool across probes by summing (k_i - 1), not (sum k_i - 1)
+            # (the latter over-counts df by n_probes - 1).
             if probe_cells >= 2:
                 chi2_sum += probe_chi2
                 total_df += probe_cells - 1
@@ -432,34 +460,45 @@ class StatisticalAnalyzer:
 
         P(evidence|honest) / P(evidence|dishonest)
 
-        Heuristic:
-        - High p-values (>>0.05) suggest match (LR > 1)
-        - Low p-values (<<0.05) suggest mismatch (LR < 1)
-        - High capability failure rate suggests downgrade (LR < 1)
+        Semantics (asymmetric on purpose):
+        - Tokenizer/KS is a *cross-family* signal only. For two same-family
+          endpoints (e.g. gpt-4o vs gpt-4o-mini) the tokenizer is identical
+          by design, so a *high* KS p-value (tokenizer consistent) is the
+          EXPECTED, NEUTRAL situation -> factor = 1.0, NEVER > 1. Only a LOW
+          KS p-value (tokenizer that does not match the claimed baseline at
+          all) counts as reverse evidence of a different family (factor < 1).
+          This prevents a same-family downgrade from being washed out by a
+          spurious "tokenizer looks fine -> honest x2".
+        - Behavioral chi-square is the PRIMARY same-family fingerprint signal
+          and may go both ways: low p = mismatch (<1), high p = match (>1).
+        - High capability failure rate suggests downgrade (<1).
         """
         lr = 1.0
 
-        # KS test contribution
+        # --- Tokenizer / KS: asymmetric, factor in (0, 1] only ---
+        # Consistency = neutral (same-family tokenizer is expected).
+        # Inconsistency = evidence of a different (cheaper) family.
         if ks_pvalue < 0.01:
-            lr *= 0.1  # strong evidence of mismatch
+            lr *= 0.2  # tokenizer strongly off-family -> against honest
         elif ks_pvalue < 0.05:
-            lr *= 0.3  # moderate evidence
-        elif ks_pvalue < 0.1:
-            lr *= 0.7  # weak evidence
-        elif ks_pvalue > 0.5:
-            lr *= 2.0  # strong evidence of match
-        elif ks_pvalue > 0.2:
-            lr *= 1.5  # moderate evidence
-
-        # Chi-square test contribution
-        if chi2_pvalue < 0.01:
-            lr *= 0.2
-        elif chi2_pvalue < 0.05:
             lr *= 0.5
-        elif chi2_pvalue > 0.5:
-            lr *= 1.5
+        elif ks_pvalue < 0.1:
+            lr *= 0.8
+        # else: consistent -> factor 1.0 (NEUTRAL, never rewards)
 
-        # Capability failure rate contribution
+        # --- Behavioral chi-square: PRIMARY same-family fingerprint ---
+        if chi2_pvalue < 0.01:
+            lr *= 0.05  # distribution strongly off baseline -> downgrade
+        elif chi2_pvalue < 0.05:
+            lr *= 0.3
+        elif chi2_pvalue < 0.1:
+            lr *= 0.7
+        elif chi2_pvalue > 0.5:
+            lr *= 3.0   # strong behavioral fingerprint match -> honest
+        elif chi2_pvalue > 0.2:
+            lr *= 1.3
+
+        # --- Capability failure rate ---
         if capability_failure_rate > 0.7:
             lr *= 0.1  # almost certainly downgraded
         elif capability_failure_rate > 0.5:
@@ -603,16 +642,18 @@ class StatisticalAnalyzer:
         else:
             return "无显著差异"
 
-    def estimate_false_positive_rate(self, n_probes: int = 10,
-                                       alpha: float = 0.05) -> float:
+    def estimate_false_positive_rate(self, alpha: float = 0.05,
+                                       n_tests: int = 2) -> float:
         """Estimate false positive rate for the test battery.
 
         Probability of flagging an honest relay as suspicious,
         assuming independent tests with significance level alpha.
 
-        FPR = 1 - (1 - alpha)^n_tests (at least one false positive)
+        FPR = 1 - (1 - alpha)^n_tests (at least one false positive).
+        The battery has n_tests=2 independent significance tests (KS + chi2).
+        (The previous `n_probes` parameter was ignored/misleading and removed;
+        the probe count does not change the number of hypothesis tests.)
         """
-        n_tests = 2  # KS test + chi-square test
         fpr = 1 - (1 - alpha) ** n_tests
         return fpr
 

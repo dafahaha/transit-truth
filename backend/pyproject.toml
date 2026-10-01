@@ -44,8 +44,7 @@ dev = [
     "black>=23.0.0",
 ]
 monitor = [
-    "schedule>=1.2.0",
-    "python-dotenv>=1.0.0",
+    # No runtime monitor dependencies currently required by backend/app.
 ]
 
 [project.scripts]

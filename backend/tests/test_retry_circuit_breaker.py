@@ -39,3 +39,24 @@ class TestCircuitBreakerHalfOpen:
         assert cb.can_execute() is True
         cb.record_failure("e2 again")
         assert cb.state == "OPEN"
+
+
+# ─── Round-2 fix: P2-1 HTTP-date Retry-After ─────────────────────────
+from app.core.retry import parse_retry_after
+from datetime import datetime, timedelta, timezone
+
+
+class TestRetryAfterHeader:
+    def test_numeric_retry_after(self):
+        assert parse_retry_after({"retry-after": "120"}) == 120.0
+
+    def test_http_date_retry_after_parses(self):
+        # 60 seconds in the future -> a positive, finite wait (<=300 cap)
+        future = datetime.now(timezone.utc) + timedelta(seconds=60)
+        rfc = future.strftime("%a, %d %b %Y %H:%M:%S GMT")
+        v = parse_retry_after({"retry-after": rfc})
+        assert v is not None, "HTTP-date Retry-After returned None (datetime NameError?)"
+        assert 0 < v <= 300.0
+
+    def test_garbage_retry_after_returns_none(self):
+        assert parse_retry_after({"retry-after": "not-a-date"}) is None

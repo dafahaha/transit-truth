@@ -32,6 +32,7 @@ import asyncio
 import logging
 import time
 from dataclasses import dataclass, field
+from datetime import datetime
 from typing import Any, Callable, Optional
 
 logger = logging.getLogger(__name__)
@@ -184,7 +185,8 @@ def parse_retry_after(response_headers: dict) -> Optional[float]:
         # 尝试解析为HTTP日期
         from email.utils import parsedate_to_datetime
         dt = parsedate_to_datetime(retry_after)
-        seconds = (dt - datetime.now(dt.tzinfo)).total_seconds()
+        now = datetime.now(dt.tzinfo)
+        seconds = (dt - now).total_seconds()
         return max(0, min(seconds, 300.0))
     except Exception:
         return None

@@ -136,3 +136,77 @@ class TestKsTwoSample:
                                      "b": [50, 51, 50, 52, 51]})
         s, p = an.ks_test_tokenizer({"a": 100, "b": 200}, bl)
         assert p < 0.05
+
+
+# ─── Round-2 fix regressions ──────────────────────────────────────────
+class TestFusionAsymmetry:
+    """P1-1: tokenizer-consistent is NEUTRAL (factor 1, never >1); behavioral
+    chi2 is the primary signal. A same-family downgrade must alarm, a true
+    same-model resubstitution must not false-alarm."""
+
+    def _obs(self, bl):
+        import statistics
+        beh = {pid: list(v) for pid, v in bl.behavioral_distributions.items()}
+        tok = {pid: statistics.mean(v) for pid, v in bl.tokenizer_distributions.items()}
+        return tok, beh
+
+    def test_mini_observed_claiming_4o_alarms(self):
+        an = StatisticalAnalyzer()
+        an.load_real_baselines()
+        mini = an._resolve_baseline("gpt-4o-mini")
+        tok, beh = self._obs(mini)
+        v = an.analyze("gpt-4o", tok, beh, 0.0)
+        # tokenizer is identical across the family -> ks_p high, but it must
+        # NOT push posterior up. Behavioral chi2 strongly rejects -> mismatch.
+        assert v.conclusion == "mismatch", f"got {v.conclusion}, posterior={v.posterior_probability}"
+        assert v.posterior_probability < 0.3
+        assert v.posterior_ci_upper < 0.5
+
+    def test_true_4o_resubstitution_no_false_alarm(self):
+        an = StatisticalAnalyzer()
+        an.load_real_baselines()
+        full = an._resolve_baseline("gpt-4o")
+        tok, beh = self._obs(full)
+        v = an.analyze("gpt-4o", tok, beh, 0.0)
+        assert v.conclusion == "match", f"got {v.conclusion}, posterior={v.posterior_probability}"
+        assert v.posterior_probability > 0.8
+
+    def test_tokenizer_consistent_factor_never_rewards(self):
+        # Direct unit check: ks_pvalue high (tokenizer consistent) must leave
+        # the LR unchanged relative to a neutral baseline; only chi2 moves it.
+        an = StatisticalAnalyzer()
+        # neutral chi2 p=0.2 (no behavioral evidence), capability=0
+        lr_consistent = an.calculate_likelihood_ratio(ks_pvalue=0.9, chi2_pvalue=0.2,
+                                                      capability_failure_rate=0.0)
+        # tokenizer consistent contributes factor 1.0; capability<0.1 -> 1.5
+        assert lr_consistent == pytest.approx(1.5, abs=1e-9)
+        # tokenizer INCONSISTENT (off-family) pulls LR below 1
+        lr_off = an.calculate_likelihood_ratio(ks_pvalue=0.001, chi2_pvalue=0.2,
+                                               capability_failure_rate=0.0)
+        assert lr_off < 1.0
+
+
+class TestSyntheticPurge:
+    """P2-2: after loading real baselines, the n=10 synthetic 'gpt-4' alias
+    must not survive to be matched against a real audit."""
+
+    def test_gpt4_alias_not_synthetic_after_real_load(self):
+        an = StatisticalAnalyzer()
+        an.load_default_baselines()      # creates synthetic "gpt-4" (n=10)
+        an.load_real_baselines()         # loads real gpt-4o / gpt-4o-mini
+        g4 = an._resolve_baseline("gpt-4")
+        # Either gone, or backed by a real (n>10) distribution -- never the n=10 placeholder.
+        assert g4 is None or g4.sample_size > 10, f"gpt-4 still resolves to n={g4.sample_size} synthetic"
+
+
+class TestChi2NovelCategory:
+    """P2-3: observed-only categories (baseline count 0) must contribute."""
+
+    def test_novel_response_category_counted(self):
+        an = StatisticalAnalyzer()
+        bl = BaselineDistribution(model_family="x", model_name="x",
+            behavioral_distributions={"beh-a": ["heads"] * 8 + ["tails"] * 2})
+        # observed emits a category the baseline never produced
+        s, p = an.chi2_test_behavioral({"beh-a": ["okapi"] * 10}, bl)
+        assert s > 0.0, "novel category was dropped (expected>0 check)"
+        assert p < 0.05
