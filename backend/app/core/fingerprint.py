@@ -308,14 +308,16 @@ class ModelFingerprinter:
             counter = Counter(responses)
             most_common = counter.most_common(3)
             total = len(responses)
+            import math as _math
             entropy = 0.0
             for count in counter.values():
                 p = count / total
                 if p > 0:
-                    entropy -= p * (p ** 0.5)  # simplified entropy
+                    entropy -= p * _math.log(p)  # Shannon entropy (nats)
             signatures[probe_id] = {
                 "sample_count": total,
                 "unique_responses": len(counter),
+                "entropy_nats": round(entropy, 4),
                 "top3": most_common,
                 "diversity_score": round(len(counter) / max(total, 1), 2),
             }
@@ -325,12 +327,10 @@ class ModelFingerprinter:
         statistical_match = None
         baseline_info = {"available": False}
         if all_observed:
-            # Check if we have a baseline for this model
-            baseline = None
-            for key, bl in self.stat_analyzer.baseline_db.items():
-                if key.lower() in self.model.lower() or self.model.lower() in key.lower():
-                    baseline = bl
-                    break
+            # Check if we have a baseline for this model. Use exact
+            # normalized lookup (same as StatisticalAnalyzer) so that
+            # "gpt-4o-mini" never matches the "gpt-4o" baseline.
+            baseline = self.stat_analyzer._resolve_baseline(self.model)
 
             if baseline and baseline.behavioral_distributions:
                 baseline_info = {

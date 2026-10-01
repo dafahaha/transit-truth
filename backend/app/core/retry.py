@@ -83,11 +83,16 @@ class CircuitBreaker:
                 self._state = "HALF_OPEN"
                 self._half_open_requests = 0
                 logger.info(f"Circuit breaker transitioning to HALF_OPEN after {self.recovery_timeout}s recovery")
-                return True
-            return False
+                # Fall through to HALF_OPEN accounting below so that this
+                # transition call itself consumes one probe slot.
+            else:
+                return False
 
         if self._state == "HALF_OPEN":
-            return self._half_open_requests < self.half_open_max_requests
+            if self._half_open_requests < self.half_open_max_requests:
+                self._half_open_requests += 1
+                return True
+            return False
 
         return False
 

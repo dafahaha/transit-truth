@@ -16,6 +16,7 @@ References:
 - SILENT-BENCH: benchmark for silent model degradation
 """
 import math
+import re
 import statistics
 from dataclasses import dataclass, field
 from typing import Optional
@@ -143,7 +144,7 @@ class StatisticalAnalyzer:
             "claude-3": claude,
         }
 
-    def load_real_baselines(self, data_dir: str = "data/baselines"):
+    def load_real_baselines(self, data_dir: str | None = None):
         """Load real baseline data from JSON files collected from actual APIs.
 
         Replaces synthetic baselines with empirically collected data.
@@ -155,9 +156,20 @@ class StatisticalAnalyzer:
         import json
         from pathlib import Path
 
-        baseline_path = Path(data_dir)
+        if data_dir is None:
+            # Resolve relative to the repo root (this file lives at
+            # backend/app/core/statistical_analyzer.py -> 4 parents up = repo root).
+            repo_root = Path(__file__).resolve().parents[3]
+            candidates = [
+                Path("data/baselines"),
+                repo_root / "data" / "baselines",
+                Path("../data/baselines"),
+            ]
+            baseline_path = next((p for p in candidates if p.exists()), candidates[1])
+        else:
+            baseline_path = Path(data_dir)
         if not baseline_path.exists():
-            print(f"Warning: baseline directory {data_dir} not found, keeping synthetic baselines")
+            print(f"Warning: baseline directory {baseline_path} not found, keeping synthetic baselines")
             return
 
         loaded = 0
@@ -245,33 +257,36 @@ class StatisticalAnalyzer:
         Returns:
             (ks_statistic, p_value)
         """
-        all_observed = []
-        all_baseline = []
+        # Normalize each probe to z-scores using the probe's own baseline
+        # mean/std, then run a *two-sample* KS between observed z-scores and
+        # the empirical z-score distribution of the baseline samples. This
+        # avoids misspecifying the reference as a standard normal when the
+        # baseline itself is small (where the true reference is the empirical
+        # baseline CDF, not N(0,1)).
+        observed_z: list[float] = []
+        baseline_z: list[float] = []
 
         for probe_id, observed_count in observed.items():
-            if probe_id in baseline.tokenizer_distributions:
-                all_observed.append(observed_count)
-                all_baseline.extend(baseline.tokenizer_distributions[probe_id])
+            if probe_id not in baseline.tokenizer_distributions:
+                continue
+            baseline_vals = baseline.tokenizer_distributions[probe_id]
+            if len(baseline_vals) < 2:
+                continue
+            mean = statistics.mean(baseline_vals)
+            std = statistics.stdev(baseline_vals)
+            if std == 0:
+                # Zero-variance baseline: cannot normalize; skip rather than
+                # silently dividing by 1.0 and masking the anomaly.
+                continue
+            observed_z.append((observed_count - mean) / std)
+            for v in baseline_vals:
+                baseline_z.append((v - mean) / std)
 
-        if len(all_observed) < 2 or len(all_baseline) < 2:
+        if len(observed_z) < 2 or len(baseline_z) < 2:
             return 0.0, 1.0  # insufficient data
 
-        # Normalize by probe (since different probes have different base counts)
-        # Use per-probe z-scores instead
-        z_scores = []
-        for probe_id, observed_count in observed.items():
-            if probe_id in baseline.tokenizer_distributions:
-                baseline_vals = baseline.tokenizer_distributions[probe_id]
-                if len(baseline_vals) >= 2:
-                    mean = statistics.mean(baseline_vals)
-                    std = statistics.stdev(baseline_vals) or 1.0
-                    z_scores.append((observed_count - mean) / std)
-
-        if len(z_scores) < 2:
-            return 0.0, 1.0
-
-        # One-sample KS test against standard normal
-        ks_stat, p_value = stats.kstest(z_scores, 'norm')
+        # Two-sample KS against the empirical baseline CDF.
+        ks_stat, p_value = stats.ks_2samp(observed_z, baseline_z)
         return float(ks_stat), float(p_value)
 
     def chi2_test_behavioral(self, observed: dict[str, list[str]],
@@ -286,7 +301,7 @@ class StatisticalAnalyzer:
         total_observed = 0
         total_expected = 0
         chi2_sum = 0.0
-        dof = 0
+        total_df = 0
 
         for probe_id, observed_responses in observed.items():
             if probe_id not in baseline.behavioral_distributions:
@@ -313,47 +328,98 @@ class StatisticalAnalyzer:
             if n_baseline == 0 or n_observed == 0:
                 continue
 
+            probe_chi2 = 0.0
+            probe_cells = 0
             for cat in all_categories:
                 expected = (baseline_counts.get(cat, 0) / n_baseline) * n_observed
                 actual = observed_counts.get(cat, 0)
                 if expected > 0:
-                    chi2_sum += (actual - expected) ** 2 / expected
-                    dof += 1
+                    probe_chi2 += (actual - expected) ** 2 / expected
+                    probe_cells += 1
+
+            # Per-probe goodness-of-fit df = (number of categories with
+            # expected>0) - 1. Pool across probes by summing both the
+            # statistics and the degrees of freedom (sum(k_i - 1)), instead
+            # of the previous (sum k_i - 1) which over-counted df by
+            # (n_probes - 1).
+            if probe_cells >= 2:
+                chi2_sum += probe_chi2
+                total_df += probe_cells - 1
 
             total_observed += n_observed
             total_expected += n_baseline
 
-        if dof <= 1:
+        if total_df < 1:
             return 0.0, 1.0
 
         # p-value from chi-square distribution
-        p_value = float(1 - stats.chi2.cdf(chi2_sum, dof - 1))
+        p_value = float(1 - stats.chi2.cdf(chi2_sum, total_df))
         return float(chi2_sum), p_value
 
-    def bayesian_update(self, prior: float, likelihood_ratio: float) -> tuple[float, float, float]:
+    @staticmethod
+    def _normalize_model_name(name: str) -> str:
+        """Lower-case and strip version/date suffixes for exact baseline lookup."""
+        n = name.strip().lower()
+        # Strip OpenAI-style date suffixes: -2024-08-06 or -20240806
+        n = re.sub(r"-\d{4}-\d{2}-\d{2}$", "", n)
+        n = re.sub(r"-\d{8}$", "", n)
+        return n.strip()
+
+    def bayesian_update(self, prior: float, likelihood_ratio: float,
+                        observed_size: int = 0, baseline_size: int = 0
+                        ) -> tuple[float, float, float]:
         """Bayesian update for model verification.
 
         Args:
             prior: P(honest) before evidence
-            likelihood_ratio: P(evidence|honest) / P(evidence|dishonest)
+            likelihood_ratio: P(evidence|honest) / P(evidence|dishonest).
+                Non-positive LR is treated as strong evidence against honest.
+            observed_size: number of observed samples (drives CI width)
+            baseline_size: number of baseline samples (drives CI width)
 
         Returns:
             (posterior, ci_lower, ci_upper) - 95% credible interval
         """
-        # Posterior odds = prior odds * likelihood ratio
-        prior_odds = prior / (1 - prior)
-        posterior_odds = prior_odds * likelihood_ratio
-        posterior = posterior_odds / (1 + posterior_odds)
+        # Clamp prior into (0, 1) to avoid log(0).
+        prior = min(max(prior, 1e-6), 1 - 1e-6)
 
-        # Approximate credible interval using beta distribution
-        # Convert to beta parameters (pseudo-counts)
-        alpha = posterior * 100  # pseudo-count for honest
-        beta_param = (1 - posterior) * 100  # pseudo-count for dishonest
+        # Work in log-odds space to avoid overflow when LR is huge.
+        log_prior_odds = math.log(prior / (1 - prior))
 
-        if alpha > 0 and beta_param > 0:
+        if not math.isfinite(likelihood_ratio) or likelihood_ratio <= 0:
+            # LR=0 / negative / NaN / inf: evidence that the model is NOT as
+            # claimed. Map -inf log-odds -> posterior 0; +inf -> posterior 1.
+            if math.isnan(likelihood_ratio):
+                log_lr = 0.0  # undefined evidence: no update
+            elif likelihood_ratio <= 0:
+                log_lr = -math.log(1e6)  # strong against, but finite
+            else:
+                log_lr = math.log(1e6)  # +inf: strong for, but finite
+        else:
+            log_lr = math.log(likelihood_ratio)
+
+        log_post_odds = log_prior_odds + log_lr
+        # Sigmoid, guarded against overflow.
+        if log_post_odds >= 0:
+            posterior = 1.0 / (1.0 + math.exp(-log_post_odds))
+        else:
+            exp_v = math.exp(log_post_odds)
+            posterior = exp_v / (1.0 + exp_v)
+        posterior = min(max(posterior, 0.0), 1.0)
+
+        # Credible interval width scales with the *effective* sample size, so
+        # that a 5-sample audit gets a wide interval and a 500-sample audit
+        # gets a narrow one. Use a Beta(posterior * N, (1-posterior) * N)
+        # where N = observed_size + baseline_size.
+        n_eff = max(int(observed_size) + int(baseline_size), 1)
+        alpha = posterior * n_eff
+        beta_param = (1 - posterior) * n_eff
+
+        if alpha > 1e-6 and beta_param > 1e-6:
             ci_lower = float(stats.beta.ppf(0.025, alpha, beta_param))
             ci_upper = float(stats.beta.ppf(0.975, alpha, beta_param))
         else:
+            # Extreme posterior with very few samples: still leave a wide CI.
             ci_lower = 0.0
             ci_upper = 1.0
 
@@ -405,6 +471,20 @@ class StatisticalAnalyzer:
 
         return lr
 
+    def _resolve_baseline(self, claimed_model: str):
+        """Return the BaselineDistribution for the claimed model, or None.
+
+        Matching rules (in order):
+          1. Exact normalized id match (case-insensitive, date-suffix stripped).
+          2. Exact match after stripping OpenAI date suffixes (-YYYY-MM-DD).
+        No substring / fuzzy containment: a mini variant must never be
+        compared against a non-mini baseline.
+        """
+        norm = self._normalize_model_name(claimed_model)
+        # Build normalized lookup once.
+        norm_db = {self._normalize_model_name(k): v for k, v in self.baseline_db.items()}
+        return norm_db.get(norm)
+
     def analyze(self, claimed_model: str,
                 observed_tokenizer: dict[str, float],
                 observed_behavioral: dict[str, list[str]],
@@ -420,12 +500,10 @@ class StatisticalAnalyzer:
         Returns:
             StatisticalVerdict with statistically grounded conclusion
         """
-        # Find matching baseline
-        baseline = None
-        for key, bl in self.baseline_db.items():
-            if key.lower() in claimed_model.lower() or claimed_model.lower() in key.lower():
-                baseline = bl
-                break
+        # Find matching baseline by exact normalized model id. We deliberately
+        # do NOT use substring containment: "gpt-4o-mini" must never match the
+        # "gpt-4o" baseline just because "gpt-4o" is a substring.
+        baseline = self._resolve_baseline(claimed_model)
 
         if baseline is None:
             return StatisticalVerdict(
@@ -444,10 +522,12 @@ class StatisticalAnalyzer:
         lr = self.calculate_likelihood_ratio(ks_pvalue, chi2_pvalue, capability_failure_rate)
 
         # Bayesian update
-        posterior, ci_lower, ci_upper = self.bayesian_update(self.prior_honest, lr)
-
-        # Calculate observed sample size
         observed_size = sum(len(responses) for responses in observed_behavioral.values())
+        posterior, ci_lower, ci_upper = self.bayesian_update(
+            self.prior_honest, lr,
+            observed_size=observed_size,
+            baseline_size=baseline.sample_size,
+        )
 
         # Assess sample adequacy
         sample_adequacy, sample_warning = assess_sample_adequacy(

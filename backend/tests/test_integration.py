@@ -26,9 +26,9 @@ from app.core.statistical_analyzer import (
     assess_sample_adequacy,
 )
 
-pytestmark = pytest.mark.integration
 
 
+@pytest.mark.integration
 class TestHTTPClientIntegration:
     """HTTP客户端集成测试"""
 
@@ -93,6 +93,8 @@ class TestHTTPClientIntegration:
         assert stats["total_requests"] == 20
 
 
+
+@pytest.mark.integration
 class TestAuditorIntegration:
     """审计器集成测试"""
 
@@ -253,6 +255,8 @@ class TestStatisticalAnalysisIntegration:
         assert verdict.posterior_probability is not None
 
 
+
+@pytest.mark.integration
 class TestEndToEndWorkflow:
     """端到端工作流测试"""
 

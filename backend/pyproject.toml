@@ -9,7 +9,7 @@ description = "AI API 中转站验真器 - 检测AI API中转站是否存在模�
 readme = "README.md"
 license = {text = "MIT"}
 authors = [
-    {name = "dafahaha", email = "156556011+dafahaha@users.noreply.github.com"}
+    {name = "dafahaha", email = "dafahaha@users.noreply.github.com"}
 ]
 keywords = ["ai", "api", "llm", "audit", "security", "openai", "transit"]
 classifiers = [
@@ -30,11 +30,9 @@ dependencies = [
     "uvicorn[standard]>=0.24.0",
     "httpx>=0.25.0",
     "tiktoken>=0.5.0",
-    "pydantic>=2.0.0",
-"scipy>=1.10.0",
-"numpy>=1.24.0",
-    "jinja2>=3.1.0",
-    "plotly>=5.18.0",
+    "pydantic>=2.5.0",
+    "scipy>=1.11.0",
+    "numpy>=1.24.0",
 ]
 
 [project.optional-dependencies]
@@ -66,7 +64,6 @@ include = ["app*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-asyncio_mode = "auto"
 python_files = ["test_*.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]
