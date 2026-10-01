@@ -15,15 +15,17 @@
 | 选1-10的数字 | **7（100%）** | 7（98%） | 每个数字10% |
 | 掷骰子 | **4（96%）** | 4（56%） | 每个数字16.7% |
 | 选随机动物 | Dolphin（16%） | **Okapi（76%!）** | 均匀分布 |
-| 选随机字母 | **G（40%）** | **K（44%）** | 每个字母3.8% |
+| 选随机字母 | **G/M（并列 40%）** | **K（44%）** | 每个字母3.8% |
 | 选颜色 | Cerulean（74%） | Cerulean（92%） | 均匀分布 |
 
 **关键发现：**
 - gpt-4o-mini选1-10的数字，**100%返回7**（零方差！）
 - gpt-4o选随机动物，**76%返回Okapi**（㺢㹢狓，罕见非洲长颈鹿近亲）
-- **只用"选一个随机动物"这一个探针，就能以90%准确率区分gpt-4o和gpt-4o-mini**——这是tokenizer指纹做不到的（两个模型用同一个o200k tokenizer）
+- 用"响应是否为 Okapi"这条简单规则，在**同一基准样本上**做重代入（resubstitution）得到 **88% 准确率**（Wilson 95%CI [0.80, 0.93]，bootstrap [0.81, 0.94]）。注意：动物探针的 TVD=0.90 是**分布距离**，不是分类准确率；这是 in-distribution 自洽检验，不是独立 held-out 准确率。
 
-这些"行为指纹"是训练数据和RLHF的产物，中转站几乎不可能伪造。
+> **效度说明（务必先读）**：上述基准均通过**单个 OpenAI 兼容中转站（wolfai.top）**采集，**不是官方端点**。我们只声称"在该中转站，两个标称端点呈现可区分的行为画像"，不声称是与厂商无关的模型指纹；基准本身也继承了中转站实际提供的模型。官方金标准基线需要官方 API 访问，属未来工作。
+
+这些"行为指纹"是训练数据和 RLHF 的产物；要在真实流量上伪造它，中转站需要实际返回真模型、后处理输出分布，或微调一个替身模型——成本不低，但并非"不可能"。
 
 ---
 
@@ -39,27 +41,22 @@ TransitTruth 是一个开源的 **AI API 安全审计平台**，基于学术前�
 
 ## 为什么需要这个？
 
-2026年，AI API中转站市场乱象频发：
+通过中转站（relay）使用 LLM API 时，用户无法在技术上确认"应答的模型就是付费的那个"。由于大模型单价更高，中转站有经济动机用更小/更便宜的模型顶替旗舰模型，同时按旗舰计费。已有学术审计在商业端点上记录了此类模型替换与静默降级现象（见 [arXiv:2504.04715](https://arxiv.org/abs/2504.04715)）。Token 计数虚高、费率不透明等问题也让自验证变得有必要。
 
-- **80%以上中转站存在模型偷偷降级**（用mini冒充pro，用3.5冒充4）
-- Token计数虚高、费率暗增成为行业常态
-- 跑路、数据倒卖、恶意代码注入时有发生
-- 国家安全部已专门发布风险提示
-
-但用户没有工具能验证自己用的中转站是否"参水分"。TransitTruth就是为了解决这个问题。
+但普通用户没有工具能核查自己用的中转站是否"参水分"。TransitTruth 就是为了给用户一个低成本、可复现的核查手段。
 
 ## 检测原理
 
 ### 1. 🧬 行为指纹（核心技术）
 
-不同模型在"随机"任务上有极端强烈的分布偏好——这是训练数据和RLHF的产物，中转站几乎不可能伪造。
+不同模型在"随机"任务上有强烈的分布偏好——这是训练数据和 RLHF 的产物。我们用 8 个行为探针（随机数、字母、颜色、动物、星期、掷骰子、抛硬币），每个采样 50 次，构建经验分布，再用**卡方检验 + KS 检验 + 贝叶斯更新**对比基准分布，计算模型匹配的后验概率。
 
-我们用8个行为探针（随机数、字母、颜色、动物、星期、掷骰子、抛硬币），每个采样10-50次，构建经验分布，然后用**卡方检验+KS检验+贝叶斯更新**对比基准分布，计算模型匹配的后验概率。
+> 响应做了归一化（如 "Heads." 与 "Heads" 合并、大小写统一）。
 
-**实测效果：**
-- gpt-4o-mini vs gpt-4o：6/8探针统计显著差异（p<0.05）
-- 最强区分探针（选动物）：TVD=0.900，单探针90%准确率
-- 整体验证：后验概率91.3%，95%可信区间[0.851, 0.960]
+**实测效果（同一中转站两个标称端点）：**
+- gpt-4o-mini vs gpt-4o：**5/8 探针**统计显著差异（p<0.05；抛硬币探针在归一化后 TVD=0.08、p=0.092，不再显著）
+- 最强区分探针（选动物）：TVD=0.90；"是否为 Okapi"规则的重代入准确率 **88%**（Wilson [0.80,0.93]）。TVD 是分布距离，不等于准确率。
+- 整体管线：后验概率 **0.913**，95% 可信区间 [0.851, 0.960]。这是**基线样本对自身参考的 in-distribution resubstitution（自洽性检验）**，用于验证管线内部一致；**不是**独立数据上的 held-out 检测准确率。
 
 ### 2. 🔤 Tokenizer指纹
 
@@ -83,11 +80,13 @@ TransitTruth 是一个开源的 **AI API 安全审计平台**，基于学术前�
 
 ### 🚀 零安装在线Demo（推荐）
 
-打开 [在线Demo](https://dafahaha.github.io/transit-truth/)，两种体验方式：
-- **🎬 先看演示（无需 Key）**：一键体验完整审计流程，看到“声称 gpt-4o 实际降级”的典型场景
+打开根目录 [index.html](index.html)（GitHub Pages: https://dafahaha.github.io/transit-truth/），两种体验方式：
+- **🎬 先看演示（无需 Key）**：一键体验完整审计流程，看到"声称 gpt-4o 实际降级"的典型场景
 - 输入自己的 API Key：对你正在使用的中转站进行真实审计
 
 所有请求直接从浏览器发出，**不需要后端服务器，不需要安装任何东西，API Key 不会经过任何服务器**。
+
+> 注：`standalone/index.html` 现为跳转到根 `index.html` 的重定向页。
 
 ### 🐳 使用Docker
 
@@ -107,12 +106,19 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 然后访问 http://localhost:8000
 
-### 📦 CLI一行命令
+### 📦 从源码安装（CLI）
+
+PyPI 上**没有** `transit-truth` 包，请从源码安装：
 
 ```bash
-pip install transit-truth
-transit-truth sk-your-api-key --base-url https://your-relay.com/v1 --model gpt-4o
+git clone https://github.com/dafahaha/transit-truth.git
+cd transit-truth
+pip install -e .
+
+transit-truth sk-your-key --base-url https://your-relay.com/v1 --model gpt-4o
 ```
+
+（后端方式见上方"本地运行"：`cd backend; pip install -r requirements.txt`。）
 
 ## 使用方法
 
@@ -145,7 +151,7 @@ transit-truth sk-your-api-key --base-url https://your-relay.com/v1 --model gpt-4
 - [x] **持续监控+告警**（4种告警检测，4种告警通道）
 - [x] **真实基准数据库**（gpt-4o-mini、gpt-4o，各50样本）
 - [x] **灵活配置管理**（12个环境变量，支持自定义探针数量/超时/重试等）
-- [x] **46个单元测试+15个集成测试框架**（全部通过）
+- [x] **测试**：实测 **87 collected / 80 passed / 7 skipped**；其中 7 个端到端集成测试需要真实 API key，用 `pytest -m integration` 单独运行
 - [x] **CI/CD**（GitHub Actions，Python 3.10/3.11/3.12矩阵）
 
 ### 🚧 开发中
@@ -160,95 +166,80 @@ transit-truth sk-your-api-key --base-url https://your-relay.com/v1 --model gpt-4
 
 - **[One Token Is Enough](https://arxiv.org/abs/2607.10252)** (arXiv:2607.10252, 2026) — 单token输出分布的模型指纹方法，165个模型验证，EER 7.3%
 - **[CoIn](https://arxiv.org/abs/2505.13778)** (arXiv:2505.13778, 2025) — 隐藏推理token计数审计框架，检测token数膨胀（94.7%成功率）
-- **[RoFL](https://arxiv.org/abs/2505.12682)** (arXiv:2505.12682, 2025) — 鲁棒模型指纹，抗微调/剪枝/量化
+- **[RAFP](https://arxiv.org/abs/2505.12682)** (arXiv:2505.12682, 2025) — Rare-region 指纹，识别 LLM 谱系，对微调/量化稳健
 - **[Model Provenance Testing](https://arxiv.org/abs/2502.00706)** (arXiv:2502.00706, 2025) — 黑盒模型来源测试
 
-我们的贡献：
-1. **同家族细粒度区分**：首次系统验证行为指纹能区分gpt-4o和gpt-4o-mini（TVD最高0.900）
+我们的工作定位：
+1. **同家族细粒度区分**：在两个标称同家族端点（gpt-4o vs gpt-4o-mini）上展示行为画像可被区分（最强 TVD=0.90）；这是 tokenizer 指纹做不到的。我们**不**声称这是"首个"此类研究，也不声称已在独立 held-out 数据上验证泛化。
 2. **工程化全功能平台**：不只是指纹工具，而是完整的API安全审计平台
 3. **中文社区优先**：面向中文用户，解决国内中转站乱象
 4. **零门槛在线Demo**：纯前端实现，浏览器即用
 
 ## 真实基准数据
 
-我们开源了真实采集的模型基准数据（不是合成数据）：
+我们开源了真实采集的模型基准数据（经同一 OpenAI 兼容中转站 wolfai.top 采集，非官方端点）：
 
 | 模型 | 样本数 | 探针数 | 总请求 | 采集时间 | 文件 |
 |---|---|---|---|---|---|
-| gpt-4o-mini | 50 | 26 | 1300 | 15分钟 | `data/baselines/gpt-4o-mini.json` |
-| gpt-4o | 50 | 26 | 1300 | 12分钟 | `data/baselines/gpt-4o.json` |
+| gpt-4o-mini | 50 | 26 | 1300 | 15 分钟 | `data/baselines/gpt-4o-mini.json` |
+| gpt-4o | 50 | 26 | 1300 | 12 分钟 | `data/baselines/gpt-4o.json` |
 
-数据采集脚本：`collect_baseline.py`（支持并发，零成本，用任何OpenAI兼容API即可）
+数据采集脚本：`collect_baseline.py`（支持并发，用任何 OpenAI 兼容 API 即可）；分布/TVD/卡方/分类器表格由 `docs/generate_tables.py` 从 JSON 自动生成。
 
 ## 学术产出（Tech Report）
 
-本项目的实验方法、数据与结论已整理为正式技术报告（Tech Report，20页，含方法论/统计检验/跨模型对比）：
+本项目的实验方法、数据与结论整理为**扩展技术报告（extended technical report）**（含完整方法论/公式推导/统计检验/跨模型对比/Threats to Validity/可复现性附录）：
 
-- 📄 **PDF版**：[Behavioral Fingerprinting of Large Language Models](docs/tech_report.pdf)（申请/引用用）
+- 📄 **PDF版**：[Behavioral Fingerprinting of Large Language Models — Extended Tech Report](docs/tech_report.pdf)
 - 🌐 **HTML版**：[tech_report.html](docs/tech_report.html)（在线阅读）
 - 📝 **Markdown源**：[experiment_report.md](docs/experiment_report.md)
-- 🧾 **Workshop投稿版（4页，可编译LaTeX）**：[paper/](paper/) · [paper/main.pdf](paper/main.pdf)
+- 🧾 **Workshop投稿版（双盲精简版，LaTeX）**：[paper/](paper/) · [paper/main.pdf](paper/main.pdf)
 
-**核心结论**：
-- 行为指纹能区分同家族不同模型（tokenizer指纹做不到）
-- 最强区分探针TVD=0.900，单探针90%准确率
-- 统计方法验证：91.3%后验概率正确识别
-- 零成本：2600次API请求，用免费中转站key即可完成
+**核心结论（均为同一中转站、in-distribution 结果）：**
+- 行为画像能区分同家族两个标称端点（tokenizer 指纹做不到）
+- 最强探针 TVD=0.90；"是否为 Okapi"规则重代入准确率 88%（Wilson [0.80,0.93]）；TVD≠准确率
+- 管线自洽检验后验 0.913（CrI [0.851,0.960]），为 resubstitution，非 held-out
+- 单次审计成本 < $0.01
 
-**与前沿工作的关系**：我们的行为指纹方法与 [One Token Is Enough](https://arxiv.org/abs/2607.10252)（单token输出分布指纹，EER 7.3%）互为补充——它聚焦跨家族识别，我们系统性验证了**同家族细粒度区分**（gpt-4o vs gpt-4o-mini），这是tokenizer指纹无法做到的。
+**与前沿工作的关系**：我们的行为画像方法与 [One Token Is Enough](https://arxiv.org/abs/2607.10252)（单 token 输出分布指纹，EER 7.3%）互为补充——它聚焦跨家族谱系识别，我们在同家族两个标称端点上展示了可区分性；官方金标准基线与 held-out 泛化验证属未来工作。
 
 ## 项目结构
 
 ```
 transit-truth/
-├── backend/                    # Python后端
+├── index.html                  # 权威纯前端 Demo（GitHub Pages 入口，零安装）
+├── web/                        # Web 资源
+├── standalone/index.html       # 跳转页（重定向到根 index.html）
+├── backend/                    # Python 后端（FastAPI）
 │   ├── app/
-│   │   ├── core/              # 核心引擎
-│   │   │   ├── auditor.py          # 审计引擎
-│   │   │   ├── fingerprint.py      # 模型指纹（行为+tokenizer）
-│   │   │   ├── token_check.py      # Token验证
-│   │   │   ├── latency_protocol.py # 延迟/协议检测
-│   │   │   ├── probes.py           # 探针集（26个：14行为+8 tokenizer+4能力）
-│   │   │   ├── statistical_analyzer.py  # 统计分析（KS+卡方+贝叶斯+Wilson置信区间）
-│   │   │   ├── retry.py            # 重试和弹性工具（指数退避+限流检测+断路器）
-│   │   │   ├── balance_checker.py  # 余额查询（8端点+5格式+批量+告警）
-│   │   │   ├── model_reference.py  # 模型参考数据（14个模型的公开数据）
-│   │   │   ├── monitor.py          # 持续监控+告警
-│   │   │   └── benchmark_collector.py   # 基准数据收集
+│   │   ├── core/              # 核心引擎（auditor/fingerprint/probes/
+│   │   │                      #   statistical_analyzer/retry/balance_checker/...）
 │   │   ├── api/               # REST API
 │   │   ├── utils/             # 工具函数
-│   │   ├── config.py          # 配置管理（12个环境变量）
-│   │   ├── tests/             # 46个单元测试+15个集成测试
-│   │   └── main.py            # FastAPI入口
+│   │   ├── config.py          # 配置管理（12 个环境变量）
+│   │   ├── tests/             # 87 collected / 80 passed / 7 skipped
+│   │   └── main.py            # FastAPI 入口
 │   └── requirements.txt
-├── frontend/                   # Web前端
-│   ├── index.html
-│   ├── css/style.css
-│   └── js/app.js
-├── standalone/                 # 纯前端在线Demo（零安装）
-│   └── index.html              # 55KB单文件，苹果风格，浏览器即用
+├── frontend/                   # Web 前端资源
 ├── data/
-│   └── baselines/              # 真实基准数据
+│   └── baselines/              # 真实基准数据（经同一中转站采集）
 │       ├── gpt-4o-mini.json
 │       └── gpt-4o.json
 ├── docs/
-│   ├── experiment_report.md    # 完整实验报告（23.7KB）
-│   ├── architecture.md         # 架构文档
-│   ├── methodology.md          # 技术原理文档
-│   ├── blog_post.md            # 爆文（《我用27分钟发现了GPT的"行为指纹"》）
-│   ├── banner_1280x640.png    # 宣传图（苹果风格）
-│   ├── demo.gif                # 功能演示GIF
-│   └── demo.mp4                # 功能演示MP4
+│   ├── tech_report.tex         # 扩展技术报告 LaTeX 源
+│   ├── tech_report.pdf / .html # 扩展技术报告
+│   ├── experiment_report.md    # 实验报告 Markdown 源
+│   ├── generate_tables.py      # 从 JSON 自动生成分布/TVD/卡方/分类器表
+│   ├── make_fig.py             # 重画 fig_results.png
+│   └── ...
+├── paper/                      # 双盲精简 workshop 版（main.tex / main.pdf / fig_results.png）
+├── examples/
 ├── collect_baseline.py         # 基准数据采集脚本（支持并发）
 ├── analyze_baseline.py         # 基准数据分析脚本
 ├── compare_models.py           # 跨模型对比分析脚本
-├── Dockerfile
-├── docker-compose.yml
-├── pyproject.toml              # Python包配置（支持pip install）
-├── CHANGELOG.md
-├── CONTRIBUTING.md
-├── CODE_OF_CONDUCT.md
-├── LICENSE                     # MIT
+├── Dockerfile / docker-compose.yml
+├── pyproject.toml              # 源码安装配置（pip install -e .）
+├── CHANGELOG.md / CONTRIBUTING.md / CODE_OF_CONDUCT.md / LICENSE
 └── README.md
 ```
 
