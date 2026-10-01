@@ -4,6 +4,20 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TransitTruth - AI API 安全审计平台</title>
+<meta name="description" content="TransitTruth：用行为指纹 30 秒检测你的 AI API 中转站有没有偷工减料——模型降级、Token 虚高、协议不合规，浏览器端零安装运行。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231d1d1f'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle'%3E%F0%9F%9B%A1%3C/text%3E%3C/svg%3E">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="TransitTruth">
+<meta property="og:title" content="TransitTruth — 你的 GPT-4 是真的吗？30 秒测出答案">
+<meta property="og:description" content="用行为指纹验证 AI API 中转站是否真实提供你付费的模型：模型降级、Token 虚高、延迟异常一测便知。纯前端运行，Key 不经过任何服务器。">
+<meta property="og:url" content="https://dafahaha.github.io/transit-truth/">
+<meta property="og:image" content="https://dafahaha.github.io/transit-truth/docs/banner_1280x640.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="TransitTruth — 你的 GPT-4 是真的吗？">
+<meta name="twitter:description" content="行为指纹检测 AI API 中转站是否偷工减料。纯前端、零安装。">
+<meta name="twitter:image" content="https://dafahaha.github.io/transit-truth/docs/banner_1280x640.png">
 <style>
   :root {
     --bg: #f5f5f7;
@@ -613,6 +627,39 @@
     font-size: 0.9rem;
     line-height: 1.5;
   }
+
+  /* ── 行为指纹分布条形图 ─────────────────────── */
+  .fp-chart-legend { display:flex; gap:20px; align-items:center; font-size:0.8rem; color:var(--muted); margin:6px 0 14px; }
+  .fp-chart-legend .swatch { display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:6px; vertical-align:-1px; }
+  .fp-probe { margin-bottom:18px; }
+  .fp-probe-title { font-size:0.92rem; font-weight:600; margin-bottom:8px; color:var(--text); }
+  .fp-probe-title .fp-anno { font-weight:500; color:var(--red); font-size:0.8rem; margin-left:8px; }
+  .fp-row { display:flex; align-items:center; gap:10px; margin:5px 0; }
+  .fp-opt { flex:0 0 52px; font-size:0.78rem; color:var(--muted); text-align:right; }
+  .fp-track { position:relative; flex:1; height:14px; background:transparent; }
+  .fp-ref { position:absolute; left:0; top:0; height:5px; background:#d2d2d7; border-radius:3px; }
+  .fp-emp { position:absolute; left:0; top:7px; height:7px; background:var(--accent); border-radius:4px; min-width:2px; }
+  .fp-val { flex:0 0 64px; font-size:0.75rem; font-weight:600; color:var(--text); }
+
+  /* ── 移动端断点 ─────────────────────────────── */
+  @media (max-width: 600px) {
+    .container { padding: 16px; }
+    header { padding: 40px 16px 32px; }
+    header h1 { font-size: 2rem; letter-spacing: -0.5px; }
+    header p { font-size: 0.98rem; }
+    .card { padding: 20px; border-radius: 16px; }
+    .row { flex-direction: column; gap: 0; }
+    .row .form-group { flex: auto; }
+    .mode-toggle { flex-direction: column; }
+    .btn-row { flex-direction: column; }
+    .btn-row .btn { width: 100%; }
+    .actions { flex-wrap: wrap; }
+    .actions .btn { flex: 1 1 45%; }
+    .result-header { flex-direction: column; align-items: flex-start; gap: 16px; }
+    .score-circle { align-self: flex-start; }
+    .fp-opt { flex-basis: 44px; }
+    .fp-val { flex-basis: 56px; font-size: 0.7rem; }
+  }
 </style>
 </head>
 <body>
@@ -1083,9 +1130,40 @@ async function runDemo() {
     fingerprint: {
       claimed_model: 'gpt-4o',
       detected_family: 'openai-gpt（偏向 gpt-4o-mini 特征）',
+      detected_family_short: 'gpt-4o-mini-like',
       family_match: false,
       confidence: 0.82,
       capability: { passed: 3, total: 6, failure_rate: 0.5 },
+      probe_distributions: [
+        {
+          name: '选 1-10 的数字',
+          anomaly: '7 被 100% 选中（gpt-4o-mini 指纹）',
+          options: ['1','2','3','4','5','6','7','8','9','10'],
+          empirical: [0,0,0,0,0,0,1.00,0,0,0],
+          reference: [0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1,0.1]
+        },
+        {
+          name: '掷骰子',
+          anomaly: '4 出现 96%，严重偏离均匀分布',
+          options: ['1','2','3','4','5','6'],
+          empirical: [0.02,0.00,0.02,0.96,0.00,0.00],
+          reference: [0.167,0.167,0.167,0.167,0.167,0.167]
+        },
+        {
+          name: '选随机动物',
+          anomaly: 'Okapi 被选 76%（gpt-4o 独有偏好）',
+          options: ['Cat','Dog','Okapi','Dolphin','Fox','Owl'],
+          empirical: [0.05,0.05,0.76,0.05,0.05,0.04],
+          reference: [0.167,0.167,0.167,0.167,0.167,0.167]
+        },
+        {
+          name: '选随机字母',
+          anomaly: 'K 被选 44%（gpt-4o 指纹）',
+          options: ['A','E','G','K','R','T'],
+          empirical: [0.06,0.08,0.10,0.44,0.16,0.16],
+          reference: [0.167,0.167,0.167,0.167,0.167,0.167]
+        }
+      ]
     },
     latency: {
       avg_latency_ms: 1240,
@@ -1581,7 +1659,7 @@ function showResult() {
 
   // 指纹详情
   const fp = auditResult.fingerprint;
-  document.getElementById('fingerprint-detail').innerHTML = `
+  let fpHtml = `
     <h3>🔍 模型指纹分析</h3>
     <table class="data-table">
       <tr><td>声称模型</td><td>${fp.claimed_model}</td></tr>
@@ -1591,6 +1669,41 @@ function showResult() {
       <tr><td>能力测试</td><td>${fp.capability.passed}/${fp.capability.total} 通过（失败率 ${(fp.capability.failure_rate*100).toFixed(0)}%）</td></tr>
     </table>
   `;
+
+  // 逐探针行为指纹分布：实测经验分布 vs 随机参考分布
+  if (fp.probe_distributions && fp.probe_distributions.length) {
+    fpHtml += `
+      <h3 style="margin-top:24px;">📈 行为指纹分布（逐探针）</h3>
+      <div class="fp-chart-legend">
+        <span><span class="swatch" style="background:var(--accent);"></span>实测经验分布</span>
+        <span><span class="swatch" style="background:#d2d2d7;"></span>随机参考分布</span>
+      </div>
+      <p style="font-size:0.8rem;color:var(--muted);margin-bottom:14px;">
+        同一探针下，真实模型的"随机"输出并不随机——这种极端偏好就是行为指纹。
+      </p>
+    `;
+    fp.probe_distributions.forEach(p => {
+      const rows = p.options.map((opt, i) => {
+        const emp = (p.empirical[i] * 100).toFixed(0);
+        const ref = (p.reference[i] * 100).toFixed(1);
+        return `
+          <div class="fp-row">
+            <span class="fp-opt">${opt}</span>
+            <div class="fp-track">
+              <div class="fp-ref" style="width:${ref}%"></div>
+              <div class="fp-emp" style="width:${Math.max(emp, 2)}%"></div>
+            </div>
+            <span class="fp-val">${emp}%</span>
+          </div>`;
+      }).join('');
+      fpHtml += `
+        <div class="fp-probe">
+          <div class="fp-probe-title">${p.name}<span class="fp-anno">⚠ ${p.anomaly}</span></div>
+          ${rows}
+        </div>`;
+    });
+  }
+  document.getElementById('fingerprint-detail').innerHTML = fpHtml;
 
   // 延迟详情
   const lat = auditResult.latency;
@@ -1841,14 +1954,18 @@ function generateShareCard() {
   ctx.font = '600 20px -apple-system, BlinkMacSystemFont, sans-serif';
   ctx.fillText('TransitTruth', 122, 82);
 
-  // 右上角：信任等级标签
-  let levelColor = '#34c759'; // 苹果绿
-  if (level === '中风险' || level === 'medium') levelColor = '#ff9500'; // 苹果橙
-  if (level === '高风险' || level === 'high' || level === 'critical') levelColor = '#ff3b30'; // 苹果红
-  ctx.fillStyle = levelColor;
+  // 右上角：信任等级标签（语义配色：high=绿 / medium=橙 / low=红 / critical=红）
+  const TRUST_STYLE = {
+    high:     { color: '#34c759', label: '高信任' },
+    medium:   { color: '#ff9500', label: '中等信任' },
+    low:      { color: '#ff3b30', label: '低信任' },
+    critical: { color: '#ff3b30', label: '风险' },
+  };
+  const trustStyle = TRUST_STYLE[level] || TRUST_STYLE.low;
+  ctx.fillStyle = trustStyle.color;
   ctx.font = '600 16px -apple-system, BlinkMacSystemFont, sans-serif';
   ctx.textAlign = 'right';
-  ctx.fillText(level, W - 70, 80);
+  ctx.fillText(trustStyle.label, W - 70, 80);
   ctx.textAlign = 'left';
 
   // 主标题区：模型名称 + 中转站
@@ -1874,13 +1991,25 @@ function generateShareCard() {
   const cards = [
     { label: 'Token 差异率', value: (auditResult.token_comparison.prompt_inflation_pct?.toFixed(1) || 'N/A') + '%', suspicious: auditResult.token_comparison.suspicious },
     { label: '平均延迟', value: (auditResult.latency.avg_latency_ms?.toFixed(0) || 'N/A') + 'ms' },
-    { label: '模型家族', value: auditResult.fingerprint.detected_family || '未知' },
+    { label: '模型家族', value: auditResult.fingerprint.detected_family_short || auditResult.fingerprint.detected_family || '未知' },
     { label: '指纹置信度', value: (auditResult.fingerprint.confidence * 100).toFixed(0) + '%' },
   ];
 
   const cardW = 235, cardH = 110, cardY = 290, gap = 20;
   const totalW = cards.length * cardW + (cards.length - 1) * gap;
   const startX = (W - totalW) / 2;
+
+  // 根据文本宽度自动缩小字号，避免长值（如家族名）溢出压到相邻卡片
+  function fitCardText(text, maxWidth, startSize, weight) {
+    let size = startSize;
+    ctx.textAlign = 'center';
+    while (size > 12) {
+      ctx.font = `${weight} ${size}px -apple-system, BlinkMacSystemFont, sans-serif`;
+      if (ctx.measureText(text).width <= maxWidth) break;
+      size -= 2;
+    }
+    return size;
+  }
 
   cards.forEach((card, i) => {
     const x = startX + i * (cardW + gap);
@@ -1894,12 +2023,13 @@ function generateShareCard() {
     ctx.font = '500 14px -apple-system, BlinkMacSystemFont, sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(card.label, x + cardW / 2, cardY + 35);
-    // 值
+    // 值（自动缩字）
     let valueColor = '#1d1d1f';
     if (card.suspicious) valueColor = '#ff3b30';
     ctx.fillStyle = valueColor;
-    ctx.font = '700 32px -apple-system, BlinkMacSystemFont, sans-serif';
-    ctx.fillText(card.value, x + cardW / 2, cardY + 78);
+    const size = fitCardText(card.value, cardW - 28, 32, 700);
+    ctx.font = `700 ${size}px -apple-system, BlinkMacSystemFont, sans-serif`;
+    ctx.fillText(card.value, x + cardW / 2, cardY + 80);
     ctx.textAlign = 'left';
   });
 

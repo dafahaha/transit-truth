@@ -41,6 +41,14 @@ backend/test_new_features.py
 backend/test_real_baselines.py
 backend/batch_audit.py
 
+# One-off root-level scratch (run `git rm --cached` to untrack, keep local)
+_check.mjs
+check_js.py
+add_demo.py
+
+# Python test cache
+.pytest_cache/
+
 # Demo intermediate frames (already have demo.gif / demo.mp4)
 docs/demo_*.png
 
@@ -48,5 +56,14 @@ docs/demo_*.png
 docs/banner.html
 docs/banner_apple.html
 
-# Old / duplicate frontend (use frontend/ or standalone/)
+# Old / duplicate frontend (demo 权威入口为根 index.html；standalone/ 现为跳转页)
 web/
+
+# LaTeX build artifacts (tech report compiled in docs/)
+docs/*.aux
+docs/*.log
+docs/*.out
+docs/*.toc
+docs/*.fls
+docs/*.fdb_latexmk
+docs/*.synctex.gz
