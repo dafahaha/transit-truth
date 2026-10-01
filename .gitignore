@@ -56,7 +56,7 @@ docs/demo_*.png
 docs/banner.html
 docs/banner_apple.html
 
-# Old / duplicate frontend (demo 权威入口为根 index.html；standalone/ 现为跳转页)
+# Old / duplicate frontend (canonical demo entry is root index.html; standalone/ is now a redirect)
 web/
 
 # LaTeX build artifacts (tech report compiled in docs/)
