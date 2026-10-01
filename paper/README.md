@@ -9,7 +9,7 @@ A compact, submission-ready version of the TransitTruth behavioral-fingerprintin
 
 ## Abstract (short)
 
-Can a black-box auditor distinguish a model from a *same-family* sibling — e.g. gpt-4o vs. gpt-4o-mini, which share an identical tokenizer? Across 26 low-cost probes, six of eight behavioral probes separate the two models (p < 0.05), with an animal probe reaching total variation distance 0.90, while tokenizer probes are provably identical. Combined with chi-square/KS tests and Bayesian updating, a held-out sample is assigned to the correct model with 91.3% posterior probability at a cost under $0.01 per audit.
+Can a black-box auditor distinguish a model from a *same-family* sibling — e.g. gpt-4o vs. gpt-4o-mini, which share an identical tokenizer? Across 26 low-cost probes, five of eight behavioral probes separate the two models (p < 0.05, after normalizing variant responses), with an animal probe reaching total variation distance 0.90, while tokenizer probes are provably identical. Combined with chi-square/KS tests and Bayesian updating, an in-distribution resubstitution check yields a 91.3% posterior (self-consistency on the baseline's own reference, not held-out accuracy) at a cost under $0.01 per audit.
 
 ## Build
 
@@ -24,4 +24,4 @@ Suitable for short-paper / workshop tracks on AI safety, trustworthy ML, LLM sec
 
 ## Relation to the technical report
 
-`../docs/tech_report.pdf` is the full 20-page report with appendices and the complete methodology; this paper is the condensed, archival version focused on the same-family discrimination result.
+`../docs/tech_report.pdf` is the extended technical report with appendices and the complete methodology; this paper is the condensed, archival version focused on the same-family discrimination result.

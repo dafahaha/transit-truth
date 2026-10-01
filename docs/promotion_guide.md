@@ -140,7 +140,7 @@ I'm a third-year CS student, and I recently did a 27-minute experiment that reve
 - **gpt-4o-mini returns "7" 100% of the time** when asked to pick a random number from 1-10 (zero variance!)
 - **gpt-4o returns "Okapi" 76% of the time** when asked to pick a random animal (Okapi is a rare African giraffe relative)
 - **gpt-4o-mini returns "4" 96% of the time** when rolling a dice
-- **A single probe ("pick a random animal") can distinguish gpt-4o from gpt-4o-mini with 90% accuracy** — something tokenizer fingerprints can't do (they use the same o200k tokenizer)
+- **On the same baseline, the "response names Okapi" rule gives 88% resubstitution accuracy (Wilson 95% CI [0.80,0.93])** — in-distribution self-consistency, not held-out accuracy; the animal probe's TVD=0.90 is a distributional distance, not a classification rate. Tokenizer fingerprints can't do this (they use the same o200k tokenizer)
 
 ## Why this matters
 
@@ -169,8 +169,8 @@ I built **TransitTruth**, an open-source AI API security audit platform based on
 ## References
 
 - [One Token Is Enough](https://arxiv.org/abs/2607.10252) (arXiv:2607.10252, 2026) — single-token fingerprinting, 165 models, EER 7.3%
-- [CoIn](https://arxiv.org/abs/2505.13778) (arXiv:2505.13778, 2025) — API model substitution detection
-- [RoFL](https://arxiv.org/abs/2505.12682) (arXiv:2505.12682, 2025) — robust model fingerprinting
+- [CoIn: Counting the Invisible Reasoning Tokens in Commercial Opaque LLM APIs](https://arxiv.org/abs/2505.13778) (arXiv:2505.13778, 2025) — hidden reasoning-token counting audit
+- [RAFP: Identifying LLM Lineages via Rare-Region Fingerprints](https://arxiv.org/abs/2505.12682) (arXiv:2505.12682, 2025) — rare-region lineage fingerprinting
 
 Would love to hear your thoughts! Happy to answer any technical questions.
 
@@ -201,7 +201,7 @@ I'm a CS student, and I recently discovered that LLMs have extreme "behavioral f
 
 - gpt-4o-mini returns "7" 100% of the time when asked to pick 1-10 (zero variance)
 - gpt-4o returns "Okapi" 76% of the time when asked to pick a random animal
-- A single probe can distinguish gpt-4o from gpt-4o-mini with 90% accuracy
+- On the same baseline, the "response names Okapi" rule gives 88% resubstitution accuracy (Wilson 95% CI [0.80,0.93]); TVD=0.90 is a distributional distance, not held-out accuracy
 
 This is useful for detecting AI API relay services that secretly downgrade models (charging for GPT-4o but serving GPT-4o-mini). Tokenizer fingerprints can't distinguish same-family models, but behavioral fingerprints can.
 

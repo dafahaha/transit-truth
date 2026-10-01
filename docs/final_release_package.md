@@ -39,7 +39,7 @@
 - gpt-4o-mini选1-10的数字，**100%返回7**（零方差！）
 - gpt-4o选随机动物，**76%返回Okapi**（㺢㹢狓，罕见非洲长颈鹿近亲）
 - gpt-4o-mini掷骰子，**96%返回4**
-- **只用"选一个随机动物"这一个探针，就能以90%准确率区分gpt-4o和gpt-4o-mini**——这是tokenizer指纹做不到的（两个模型用同一个o200k tokenizer）
+- **在同一基准样本上，"响应是否为 Okapi"规则的重代入准确率为 88%（Wilson 95%CI [0.80,0.93]）**——这是 in-distribution 自洽检验，不是独立 held-out 准确率；动物探针 TVD=0.90 是分布距离而非分类准确率。这是 tokenizer 指纹做不到的（两个模型用同一个 o200k tokenizer）
 
 ## 为什么会这样？
 
@@ -84,8 +84,8 @@
 ## 参考论文
 
 - [One Token Is Enough](https://arxiv.org/abs/2607.10252)（2026）：单token指纹，165模型，EER 7.3%
-- [CoIn](https://arxiv.org/abs/2505.13778)（2025）：API模型替换检测
-- [RoFL](https://arxiv.org/abs/2505.12682)（2025）：鲁棒模型指纹
+- [CoIn: Counting the Invisible Reasoning Tokens in Commercial Opaque LLM APIs](https://arxiv.org/abs/2505.13778)（2025）：隐藏推理 token 计数审计
+- [RAFP: Identifying LLM Lineages via Rare-Region Fingerprints](https://arxiv.org/abs/2505.12682)（2025）：基于稀有区域的鲁棒模型谱系指纹
 
 欢迎大家试用、提Issue、提交PR！有任何技术问题欢迎在评论区讨论。
 ```
@@ -219,7 +219,7 @@ I'm a third-year CS student, and I recently did a 27-minute experiment that reve
 - **gpt-4o-mini returns "7" 100% of the time** when asked to pick a random number from 1-10 (zero variance!)
 - **gpt-4o returns "Okapi" 76% of the time** when asked to pick a random animal (Okapi is a rare African giraffe relative)
 - **gpt-4o-mini returns "4" 96% of the time** when rolling a dice
-- **A single probe ("pick a random animal") can distinguish gpt-4o from gpt-4o-mini with 90% accuracy** — something tokenizer fingerprints can't do (they use the same o200k tokenizer)
+- **On the same baseline, the "response names Okapi" rule gives 88% resubstitution accuracy (Wilson 95% CI [0.80,0.93])** — in-distribution self-consistency, not held-out accuracy; the animal probe's TVD=0.90 is a distributional distance, not a classification rate. Tokenizer fingerprints can't do this (they use the same o200k tokenizer)
 
 ## Why this matters
 
@@ -252,8 +252,8 @@ I built **TransitTruth**, an open-source AI API security audit platform based on
 ## References
 
 - [One Token Is Enough](https://arxiv.org/abs/2607.10252) (arXiv:2607.10252, 2026) — single-token fingerprinting, 165 models, EER 7.3%
-- [CoIn](https://arxiv.org/abs/2505.13778) (arXiv:2505.13778, 2025) — API model substitution detection
-- [RoFL](https://arxiv.org/abs/2505.12682) (arXiv:2505.12682, 2025) — robust model fingerprinting
+- [CoIn: Counting the Invisible Reasoning Tokens in Commercial Opaque LLM APIs](https://arxiv.org/abs/2505.13778) (arXiv:2505.13778, 2025) — hidden reasoning-token counting audit
+- [RAFP: Identifying LLM Lineages via Rare-Region Fingerprints](https://arxiv.org/abs/2505.12682) (arXiv:2505.12682, 2025) — rare-region lineage fingerprinting
 
 Would love to hear your thoughts! Happy to answer any technical questions.
 
@@ -277,7 +277,7 @@ I'm a CS student, and I recently discovered that LLMs have extreme "behavioral f
 
 - gpt-4o-mini returns "7" 100% of the time when asked to pick 1-10 (zero variance)
 - gpt-4o returns "Okapi" 76% of the time when asked to pick a random animal
-- A single probe can distinguish gpt-4o from gpt-4o-mini with 90% accuracy
+- On the same baseline, the "response names Okapi" rule gives 88% resubstitution accuracy (Wilson 95% CI [0.80,0.93]); TVD=0.90 is a distributional distance, not held-out accuracy
 
 This is useful for detecting AI API relay services that secretly downgrade models (charging for GPT-4o but serving GPT-4o-mini). Tokenizer fingerprints can't distinguish same-family models, but behavioral fingerprints can.
 
@@ -314,7 +314,7 @@ Paper reference: "One Token Is Enough" (arXiv:2607.10252)
 🔴 gpt-4o-mini选1-10的数字，**100%返回7**（零方差！）
 🔴 gpt-4o选随机动物，**76%返回Okapi**（㺢㹢狓，罕见非洲长颈鹿近亲）
 🔴 gpt-4o-mini掷骰子，**96%返回4**
-🔴 只用"选动物"一个探针，就能以**90%准确率**区分gpt-4o和gpt-4o-mini
+🔴 动物探针上，"响应是否为 Okapi"规则在同一基准样本上重代入准确率 88%（Wilson 95%CI [0.80,0.93]）；TVD=0.90 是分布距离而非准确率
 
 ## 为什么会这样？
 
@@ -400,7 +400,7 @@ GitHub开源：https://github.com/dafahaha/transit-truth
 旁白：我是一名大三学生，最近做了一个27分钟的小实验，2600次API请求，发现了一个惊人的现象。
 - gpt-4o-mini选1-10的数字，100%返回7，零方差！
 - gpt-4o选随机动物，76%返回Okapi，就是这个罕见的非洲长颈鹿近亲。
-- 只用"选动物"一个探针，就能以90%准确率区分gpt-4o和gpt-4o-mini。
+- 动物探针上，"响应是否为 Okapi"规则在同一基准样本上重代入准确率 88%（Wilson 95%CI [0.80,0.93]）；TVD=0.90 是分布距离而非准确率。
 
 【第二部分：60-120秒 为什么会这样】
 （画面：大模型原理图，训练数据词频图）
@@ -484,7 +484,7 @@ GitHub开源：https://github.com/dafahaha/transit-truth
 I discovered GPT's "behavioral fingerprint" in 27 minutes:
 - It returns "7" 100% of the time when asked to pick 1-10 (zero variance!)
 - It returns "Okapi" 76% of the time when asked to pick a random animal
-- A single probe distinguishes gpt-4o from gpt-4o-mini with 90% accuracy
+- On the same baseline, the "response names Okapi" rule gives 88% resubstitution accuracy (Wilson 95% CI [0.80,0.93]); TVD=0.90 is a distributional distance, not held-out accuracy
 
 80%+ of AI API relays secretly downgrade models. I built an open-source tool to detect it:
 

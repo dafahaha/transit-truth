@@ -11,7 +11,7 @@
 - 你付了GPT-4o的钱，实际返回的可能是GPT-4o-mini，甚至GPT-3.5
 - 你用了1000个token，中转站可能收你1500个的钱
 - 跑路、数据倒卖、恶意代码注入时有发生
-- 国家安全部都专门发过风险提示
+- 近年来监管部门和媒体多次提示 AI 中转站的数据安全与合规风险
 
 问题是：**作为普通用户，你怎么验证自己用的中转站有没有"参水分"？**
 
@@ -72,7 +72,7 @@ Okapi（㺢㹢狓）是一种非常罕见的非洲动物，是长颈鹿的近亲
 
 而gpt-4o-mini呢？它偏好Dolphin（海豚），只出现16%，而且有17种不同的动物。
 
-**只用"选一个随机动物"这一个探针，就能以90%的准确率区分gpt-4o和gpt-4o-mini。**
+**在同一基准样本上，"响应是否为 Okapi"这条简单规则的重代入（resubstitution）准确率为 88%（Wilson 95%CI [0.80,0.93]）。注意：动物探针的 TVD=0.90 是两个模型输出分布之间的距离，不是分类准确率；这是 in-distribution 自洽检验，不是独立 held-out 准确率。**
 
 这太反直觉了——为什么gpt-4o对Okapi有这么极端的偏好？可能是训练数据里Okapi出现在某些特定语境中（比如动物学教材、维基百科），RLHF又放大了这种偏好。
 
@@ -97,10 +97,10 @@ gpt-4o也偏好4，但只有56%，比mini弱很多。
 | 选字母 | **G（40%）** | **K（44%）** | 每个3.8% | **0.720** |
 | 选颜色 | Cerulean（74%） | Cerulean（92%） | 均匀 | 0.220 |
 | 选1-100数字 | 57（40%） | 57（24%） | 每个1% | 0.380 |
-| 抛硬币 | Heads（78%） | Heads（82%） | 50% | 0.220 |
+| 抛硬币 | Heads（98%） | Heads（90%） | 50% | 0.080 |
 | 选星期 | Thursday（54%） | Thursday（62%） | 每个14.3% | 0.320 |
 
-**8个探针里，6个有统计显著差异（p<0.05）。**
+**把"Heads."和"Heads"、大小写等变体归一化后，8个探针里有5个达到统计显著差异（p<0.05）。**
 
 ---
 
@@ -147,8 +147,8 @@ OpenAI经常偷偷更新模型（比如gpt-4o-2024-05-13更新到gpt-4o-2024-08-
 
 目前已知的相关论文：
 - [One Token Is Enough](https://arxiv.org/abs/2607.10252)（2026）：165个模型的单token指纹普查
-- [RoFL](https://arxiv.org/abs/2505.12682)（2025）：鲁棒模型指纹
-- [CoIn](https://arxiv.org/abs/2505.13778)（2025）：API模型替换检测
+- [RAFP: Identifying LLM Lineages via Rare-Region Fingerprints](https://arxiv.org/abs/2505.12682)（2025）：基于稀有区域的鲁棒模型谱系指纹
+- [CoIn: Counting the Invisible Reasoning Tokens in Commercial Opaque LLM APIs](https://arxiv.org/abs/2505.13778)（2025）：隐藏推理 token 计数审计
 - [Model Provenance Testing](https://arxiv.org/abs/2502.00706)（2025）：黑盒模型来源测试
 
 但这些论文主要做的是"不同家族模型的区分"，**同家族不同模型（如gpt-4o vs gpt-4o-mini）的细粒度区分还很少有人做**。我的实验填补了这个空白。
@@ -220,7 +220,7 @@ python compare_models.py
 
 1. **gpt-4o比gpt-4o-mini更快**：在这个中转站上，gpt-4o平均延迟1595ms，gpt-4o-mini是2185ms。可能是中转站把gpt-4o路由到了更高优先级的后端。
 
-2. **gpt-4o在球棒问题上反而答错了**：经典的"球棒和球一共1.1元，球棒比球贵1元，球多少钱？"——gpt-4o-mini答对了（5美分），但gpt-4o答错了（10美分）。可能是大模型更容易"想当然"。
+2. **gpt-4o在球棒问题上更容易答错**：经典的"球棒和球一共1.1元，球棒比球贵1元，球多少钱？"——gpt-4o-mini 采样中 10/10 答对（5美分）；gpt-4o 采样里约 6/10 给出直觉错误答案（10美分），约 4/10 答对（5美分）。可能是大模型更容易"想当然"。
 
 3. **温度0的确定性更强**：论文里提到，温度0时90.4%的探针在同服务商内完全确定。我还没来得及测温度0的对比，这是下一步的工作。
 
@@ -247,9 +247,9 @@ python compare_models.py
 - gpt-4o-mini选1-10的数字，**100%返回7**
 - gpt-4o选随机动物，**76%返回Okapi**
 - 掷骰子gpt-4o-mini **96%返回4**
-- 只用"选动物"一个探针，就能以**90%准确率**区分gpt-4o和gpt-4o-mini
+- 动物探针上，"响应是否为 Okapi"规则在同一基准样本上重代入准确率 88%（Wilson 95%CI [0.80,0.93]）；TVD=0.90 是分布距离而非准确率
 
-这些"行为指纹"是训练数据和RLHF的产物，中转站几乎不可能伪造。基于这个发现，我做了一个开源工具TransitTruth，帮助用户验证自己用的中转站有没有偷换模型。
+这些"行为指纹"是训练数据和RLHF的产物。要刻意模仿它，中转站需要真的返回对应模型、后处理输出分布，或微调一个替身模型——成本不低，但并非不可能。基于这个发现，我做了一个开源工具TransitTruth，帮助用户验证自己用的中转站有没有偷换模型。
 
 如果你觉得这个发现有意思，或者这个工具有用，欢迎给个Star ⭐，也欢迎提交PR一起完善。
 
@@ -260,8 +260,8 @@ python compare_models.py
 ## 参考资料
 
 1. [One Token Is Enough: Fingerprinting and Verifying Large Language Models from Single-Token Output Distributions](https://arxiv.org/abs/2607.10252) (arXiv:2607.10252, 2026)
-2. [CoIn: Can You Trust Your LLM API?](https://arxiv.org/abs/2505.13778) (arXiv:2505.13778, 2025)
-3. [RoFL: Robust Fingerprinting of Language Models](https://arxiv.org/abs/2505.12682) (arXiv:2505.12682, 2025)
+2. [CoIn: Counting the Invisible Reasoning Tokens in Commercial Opaque LLM APIs](https://arxiv.org/abs/2505.13778) (arXiv:2505.13778, 2025)
+3. [RAFP: Identifying LLM Lineages via Rare-Region Fingerprints](https://arxiv.org/abs/2505.12682) (arXiv:2505.12682, 2025)
 4. [Model Provenance Testing for Large Language Models](https://arxiv.org/abs/2502.00706) (arXiv:2502.00706, 2025)
 5. [TransitTruth GitHub仓库](https://github.com/dafahaha/transit-truth)
 
