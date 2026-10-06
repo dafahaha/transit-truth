@@ -94,7 +94,10 @@ function showUrlSuggestions(suggestions) {
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'url-suggestion-btn';
-        btn.innerHTML = `<strong>${s.name}</strong> <span class="url">${s.base_url}</span> <span class="confidence">${Math.round(s.confidence * 100)}%</span>`;
+        // s.name / s.base_url come from /api/detect/ suggestions; currently
+        // fed by hardcoded KNOWN_RELAYS, but escape defensively against future
+        // data-source changes (Storage/server-XSS into innerHTML).
+        btn.innerHTML = `<strong>${escapeHtml(s.name)}</strong> <span class="url">${escapeHtml(s.base_url)}</span> <span class="confidence">${Math.round(s.confidence * 100)}%</span>`;
         btn.addEventListener('click', () => {
             baseUrlInput.value = s.base_url;
             container.innerHTML = '';
