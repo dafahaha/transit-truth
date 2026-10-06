@@ -2224,22 +2224,25 @@ function renderRanking() {
   tbody.innerHTML = data.map((item, idx) => {
     const rank = idx + 1;
     const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : 'rank-other';
-    const trustClass = `trust-${item.trust_level}`;
+    const trustClass = `trust-${escapeHtml(item.trust_level)}`;
     const statusClass = item.status === 'verified' ? 'status-verified' : 'status-preliminary';
     const statusIcon = item.status === 'verified' ? '✅' : '⏳';
     const tokenStr = item.token_inflation_pct !== null ? `+${item.token_inflation_pct}%` : '-';
     const latencyStr = item.avg_latency_ms ? `${item.avg_latency_ms}ms` : '-';
+    // Every interpolated value goes through escapeHtml (N4): once this table
+    // is wired to /api/ranking/, relay_name/model/notes/contributor are
+    // attacker-controlled and must not be parsed as HTML or attribute markup.
     return `
-      <tr title="${item.notes || ''}">
+      <tr title="${escapeHtml(item.notes || '')}">
         <td><span class="rank-badge ${rankClass}">${rank}</span></td>
-        <td><strong>${item.relay}</strong><br><span style="font-size:0.7rem;color:var(--muted);">${item.base_url}</span></td>
-        <td><span class="model-tag">${item.model}</span></td>
-        <td style="font-weight:700;font-size:1rem;">${item.overall_score}</td>
-        <td><span class="trust-badge ${trustClass}">${item.trust_level}</span></td>
-        <td style="color:${item.token_inflation_pct > 20 ? '#dc2626' : item.token_inflation_pct > 5 ? '#ca8a04' : '#16a34a'};">${tokenStr}</td>
-        <td>${latencyStr}</td>
-        <td class="${statusClass}">${statusIcon} ${item.status}</td>
-        <td style="font-size:0.8rem;">${item.contributor}</td>
+        <td><strong>${escapeHtml(item.relay)}</strong><br><span style="font-size:0.7rem;color:var(--muted);">${escapeHtml(item.base_url)}</span></td>
+        <td><span class="model-tag">${escapeHtml(item.model)}</span></td>
+        <td style="font-weight:700;font-size:1rem;">${escapeHtml(item.overall_score)}</td>
+        <td><span class="trust-badge ${trustClass}">${escapeHtml(item.trust_level)}</span></td>
+        <td style="color:${item.token_inflation_pct > 20 ? '#dc2626' : item.token_inflation_pct > 5 ? '#ca8a04' : '#16a34a'};">${escapeHtml(tokenStr)}</td>
+        <td>${escapeHtml(latencyStr)}</td>
+        <td class="${statusClass}">${statusIcon} ${escapeHtml(item.status)}</td>
+        <td style="font-size:0.8rem;">${escapeHtml(item.contributor)}</td>
       </tr>
     `;
   }).join('');

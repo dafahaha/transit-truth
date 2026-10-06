@@ -1,23 +1,25 @@
 """Audit API endpoints."""
 from typing import Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from starlette.concurrency import run_in_threadpool
 from ..models import AuditRequest, AuditResult
 from ..core.auditor import AuditEngine
 from ..database import save_audit, get_audit, list_audits
-from ..utils.ssrf_guard import require_public_url
+from ..utils.ssrf_guard import require_public_url_async
+from ..utils.rate_limit import enforce_rate_limit
 
 router = APIRouter(prefix="/api/audit", tags=["audit"])
 
 _engine = AuditEngine()
 
 
-@router.post("/start", response_model=AuditResult)
+@router.post("/start", response_model=AuditResult, dependencies=[Depends(enforce_rate_limit)])
 async def start_audit(request: AuditRequest):
     """Start a new audit (synchronous for MVP)."""
     # SSRF guard: refuse internal/non-http targets before any outbound call.
-    require_public_url(request.base_url)
+    # Async variant offloads the blocking getaddrinfo off the event loop (N6).
+    await require_public_url_async(request.base_url)
     result = await _engine.run_audit(request)
     # Offload the blocking sqlite write so it doesn't stall the event loop (S7).
     await run_in_threadpool(save_audit, result)

@@ -14,6 +14,8 @@ from typing import Optional
 
 import httpx
 
+from ..utils.ssrf_guard import guarded_async_client
+
 logger = logging.getLogger(__name__)
 
 
@@ -124,7 +126,7 @@ class BalanceChecker:
             "Content-Type": "application/json",
         }
 
-        async with httpx.AsyncClient(timeout=self.timeout) as client:
+        async with guarded_async_client(timeout=self.timeout) as client:
             for endpoint in endpoints:
                 url = base_root.rstrip("/") + endpoint
                 try:

@@ -96,6 +96,8 @@ docker-compose up -d
 
 然后访问 http://localhost:8000
 
+> 部署注意：compose 已显式 `user: "1000:1000"`（与 Dockerfile 内 `appuser` 对齐）。`./data` 挂载到容器 `/app/data` 后，该目录属主由**宿主目录**决定；若宿主 `./data` 对 UID 1000 不可写，请先在宿主 `sudo chown -R 1000:1000 ./data`，否则首次写 SQLite 会因 EACCES 返回 500。
+
 ### 💻 本地运行
 
 ```bash
@@ -128,7 +130,7 @@ transit-truth sk-your-key --base-url https://your-relay.com/v1 --model gpt-4o
 4. 选择检测模式：快速（3探针，~10秒）/ 深度（10探针，~60秒）
 5. 点击"开始审计"
 6. 查看审计结果、行为指纹分布图、详细报告
-7. （可选）一键贡献到社区排行榜
+7. （可选）提交审计结果到社区贡献队列（进入人工审核，审核通过后才计入排行榜）
 
 ## 功能特性
 
@@ -248,7 +250,7 @@ transit-truth/
 我们欢迎所有形式的贡献！
 
 - **提交基准数据**：用`collect_baseline.py`采集你常用模型的基准数据，提交PR
-- **贡献审计结果**：用工具审计你用的中转站，一键贡献到排行榜
+- **贡献审计结果**：用工具审计你用的中转站，提交后进人工审核队列（`python -m app.moderation list/approve/reject`），审核通过才计入排行榜
 - **开发新功能**：看GitHub Issues，认领任务
 - **写文档/教程**：帮助更多人用上这个工具
 - **报告Bug**：提交Issue，我们会尽快修复

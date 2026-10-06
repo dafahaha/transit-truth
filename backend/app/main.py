@@ -2,10 +2,10 @@
 
 Main FastAPI application entry point.
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
 
 from .config import APP_VERSION, BASE_DIR
 from .database import init_db
@@ -31,6 +31,26 @@ app.add_middleware(
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+# Hard cap on request body size (N3). The anonymous /api/contribute endpoint
+# stores the submitted JSON; without a cap a caller could upload multi-MB
+# blobs to fill the DB. 1 MiB is far above any legitimate audit payload.
+MAX_BODY_BYTES = 1 * 1024 * 1024
+
+
+@app.middleware("http")
+async def limit_request_body_size(request: Request, call_next):
+    length = request.headers.get("content-length")
+    if length is not None:
+        try:
+            if int(length) > MAX_BODY_BYTES:
+                return JSONResponse(
+                    status_code=413,
+                    content={"detail": "Request body too large"},
+                )
+        except ValueError:
+            pass
+    return await call_next(request)
 
 # Initialize database
 init_db()

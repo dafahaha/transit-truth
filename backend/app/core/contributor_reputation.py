@@ -208,6 +208,9 @@ class Contribution:
     reviewed_at: Optional[datetime] = None
     quality_score: float = 0.0             # 质量评分（0-1）
     notes: Optional[str] = None
+    # Moderation queue state (N2): pending -> approved | rejected. The public
+    # ranking row is only written when status transitions to approved.
+    status: str = "pending"
 
     def to_dict(self) -> dict:
         """转换为字典"""
@@ -223,6 +226,7 @@ class Contribution:
             "reviewed_at": self.reviewed_at.isoformat() if self.reviewed_at else None,
             "quality_score": self.quality_score,
             "notes": self.notes,
+            "status": self.status,
         }
 
 
@@ -285,6 +289,9 @@ class ContributorReputationSystem:
                         is_valid=bool(r["is_valid"]),
                         quality_score=r["quality_score"],
                         notes=r["notes"],
+                        # Older DBs may predate the status column (migration adds
+                        # it with a default); fall back to pending if absent.
+                        status=r["status"] if "status" in r.keys() else "pending",
                     ))
                 except (ValueError, KeyError):
                     continue
@@ -323,12 +330,12 @@ class ContributorReputationSystem:
             conn.execute(
                 """INSERT OR REPLACE INTO contributions
                 (id, contributor_id, contribution_type, channel, content,
-                 created_at, is_valid, quality_score, notes)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                 created_at, is_valid, quality_score, notes, status)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     c.id, c.contributor_id, c.contribution_type.value, c.channel.value,
                     json.dumps(c.content), c.created_at.isoformat(),
-                    int(c.is_valid), c.quality_score, c.notes,
+                    int(c.is_valid), c.quality_score, c.notes, c.status,
                 ),
             )
             conn.commit()
@@ -457,6 +464,40 @@ class ContributorReputationSystem:
     def get_contributor(self, contributor_id: str) -> Optional[Contributor]:
         """获取贡献者信息"""
         return self.contributors.get(contributor_id)
+
+    # ─── Moderation queue (N2) ──────────────────────────────────────
+    def get_contribution(self, contribution_id: str) -> Optional[Contribution]:
+        """Fetch a single contribution by id."""
+        for c in self.contributions:
+            if c.id == contribution_id:
+                return c
+        return None
+
+    def list_contributions(self, status: Optional[str] = None) -> list[Contribution]:
+        """List contributions, optionally filtered by moderation status."""
+        items = list(self.contributions)
+        if status is not None:
+            items = [c for c in items if c.status == status]
+        items.sort(key=lambda c: c.created_at, reverse=True)
+        return items
+
+    def set_contribution_status(self, contribution_id: str, status: str,
+                                reviewer: str = "cli") -> Optional[Contribution]:
+        """Approve/reject a contribution. Returns the updated record or None."""
+        if status not in ("pending", "approved", "rejected"):
+            raise ValueError(f"Invalid status: {status}")
+        c = self.get_contribution(contribution_id)
+        if c is None:
+            return None
+        c.status = status
+        c.reviewed_by = reviewer
+        c.reviewed_at = datetime.now()
+        if status == "approved":
+            # Contributor "valid contribution" credit is already assigned by the
+            # auto quality gate in add_contribution; we do not double-count here.
+            c.is_valid = True
+        self._persist_contribution(c)
+        return c
 
     def get_top_contributors(self,
                                contribution_type: Optional[ContributionType] = None,

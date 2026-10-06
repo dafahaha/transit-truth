@@ -7,6 +7,7 @@ from typing import Optional
 import httpx
 
 from ..config import REQUEST_TIMEOUT, MAX_RETRIES
+from .ssrf_guard import guarded_async_client
 
 logger = logging.getLogger(__name__)
 
@@ -30,7 +31,9 @@ class AsyncAPIClient:
         }
 
     async def __aenter__(self):
-        self._client = httpx.AsyncClient(
+        # Use the SSRF-guarded transport so a DNS-rebinding second resolution
+        # can never connect to an internal IP (N1).
+        self._client = guarded_async_client(
             timeout=self.timeout,
             headers=self._default_headers(),
         )

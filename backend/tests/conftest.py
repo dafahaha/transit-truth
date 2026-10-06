@@ -73,3 +73,19 @@ def test_model():
     默认使用 gpt-4o-mini
     """
     return os.getenv("TRANSIT_TRUTH_TEST_MODEL", "gpt-4o-mini")
+
+
+@pytest.fixture(autouse=True)
+def _reset_rate_limiter():
+    """Reset the per-IP rate limiter between tests (S2).
+
+    The TestClient always originates from the same client host; without a
+    reset, one test that exhausts the quota would 429 every later request.
+    A generous default quota keeps the full suite from being throttled while
+    tests that need a tiny quota can call ``rate_limit.configure(...)``.
+    """
+    from app.utils import rate_limit
+    rate_limit.reset()
+    rate_limit.configure(100, 60)
+    yield
+    rate_limit.reset()

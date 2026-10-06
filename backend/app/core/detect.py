@@ -9,7 +9,7 @@ import re
 from dataclasses import dataclass
 from typing import Optional
 
-import httpx
+from ..utils.ssrf_guard import guarded_async_client
 
 
 @dataclass
@@ -199,7 +199,7 @@ async def fetch_models(base_url: str, api_key: str, timeout: float = 10.0) -> li
     }
 
     try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
+        async with guarded_async_client(timeout=timeout) as client:
             response = await client.get(url, headers=headers)
             if response.status_code == 200:
                 data = response.json()

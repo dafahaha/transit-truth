@@ -91,9 +91,19 @@ def init_db():
             created_at TEXT,
             is_valid INTEGER DEFAULT 0,
             quality_score REAL DEFAULT 0,
-            notes TEXT
+            notes TEXT,
+            status TEXT NOT NULL DEFAULT 'pending'
         )
     """)
+
+    # Migration: add the moderation status column to databases created before
+    # the pending/approved/rejected queue existed (N2).
+    try:
+        cursor.execute(
+            "ALTER TABLE contributions ADD COLUMN status TEXT NOT NULL DEFAULT 'pending'"
+        )
+    except sqlite3.OperationalError:
+        pass  # column already exists
 
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_audits_base_url ON audits(base_url)
@@ -225,7 +235,7 @@ def upsert_ranking(entry: RankingEntry):
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(base_url, model) DO UPDATE SET
             avg_trust_score = excluded.avg_trust_score,
-            audit_count = excluded.audit_count,
+            audit_count = rankings.audit_count + 1,
             last_audited = excluded.last_audited,
             token_inflation_avg = excluded.token_inflation_avg,
             model_authenticity_rate = excluded.model_authenticity_rate,

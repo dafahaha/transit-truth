@@ -13,18 +13,17 @@ Contribution API endpoints - 贡献API端点
 import logging
 import uuid
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field, field_validator
 
 from ..core.contributor_reputation import (
     ContributorReputationSystem,
     ContributionType,
     ContributionChannel,
 )
-from ..database import upsert_ranking
-from ..models import RankingEntry
+from ..utils.rate_limit import enforce_rate_limit
 
 logger = logging.getLogger(__name__)
 
@@ -34,49 +33,64 @@ router = APIRouter(prefix="/api/contribute", tags=["contribute"])
 _reputation_system = ContributorReputationSystem()
 
 
-def _build_ranking_entry(request: "AuditContributionRequest", audit: dict):
-    """Best-effort build of a public RankingEntry from a contributed audit.
+# ─── Input hardening for /api/contribute/audit (N3) ──────────────────────
+# The contributed audit JSON is caller-supplied. Before it is stored we cap
+# its size/shape so an anonymous client cannot blob arbitrary JSON into the
+# database or smuggle deeply nested structures past the validator.
+_AUDIT_MAX_DEPTH = 6
+_AUDIT_MAX_STRING = 2000
+_AUDIT_MAX_LIST = 200
+_AUDIT_MAX_DICT_KEYS = 100
 
-    Returns None if essential fields are unusable. Never raises: a ranking
-    write failure must not turn a valid contribution into a 500.
+
+def _sanitize_audit_payload(value: Any, depth: int = 0) -> Any:
+    """Recursively validate a contributed audit result.
+
+    Raises ValueError (which Pydantic turns into HTTP 422) on over-limit
+    strings, lists, dicts, nesting depth, or non-JSON types.
     """
-    try:
-        relay_name = request.relay_name or (audit.get("base_url", "") or "").split("//")[-1].split("/")[0] or "unknown"
-        token_cmp = audit.get("token_comparison") or {}
-        latency = audit.get("latency") or {}
-        fp = audit.get("fingerprint") or {}
-        return RankingEntry(
-            relay_name=str(relay_name),
-            base_url=str(audit.get("base_url", "")),
-            model=str(audit.get("model", "")),
-            avg_trust_score=float(audit.get("overall_score", 0)),
-            audit_count=1,
-            last_audited=datetime.now(),
-            token_inflation_avg=float(token_cmp.get("prompt_inflation_pct", 0) or 0),
-            model_authenticity_rate=1.0 if fp.get("family_match", True) else 0.0,
-            avg_latency_ms=float(latency.get("avg_latency_ms", 0) or 0),
-            uptime_rate=1.0,
-            notes=(request.notes or "")[:500],
-        )
-    except (TypeError, ValueError, AttributeError):
-        return None
+    if depth > _AUDIT_MAX_DEPTH:
+        raise ValueError("audit_result is nested too deeply")
+    if value is None or isinstance(value, (bool, int, float)):
+        return value
+    if isinstance(value, str):
+        if len(value) > _AUDIT_MAX_STRING:
+            raise ValueError(f"string field exceeds {_AUDIT_MAX_STRING} chars")
+        return value
+    if isinstance(value, (list, tuple)):
+        if len(value) > _AUDIT_MAX_LIST:
+            raise ValueError(f"list field exceeds {_AUDIT_MAX_LIST} items")
+        return [_sanitize_audit_payload(v, depth + 1) for v in value]
+    if isinstance(value, dict):
+        if len(value) > _AUDIT_MAX_DICT_KEYS:
+            raise ValueError(f"object field exceeds {_AUDIT_MAX_DICT_KEYS} keys")
+        return {
+            str(k): _sanitize_audit_payload(v, depth + 1)
+            for k, v in value.items()
+        }
+    raise ValueError("unsupported type in audit_result")
 
 
 # ─── 请求/响应模型 ────────────────────────────────────
 
 class AuditContributionRequest(BaseModel):
     """审计结果贡献请求"""
-    # 审计结果数据
+    # 审计结果数据 (validated for shape/size by _sanitize_audit_payload).
     audit_result: dict = Field(..., description="完整的审计结果JSON")
 
     # 贡献者信息（可选，不填则为匿名）
-    contributor_name: Optional[str] = Field(None, description="贡献者名称（显示用）")
-    contributor_email: Optional[str] = Field(None, description="贡献者邮箱（用于联系，不公开）")
+    contributor_name: Optional[str] = Field(None, max_length=100, description="贡献者名称（显示用）")
+    contributor_email: Optional[str] = Field(None, max_length=200, description="贡献者邮箱（用于联系，不公开）")
     is_anonymous: bool = Field(False, description="是否匿名贡献")
 
     # 元数据
-    relay_name: Optional[str] = Field(None, description="中转站名称（可选，用于排行榜展示）")
-    notes: Optional[str] = Field(None, description="备注信息")
+    relay_name: Optional[str] = Field(None, max_length=100, description="中转站名称（可选，用于排行榜展示）")
+    notes: Optional[str] = Field(None, max_length=1000, description="备注信息")
+
+    @field_validator("audit_result")
+    @classmethod
+    def _check_audit_shape(cls, v: dict) -> dict:
+        return _sanitize_audit_payload(v)
 
 
 class ContributionResponse(BaseModel):
@@ -110,7 +124,7 @@ class ContributorStatsResponse(BaseModel):
 
 # ─── API 端点 ────────────────────────────────────
 
-@router.post("/audit", response_model=ContributionResponse)
+@router.post("/audit", response_model=ContributionResponse, dependencies=[Depends(enforce_rate_limit)])
 async def contribute_audit_result(request: AuditContributionRequest):
     """
     提交审计结果贡献
@@ -191,30 +205,19 @@ async def contribute_audit_result(request: AuditContributionRequest):
             audit_result=contribution_content,
         )
 
-        # 7b. 自动审核通过的贡献，写入公开排行榜（S4: 之前此路径断连）。
-        if contribution.is_valid:
-            self_rank = _build_ranking_entry(request, audit)
-            if self_rank is not None:
-                try:
-                    upsert_ranking(self_rank)
-                except Exception:
-                    logger.exception("Failed to upsert ranking for contribution %s", contribution.id)
+        # 7b. (N2) Do NOT write to the public ranking from this anonymous,
+        # unauthenticated endpoint. The contribution sits in the moderation
+        # queue with status=pending; an operator approves it via
+        # `python -m app.moderation approve <id>`, which is the only path that
+        # upserts a ranking row.
 
         # 8. 构建响应
-        if contribution.is_valid:
-            message = "贡献成功！审计结果已通过质量审核，将计入排行榜。"
-            next_steps = [
-                "你可以继续提交更多审计结果",
-                "贡献次数达到3次可升级为Silver等级",
-                "贡献次数达到10次可升级为Gold等级",
-            ]
-        else:
-            message = "贡献已接收，但需要人工审核后才会计入排行榜。"
-            next_steps = [
-                "请确保审计结果完整（建议使用深度模式，10+探针）",
-                "管理员会在24小时内完成审核",
-                "审核通过后会自动计入排行榜",
-            ]
+        message = "贡献已提交，进入人工审核队列；审核通过后才会计入公开排行榜。"
+        next_steps = [
+            "请确保审计结果完整（建议使用深度模式，10+探针）",
+            "管理员会在审核队列中逐条复核",
+            "审核通过后会自动计入排行榜（audit_count 累加）",
+        ]
 
         return ContributionResponse(
             success=True,
