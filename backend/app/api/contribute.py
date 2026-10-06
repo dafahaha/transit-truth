@@ -34,7 +34,7 @@ router = APIRouter(prefix="/api/contribute", tags=["contribute"])
 _reputation_system = ContributorReputationSystem()
 
 
-def _build_ranking_entry(request: AuditContributionRequest, audit: dict):
+def _build_ranking_entry(request: "AuditContributionRequest", audit: dict):
     """Best-effort build of a public RankingEntry from a contributed audit.
 
     Returns None if essential fields are unusable. Never raises: a ranking
