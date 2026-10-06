@@ -1915,18 +1915,19 @@ function contributeViaCommunity() {
 }
 
 function contributeViaAPI() {
-  // relay_name/base_url/model are echoed back into this doc and then rendered
-  // via innerHTML in showContributeSuccess; escape them so a self-entered value
-  // (e.g. a model name like `"><img onerror=...>`) cannot break out into HTML
-  // (R3-3, self-XSS). Escaped entities render back to the same visible text.
+  // R4-1: user-controlled values (relay_name/model AND the whole raw
+  // audit_result JSON) are escaped wholesale inside showContributeSuccess when
+  // it builds innerHTML. Do NOT escape them here, or they would be double
+  // escaped (visible `&quot;` text). The audit_result JSON is intentionally
+  // inserted raw; the popup layer is the single trust boundary.
   const apiDoc = `POST /api/contribute/audit\n\n` +
     `Content-Type: application/json\n\n` +
     `{\n` +
-    `  "relay_name": "${escapeHtml(auditResult.relay_name)}",\n` +
-    `  "base_url": "${escapeHtml(auditResult.base_url)}",\n` +
-    `  "model": "${escapeHtml(auditResult.model)}",\n` +
+    `  "relay_name": "${auditResult.relay_name}",\n` +
+    `  "base_url": "${auditResult.base_url}",\n` +
+    `  "model": "${auditResult.model}",\n` +
     `  "overall_score": ${auditResult.overall_score},\n` +
-    `  "trust_level": "${escapeHtml(auditResult.trust_level)}",\n` +
+    `  "trust_level": "${auditResult.trust_level}",\n` +
     `  "contributor_id": "your-email-or-id",\n` +
     `  "audit_result": ${JSON.stringify(auditResult).substring(0, 500)}...\n` +
     `}`;
@@ -1935,11 +1936,18 @@ function contributeViaAPI() {
 
 function showContributeSuccess(title, message) {
   const content = document.getElementById('contribute-modal-content');
+  // R4-1: escape the WHOLE message (including the raw audit_result JSON built
+  // in contributeViaAPI) BEFORE touching innerHTML. A self-entered model name
+  // like `"><img onerror=alert(1)>` must render as inert text, never as a real
+  // tag. Order matters: escape first (so <>"'& become entities), only THEN
+  // turn newlines into real <br> line breaks — escaping after inserting <br>
+  // would mangle the tags into &lt;br&gt;.
+  const safeMessage = escapeHtml(message).replace(/\n/g, '<br>');
   content.innerHTML = `
     <div class="contribute-success">
       <div class="check-icon">${title.split(' ')[0]}</div>
       <h3>${title.substring(title.indexOf(' ') + 1)}</h3>
-      <p style="color:var(--muted);font-size:0.875rem;white-space:pre-wrap;text-align:left;margin:16px 0;">${message}</p>
+      <p style="color:var(--muted);font-size:0.875rem;text-align:left;margin:16px 0;">${safeMessage}</p>
       <button class="btn" onclick="closeContributeModal()">完成</button>
     </div>
   `;
