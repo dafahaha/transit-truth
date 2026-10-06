@@ -7,6 +7,7 @@ from app.core.detect import detect_base_url, suggest_relays, KNOWN_RELAYS
 from app.utils.ranking_aggregator import (
     AuditEntry,
     aggregate_audits,
+    detect_anomalies,
     generate_ranking_json,
     get_top_contributors,
 )
@@ -60,6 +61,21 @@ class TestRankingAggregator:
         top = get_top_contributors(entries)
         assert len(top) >= 1
         assert "contributor" in top[0]
+
+    def test_detect_anomalies_group_of_two_no_nameerror(self):
+        # Regression: Counter was used at ranking_aggregator.py:121 but never
+        # imported, so any group with >=2 entries crashed with NameError.
+        entries = [
+            AuditEntry(relay="r1", model="m1", base_url="https://r1/v1",
+                       overall_score=50.0, trust_level="medium"),
+            AuditEntry(relay="r1", model="m1", base_url="https://r1/v1",
+                       overall_score=55.0, trust_level="medium"),
+        ]
+        anomalies = detect_anomalies(entries)
+        assert isinstance(anomalies, list)
+        # aggregate_audits also calls detect_anomalies internally per group.
+        aggregated = aggregate_audits(entries)
+        assert aggregated[0].audit_count == 2
 
 
 class TestBadgeGenerator:

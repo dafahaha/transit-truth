@@ -1682,13 +1682,13 @@ function showResult() {
   document.getElementById('token-detail').innerHTML = `
     <h3>📊 Token 计数对比</h3>
     <table class="data-table">
-      <tr><td>报告 Prompt Tokens</td><td>${tc.prompt_tokens_reported}</td></tr>
-      <tr><td>预期 Prompt Tokens</td><td>${tc.prompt_tokens_expected || 'N/A'}</td></tr>
-      <tr><td>Chat Template 估算</td><td>${tc.chat_template_overhead} tokens</td></tr>
+      <tr><td>报告 Prompt Tokens</td><td>${escapeHtml(tc.prompt_tokens_reported)}</td></tr>
+      <tr><td>预期 Prompt Tokens</td><td>${escapeHtml(tc.prompt_tokens_expected || 'N/A')}</td></tr>
+      <tr><td>Chat Template 估算</td><td>${escapeHtml(tc.chat_template_overhead)} tokens</td></tr>
       <tr><td>Token 差异率</td><td style="color:${tc.suspicious ? 'var(--red)' : 'var(--green)'}">${tc.prompt_inflation_pct !== null ? tc.prompt_inflation_pct.toFixed(1) + '%' : 'N/A'}</td></tr>
       <tr><td>可疑</td><td style="color:${tc.suspicious ? 'var(--red)' : 'var(--green)'}">${tc.suspicious ? '⚠ 是（已扣除 chat template）' : '否'}</td></tr>
     </table>
-    ${tc.discrepancy_note ? `<p style="font-size:0.8rem;color:var(--muted);margin-top:8px;">💡 ${tc.discrepancy_note}</p>` : ''}
+    ${tc.discrepancy_note ? `<p style="font-size:0.8rem;color:var(--muted);margin-top:8px;">💡 ${escapeHtml(tc.discrepancy_note)}</p>` : ''}
   `;
 
   // 指纹详情

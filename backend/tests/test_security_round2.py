@@ -525,6 +525,39 @@ def test_custom_endpoint_accepts_plain_path():
     validate_custom_endpoint("/v1/user/balance")
 
 
+# ─── R7-3: percent-encoded host-rewrite variants must also be rejected ───
+
+@pytest.mark.parametrize("encoded_bad", [
+    "/%40127.0.0.1/latest",                 # %40 -> '@' (userinfo injection)
+    "/%40169.254.169.254/latest/meta-data",
+    "/v1/%2f%2fevil.example.com/balance",   # %2f%2f -> '//' (scheme-relative)
+    "/%2f%2fevil.example.com/v1/balance",
+    "/v1%5Cevil.example.com/x",              # %5C -> '\\' (backslash)
+    "/v1/path%23fragment",                  # %23 -> '#' (fragment)
+    "/v1/balance%0d%0aX-Injected: 1",      # %0d%0a -> CRLF control chars
+    "/v1/balance%00",                       # %00 -> NUL
+])
+def test_custom_endpoint_rejects_encoded_host_rewrite(encoded_bad):
+    from app.core.balance_checker import validate_custom_endpoint
+    with pytest.raises(ValueError):
+        validate_custom_endpoint(encoded_bad)
+
+
+@pytest.mark.parametrize("legit", [
+    "/v1/dashboard/billing/credit_grants",
+    "/v1/user/balance",
+    "/v1/balance%20with%20space",          # %20 -> ' ' (legal encoded space)
+    "/v1/foo%25bar",                        # %25 -> '%' (legal literal %)
+    "/v1/%2540",                            # double-encoded %: decodes to '%40'
+    "/v1/foo%2Fbar",                        # single encoded slash in path segment
+    "/v1/%E4%B8%AD%E6%96%87",              # percent-encoded UTF-8 path
+])
+def test_custom_endpoint_accepts_legit_encoded_paths(legit):
+    from app.core.balance_checker import validate_custom_endpoint
+    # Must not raise.
+    validate_custom_endpoint(legit)
+
+
 def test_checker_rejects_bad_custom_endpoint_before_outbound():
     """The checker must raise ValueError (no outbound) for a hostile endpoint."""
     from app.core.balance_checker import BalanceChecker

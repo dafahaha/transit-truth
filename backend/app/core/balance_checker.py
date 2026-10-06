@@ -11,6 +11,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from typing import Optional
+from urllib.parse import unquote
 
 import httpx
 
@@ -90,6 +91,12 @@ def validate_custom_endpoint(endpoint: str) -> None:
       can smuggle an authority past naive path checks.
     * control characters — can corrupt the URL parser or smuggle headers.
 
+    The endpoint is percent-decoded exactly once before these checks so that
+    encoded variants (``%40``, ``%2f%2f``, ``%5C``, ``%23``, ``%0d`` ...) are
+    caught as well. Decoding only once is deliberate: a second decode would
+    misread legitimate ``%2540`` (a literal ``%`` followed by ``40``) as ``@``
+    and reject valid paths.
+
     A legitimate endpoint is a bare path starting with ``/`` (e.g.
     ``/v1/dashboard/billing/balance``). Raises ``ValueError`` on any violation;
     the API layer maps that to HTTP 400.
@@ -98,15 +105,16 @@ def validate_custom_endpoint(endpoint: str) -> None:
         raise ValueError("custom_endpoint must be a non-empty path string")
     if not endpoint.startswith("/"):
         raise ValueError("custom_endpoint must start with '/' (a URL path)")
-    if "//" in endpoint:
+    decoded = unquote(endpoint)
+    if "//" in decoded:
         raise ValueError("custom_endpoint must not contain '//'")
-    if "@" in endpoint:
+    if "@" in decoded:
         raise ValueError("custom_endpoint must not contain '@'")
-    if "#" in endpoint:
+    if "#" in decoded:
         raise ValueError("custom_endpoint must not contain '#'")
-    if "\\" in endpoint:
+    if "\\" in decoded:
         raise ValueError("custom_endpoint must not contain '\\'")
-    if any(ord(c) < 0x20 or ord(c) == 0x7F for c in endpoint):
+    if any(ord(c) < 0x20 or ord(c) == 0x7F for c in decoded):
         raise ValueError("custom_endpoint must not contain control characters")
 
 
