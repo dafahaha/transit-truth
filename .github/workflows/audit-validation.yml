@@ -46,14 +46,27 @@ jobs:
                 }
               });
 
+              // Sanitize free-text frontmatter before turning it into a label.
+              // Anyone can open an issue, so without this an attacker could make
+              // the workflow create arbitrary `relay:*`/`model:*` labels (spam).
+              const safeLabelValue = (v) => {
+                if (!v) return null;
+                const s = String(v).trim();
+                if (s.length > 40) return null;
+                if (!/^[a-zA-Z0-9][a-zA-Z0-9._\- ]*$/.test(s)) return null;
+                return s;
+              };
+
               // Extract relay label
-              if (fm.relay && fm.relay !== 'unknown') {
-                labels.push(`relay:${fm.relay}`);
+              const relayLabel = safeLabelValue(fm.relay);
+              if (relayLabel && relayLabel !== 'unknown') {
+                labels.push(`relay:${relayLabel}`);
               }
 
               // Extract model label
-              if (fm.model && fm.model !== 'unknown') {
-                labels.push(`model:${fm.model}`);
+              const modelLabel = safeLabelValue(fm.model);
+              if (modelLabel && modelLabel !== 'unknown') {
+                labels.push(`model:${modelLabel}`);
               }
 
               // Extract trust level label

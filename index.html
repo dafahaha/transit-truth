@@ -884,6 +884,18 @@
 
 import { getEncoding } from 'https://esm.sh/js-tiktoken@1.0.12';
 
+// Escape a string before interpolating it into innerHTML. Strings coming from a
+// relay (model ids, model echo) are attacker-controlled and must not be treated
+// as raw HTML (DOM XSS defense, complements the DOM-built model dropdown).
+function escapeHtml(str) {
+  return String(str ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // ─── 已知中转站映射 ────────────────────────────────────────
 const KNOWN_RELAYS = [
   { name: 'OpenAI 官方', base_url: 'https://api.openai.com/v1', pattern: /api\.openai\.com/ },
@@ -1052,8 +1064,20 @@ async function loadModels() {
       return;
     }
 
-    select.innerHTML = '<option value="">-- 请选择模型 --</option>' +
-      models.map(m => `<option value="${m}">${m}</option>`).join('');
+    // Build <option> nodes via the DOM API. Model ids come from the relay's
+    // /models response (attacker-controlled); string-interpolating them into
+    // innerHTML would allow HTML/script injection (DOM XSS).
+    select.textContent = '';
+    const placeholderOpt = document.createElement('option');
+    placeholderOpt.value = '';
+    placeholderOpt.textContent = '-- 请选择模型 --';
+    select.appendChild(placeholderOpt);
+    for (const m of models) {
+      const opt = document.createElement('option');
+      opt.value = m;
+      opt.textContent = m;
+      select.appendChild(opt);
+    }
 
     // 自动选择常见模型
     const preferred = ['gpt-4o', 'gpt-4o-mini', 'gpt-4-turbo', 'gpt-3.5-turbo', 'claude-3-5-sonnet', 'gemini-pro'];
@@ -1636,8 +1660,8 @@ function showResult() {
     <div class="check-item">
       <div class="check-icon ${c.passed ? 'check-pass' : 'check-fail'}">${c.passed ? '✓' : '✗'}</div>
       <div class="check-info">
-        <div class="check-name">${c.name}</div>
-        <div class="check-details">${c.details}</div>
+        <div class="check-name">${escapeHtml(c.name)}</div>
+        <div class="check-details">${escapeHtml(c.details)}</div>
       </div>
       <div class="check-score" style="color:${c.passed ? 'var(--green)' : 'var(--red)'}">${c.score}/100</div>
     </div>
@@ -1662,8 +1686,8 @@ function showResult() {
   let fpHtml = `
     <h3>🔍 模型指纹分析</h3>
     <table class="data-table">
-      <tr><td>声称模型</td><td>${fp.claimed_model}</td></tr>
-      <tr><td>检测到家族</td><td>${fp.detected_family || '未知'}</td></tr>
+      <tr><td>声称模型</td><td>${escapeHtml(fp.claimed_model)}</td></tr>
+      <tr><td>检测到家族</td><td>${escapeHtml(fp.detected_family || '未知')}</td></tr>
       <tr><td>家族匹配</td><td style="color:${fp.family_match ? 'var(--green)' : 'var(--red)'}">${fp.family_match ? '✓ 匹配' : '✗ 不匹配'}</td></tr>
       <tr><td>置信度</td><td>${(fp.confidence * 100).toFixed(0)}%</td></tr>
       <tr><td>能力测试</td><td>${fp.capability.passed}/${fp.capability.total} 通过（失败率 ${(fp.capability.failure_rate*100).toFixed(0)}%）</td></tr>
