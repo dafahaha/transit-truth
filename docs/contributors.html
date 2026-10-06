@@ -163,6 +163,18 @@
     <script>
         const REPO = 'dafahaha/transit-truth';
 
+        // Escape the contributor username (comes from anonymous issue frontmatter)
+        // before interpolating into innerHTML; quoting " and ' also prevents
+        // attribute breakout in the github.com profile href.
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         async function loadLeaderboard() {
             const content = document.getElementById('leaderboardContent');
             content.innerHTML = '<div class="loading"><div class="spinner"></div><p>正在加载贡献者榜单...</p></div>';
@@ -241,9 +253,9 @@
                     html += `<div class="leaderboard-row">
                         <div class="rank ${rankClass}">#${i + 1}</div>
                         <div class="contributor">
-                            <div class="avatar">${initial}</div>
+                            <div class="avatar">${escapeHtml(initial)}</div>
                             <div class="contributor-info">
-                                <div class="name"><a href="https://github.com/${c.name}" target="_blank">@${c.name}</a></div>
+                                <div class="name"><a href="https://github.com/${escapeHtml(c.name)}" target="_blank">@${escapeHtml(c.name)}</a></div>
                                 <span class="badge badge-${level}">${level.charAt(0).toUpperCase() + level.slice(1)}</span>
                             </div>
                         </div>

@@ -1722,7 +1722,7 @@ function showResult() {
         const ref = (p.reference[i] * 100).toFixed(1);
         return `
           <div class="fp-row">
-            <span class="fp-opt">${opt}</span>
+            <span class="fp-opt">${escapeHtml(opt)}</span>
             <div class="fp-track">
               <div class="fp-ref" style="width:${ref}%"></div>
               <div class="fp-emp" style="width:${Math.max(emp, 2)}%"></div>
@@ -1732,7 +1732,7 @@ function showResult() {
       }).join('');
       fpHtml += `
         <div class="fp-probe">
-          <div class="fp-probe-title">${p.name}<span class="fp-anno">⚠ ${p.anomaly}</span></div>
+          <div class="fp-probe-title">${escapeHtml(p.name)}<span class="fp-anno">⚠ ${escapeHtml(p.anomaly)}</span></div>
           ${rows}
         </div>`;
     });
