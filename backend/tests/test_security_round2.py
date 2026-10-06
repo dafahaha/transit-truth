@@ -224,12 +224,14 @@ def test_anonymous_contribute_does_not_write_ranking():
 
 
 def test_approve_leaves_pending_when_ranking_write_fails(monkeypatch):
-    # R3-5: if upsert_ranking fails, the contribution must NOT be left
-    # "approved" without a public row. Ordering is upsert-first, so a failure
-    # leaves it pending for a clean retry.
+    # R3-5/R4-2: if the ranking upsert fails mid-transaction, the whole approve
+    # rolls back — the contribution must NOT be left "approved" (and no partial
+    # ranking row / audit_count increment survives).
     from types import SimpleNamespace
     from app import moderation
+    import app.database as db_module
     from app.core.contributor_reputation import ContributorReputationSystem
+    from app.database import get_rankings
 
     payload = {
         "audit_result": {
@@ -240,15 +242,54 @@ def test_approve_leaves_pending_when_ranking_write_fails(monkeypatch):
     }
     cid = client.post("/api/contribute/audit", json=payload).json()["contribution_id"]
 
-    def boom(entry):
+    def boom(cursor, entry):
         raise RuntimeError("simulated DB lock")
 
-    monkeypatch.setattr(moderation, "upsert_ranking", boom)
+    monkeypatch.setattr(db_module, "_upsert_ranking_row", boom)
 
     rc = moderation.cmd_approve(SimpleNamespace(id=cid))
     assert rc == 3
+    # rolled back: no public row committed ...
+    assert get_rankings(model="gpt-4o-r35") == []
+    # ... and the contribution stays pending for a clean retry.
     contrib = ContributorReputationSystem().get_contribution(cid)
     assert contrib.status == "pending"
+
+
+def test_approve_rolls_back_when_status_flip_fails(monkeypatch):
+    # R4-2: the ranking upsert and the contribution status flip are ONE
+    # transaction. Simulate the SECOND step (status flip) failing after the
+    # upsert ran — the transaction must roll back, so audit_count is NOT
+    # incremented and the contribution stays pending (an operator retry then
+    # upserts exactly once, instead of double-counting).
+    from types import SimpleNamespace
+    from app import moderation
+    import app.database as db_module
+    from app.core.contributor_reputation import ContributorReputationSystem
+    from app.database import get_rankings
+
+    payload = {
+        "audit_result": {
+            "model": "gpt-4o-r42",
+            "base_url": "https://r42.example.com/v1",
+            "overall_score": 80,
+        },
+    }
+    cid = client.post("/api/contribute/audit", json=payload).json()["contribution_id"]
+
+    def boom(cursor, contribution_id):
+        raise RuntimeError("simulated DB lock on status update")
+
+    monkeypatch.setattr(db_module, "_set_contribution_approved", boom)
+
+    rc = moderation.cmd_approve(SimpleNamespace(id=cid))
+    assert rc == 3
+    # The upsert ran on the transaction's connection but was rolled back:
+    # no committed ranking row, hence no audit_count increment.
+    assert get_rankings(model="gpt-4o-r42") == []
+    contrib = ContributorReputationSystem().get_contribution(cid)
+    assert contrib.status == "pending"
+
 
 
 # ─── N3: contributed payload size/shape bounds ───────────────────────────

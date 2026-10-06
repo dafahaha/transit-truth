@@ -223,11 +223,12 @@ def list_audits(limit: int = 50, model: str = None, base_url: str = None) -> lis
     return [dict(row) for row in rows]
 
 
-def upsert_ranking(entry: RankingEntry):
-    """Insert or update a ranking entry."""
-    conn = get_db()
-    cursor = conn.cursor()
+def _upsert_ranking_row(cursor, entry: RankingEntry):
+    """Run the ranking upsert statement on ``cursor`` (no commit).
 
+    Shared by ``upsert_ranking`` (own connection) and the atomic approve path
+    (one transaction with the contribution status flip, R4-2).
+    """
     cursor.execute("""
         INSERT INTO rankings
         (relay_name, base_url, model, avg_trust_score, audit_count, last_audited,
@@ -256,8 +257,55 @@ def upsert_ranking(entry: RankingEntry):
         entry.notes,
     ))
 
-    conn.commit()
-    conn.close()
+
+def _set_contribution_approved(cursor, contribution_id: str):
+    """Mark a contribution approved on ``cursor`` (no commit).
+
+    Mirrors the DB-visible side of ``set_contribution_status("approved")``:
+    the contributions table only persists ``status``/``is_valid`` (reviewed_by /
+    reviewed_at are in-memory only). Kept as its own seam so tests can simulate
+    the second step failing mid-transaction (R4-2).
+    """
+    cursor.execute(
+        "UPDATE contributions SET status = 'approved', is_valid = 1 WHERE id = ?",
+        (contribution_id,),
+    )
+
+
+def upsert_ranking(entry: RankingEntry):
+    """Insert or update a ranking entry."""
+    conn = get_db()
+    try:
+        _upsert_ranking_row(conn.cursor(), entry)
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def approve_contribution_atomically(entry: RankingEntry, contribution_id: str, reviewer: str = "cli"):
+    """Approve a contribution in ONE SQLite transaction (R4-2).
+
+    The public ranking upsert and the contribution status flip used to run on
+    two separate connections with two commits. If the status flip failed after
+    the upsert committed (e.g. DB lock), the contribution stayed pending while
+    ``audit_count`` had already been incremented — re-running ``approve`` then
+    upserted a second time, double-counting.
+
+    Now both writes share a single connection and a single commit: if either
+    raises, the whole transaction rolls back, so a retry starts from a clean,
+    still-pending state with no partial ranking row.
+    """
+    conn = get_db()
+    try:
+        cursor = conn.cursor()
+        _upsert_ranking_row(cursor, entry)
+        _set_contribution_approved(cursor, contribution_id)
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def get_rankings(model: str = None, limit: int = 100) -> list[dict]:

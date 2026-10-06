@@ -99,6 +99,8 @@ docker-compose up -d
 > 部署注意：compose 已显式 `user: "1000:1000"`（与 Dockerfile 内 `appuser` 对齐）。`./data` 挂载到容器 `/app/data` 后，该目录属主由**宿主目录**决定；若宿主 `./data` 对 UID 1000 不可写，请先在宿主 `sudo chown -R 1000:1000 ./data`，否则首次写 SQLite 会因 EACCES 返回 500。
 
 > 反向代理与限流：限流默认按 **TCP 对端 IP** 分桶，因此直连部署最安全（调用方无法伪造 `X-Forwarded-For` 换配额桶）。若必须把本服务放在 nginx / 云 LB 之后，请设置环境变量 `TRUSTED_PROXIES=<代理IP,逗号分隔>`，例如 `TRUSTED_PROXIES=10.0.0.1,10.0.0.2`。只有当请求的 TCP 对端落在可信代理列表内时，服务才会解析 `X-Forwarded-For`（从右向左跳过可信代理后取第一个不可信跳作为真实客户端 IP）；未配置时即使客户端带了 `X-Forwarded-For` 也会被忽略。请勿把公网客户端 IP 加入 `TRUSTED_PROXIES`。
+>
+> 两个部署前提：① 上述右向左解析**依赖每个可信代理在 `X-Forwarded-For` 右侧追加自身地址**——nginx 请用 `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`，切勿用 `$http_x_forwarded_for` 原样透传（否则客户端在左侧伪造的 IP 会被当成真实客户端）。② 限流计数器是**进程内**状态，`uvicorn --workers N>1` 时各 worker 独立计数，实际配额约为单 worker 的 N 倍；需要严格全局配额请前置统一网关或改用外部存储限流。
 
 ### 💻 本地运行
 

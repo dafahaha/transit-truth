@@ -18,7 +18,7 @@ import sys
 from datetime import datetime
 
 from .core.contributor_reputation import ContributorReputationSystem
-from .database import upsert_ranking
+from .database import approve_contribution_atomically
 from .models import RankingEntry
 
 logger = logging.getLogger(__name__)
@@ -98,22 +98,27 @@ def cmd_approve(args) -> int:
         )
         return 2
 
-    # R3-5: write the public ranking row FIRST. The old order flipped the
-    # contribution to "approved" and only then upserted the ranking; if upsert
-    # crashed (e.g. DB lock) the contribution was left approved with no public
-    # row. Upserting first means a failure leaves the contribution still pending,
-    # so the operator can simply re-run `approve` (idempotent).
+    # R4-2: the public ranking upsert and the contribution status flip now run
+    # inside ONE SQLite transaction (approve_contribution_atomically). Either
+    # both commit or neither does: if the status flip fails after the upsert,
+    # the whole thing rolls back, so the contribution stays pending and a retry
+    # cannot double-count audit_count. (R3-5 ordering concern is subsumed: any
+    # failure leaves the contribution pending.)
     try:
-        upsert_ranking(entry)
+        approve_contribution_atomically(entry, args.id, reviewer="cli")
     except Exception as exc:
         print(
-            f"error writing ranking for {args.id}: {exc}; contribution left "
-            "pending — fix the cause and re-run approve.",
+            f"error approving {args.id}: {exc}; contribution left pending — "
+            "fix the cause and re-run approve.",
             file=sys.stderr,
         )
         return 3
-    # audit_count accumulates in the SQL upsert (read old value +1).
-    sys_.set_contribution_status(args.id, "approved", reviewer="cli")
+    # Keep the in-memory queue consistent for the rest of this process; the DB
+    # already has the committed status='approved' row.
+    contrib.status = "approved"
+    contrib.reviewed_by = "cli"
+    contrib.reviewed_at = datetime.now()
+    contrib.is_valid = True
     print(f"approved {args.id} -> ranking[{entry.base_url} / {entry.model}]")
     return 0
 
