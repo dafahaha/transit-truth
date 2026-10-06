@@ -1086,7 +1086,17 @@ async function loadModels() {
       if (found) { select.value = found; break; }
     }
   } catch (e) {
-    select.innerHTML = `<option value="">加载失败: ${e.message}</option>`;
+    // e.message is attacker-influenced: when a hostile relay returns HTTP 200
+    // with a non-JSON body (e.g. "<img src=x onerror=alert(1)>"), Chrome's
+    // JSON.parse SyntaxError echoes a snippet of that body back in e.message.
+    // Interpolating it into innerHTML would parse the echoed fragment as HTML
+    // (DOM XSS). Build the option node via the DOM API so the fragment becomes
+    // inert text, mirroring the model-id path above.
+    select.textContent = '';
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = `加载失败: ${e.message}`;
+    select.appendChild(opt);
   }
 }
 

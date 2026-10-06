@@ -73,6 +73,43 @@ COMMON_BALANCE_ENDPOINTS = [
 ]
 
 
+def validate_custom_endpoint(endpoint: str) -> None:
+    """Reject ``custom_endpoint`` values that could rewrite the effective host.
+
+    ``custom_endpoint`` is concatenated onto ``base_root`` and sent through the
+    guarded client. The connect-level SSRF guard already re-checks the real peer
+    address (defense in depth), but a hostile endpoint can still attempt URL
+    tricks at the URL layer:
+
+    * ``@``    — userinfo injection, e.g. ``/@169.254.169.254/latest`` rewrites
+      the effective authority after concatenation.
+    * ``//``   — scheme-relative authority (``//evil.com/path``) or embedded
+      ``://``; httpx would treat the following host as the target.
+    * ``#``    — fragment; truncates the path and can hide the real target.
+    * ``\\``   — backslashes are normalised to ``/`` by httpx/browsers, which
+      can smuggle an authority past naive path checks.
+    * control characters — can corrupt the URL parser or smuggle headers.
+
+    A legitimate endpoint is a bare path starting with ``/`` (e.g.
+    ``/v1/dashboard/billing/balance``). Raises ``ValueError`` on any violation;
+    the API layer maps that to HTTP 400.
+    """
+    if not isinstance(endpoint, str) or not endpoint:
+        raise ValueError("custom_endpoint must be a non-empty path string")
+    if not endpoint.startswith("/"):
+        raise ValueError("custom_endpoint must start with '/' (a URL path)")
+    if "//" in endpoint:
+        raise ValueError("custom_endpoint must not contain '//'")
+    if "@" in endpoint:
+        raise ValueError("custom_endpoint must not contain '@'")
+    if "#" in endpoint:
+        raise ValueError("custom_endpoint must not contain '#'")
+    if "\\" in endpoint:
+        raise ValueError("custom_endpoint must not contain '\\'")
+    if any(ord(c) < 0x20 or ord(c) == 0x7F for c in endpoint):
+        raise ValueError("custom_endpoint must not contain control characters")
+
+
 class BalanceChecker:
     """中转站余额查询器"""
 
@@ -116,6 +153,11 @@ class BalanceChecker:
 
         # 确定要尝试的端点列表
         if custom_endpoint:
+            # URL-layer defense in depth: reject paths that could rewrite the
+            # effective host (userinfo @, scheme-relative //, fragment #,
+            # backslash, control chars). The connect-level guard still re-checks
+            # the real peer, but failing fast here keeps the URL honest.
+            validate_custom_endpoint(custom_endpoint)
             endpoints = [custom_endpoint]
         else:
             endpoints = COMMON_BALANCE_ENDPOINTS

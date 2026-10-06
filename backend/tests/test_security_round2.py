@@ -497,3 +497,56 @@ def test_batch_account_missing_base_url_is_422():
         "accounts": [{"api_key": "sk-test"}],  # no base_url
     })
     assert resp.status_code == 422, resp.text
+
+
+# ─── R6-2: custom_endpoint is path-only (URL-layer SSRF defense in depth) ─
+
+@pytest.mark.parametrize("bad_endpoint", [
+    "/@169.254.169.254/latest/meta-data",   # userinfo injection -> rewrites host
+    "/@127.0.0.1:8080/admin",               # userinfo to loopback
+    "//evil.example.com/v1/balance",       # scheme-relative authority
+    "/v1//balance",                         # embedded '//'
+    "/v1/balance#fragment",                 # fragment
+    "/v1\\internal\\path",                  # backslash (httpx normalises to /)
+    "/v1/balance\r\nX-Injected: 1",         # CRLF control chars
+    "https://api.openai.com/v1/balance",    # absolute URL, not a bare path
+    "v1/balance",                           # does not start with '/'
+])
+def test_custom_endpoint_rejects_host_rewrite_attempts(bad_endpoint):
+    from app.core.balance_checker import validate_custom_endpoint
+    with pytest.raises(ValueError):
+        validate_custom_endpoint(bad_endpoint)
+
+
+def test_custom_endpoint_accepts_plain_path():
+    from app.core.balance_checker import validate_custom_endpoint
+    # Legitimate shape must still pass (no regression on normal usage).
+    validate_custom_endpoint("/v1/dashboard/billing/balance")
+    validate_custom_endpoint("/v1/user/balance")
+
+
+def test_checker_rejects_bad_custom_endpoint_before_outbound():
+    """The checker must raise ValueError (no outbound) for a hostile endpoint."""
+    from app.core.balance_checker import BalanceChecker
+    checker = BalanceChecker()
+    with pytest.raises(ValueError):
+        asyncio.run(checker.check_balance(
+            api_key="sk-test",
+            base_url="https://api.example.com/v1",
+            custom_endpoint="/@127.0.0.1/latest",
+        ))
+
+
+def test_balance_api_returns_400_for_bad_custom_endpoint(monkeypatch):
+    """API layer maps the ValueError to HTTP 400 (like require_public_url)."""
+    # Bypass the base_url DNS check so we only exercise the endpoint validation;
+    # the base_url SSRF guard is already covered by other tests.
+    async def _noop(url):
+        return None
+    monkeypatch.setattr("app.api.balance.require_public_url_async", _noop)
+    resp = client.post("/api/balance/check", json={
+        "api_key": "sk-test",
+        "base_url": "https://api.example.com/v1",
+        "custom_endpoint": "/@127.0.0.1/latest",
+    })
+    assert resp.status_code == 400, resp.text

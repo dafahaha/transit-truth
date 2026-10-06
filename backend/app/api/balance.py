@@ -2,7 +2,7 @@
 余额查询 API 端点
 """
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from typing import Optional
 
@@ -35,12 +35,18 @@ async def check_balance(request: BalanceCheckRequest):
     """查询单个账户余额"""
     await require_public_url_async(request.base_url)
     checker = BalanceChecker()
-    result = await checker.check_balance(
-        api_key=request.api_key,
-        base_url=request.base_url,
-        account_name=request.account_name,
-        custom_endpoint=request.custom_endpoint,
-    )
+    try:
+        result = await checker.check_balance(
+            api_key=request.api_key,
+            base_url=request.base_url,
+            account_name=request.account_name,
+            custom_endpoint=request.custom_endpoint,
+        )
+    except ValueError as exc:
+        # Invalid custom_endpoint (e.g. userinfo '@' / scheme-relative '//').
+        # URL-layer defense in depth; the connect-level guard would also block
+        # the resulting request, but we reject up front with a clear 400.
+        raise HTTPException(status_code=400, detail=str(exc))
     return result.to_dict()
 
 
@@ -53,7 +59,10 @@ async def batch_check_balance(request: BatchBalanceCheckRequest):
     checker = BalanceChecker()
     # Pass plain dicts to the checker (it already works with dict access).
     account_dicts = [acc.model_dump() for acc in request.accounts]
-    results = await checker.check_multiple(account_dicts)
+    try:
+        results = await checker.check_multiple(account_dicts)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     return {
         "results": [r.to_dict() for r in results],
         "summary": checker.format_summary(results),
