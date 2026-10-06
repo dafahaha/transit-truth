@@ -291,8 +291,8 @@ def test_approve_rolls_back_when_status_flip_fails(monkeypatch):
     assert contrib.status == "pending"
 
 
-
 # ─── N3: contributed payload size/shape bounds ───────────────────────────
+
 
 def test_contribute_oversized_string_is_422():
     payload = {

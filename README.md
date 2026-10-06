@@ -101,6 +101,8 @@ docker-compose up -d
 > 反向代理与限流：限流默认按 **TCP 对端 IP** 分桶，因此直连部署最安全（调用方无法伪造 `X-Forwarded-For` 换配额桶）。若必须把本服务放在 nginx / 云 LB 之后，请设置环境变量 `TRUSTED_PROXIES=<代理IP,逗号分隔>`，例如 `TRUSTED_PROXIES=10.0.0.1,10.0.0.2`。只有当请求的 TCP 对端落在可信代理列表内时，服务才会解析 `X-Forwarded-For`（从右向左跳过可信代理后取第一个不可信跳作为真实客户端 IP）；未配置时即使客户端带了 `X-Forwarded-For` 也会被忽略。请勿把公网客户端 IP 加入 `TRUSTED_PROXIES`。
 >
 > 两个部署前提：① 上述右向左解析**依赖每个可信代理在 `X-Forwarded-For` 右侧追加自身地址**——nginx 请用 `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;`，切勿用 `$http_x_forwarded_for` 原样透传（否则客户端在左侧伪造的 IP 会被当成真实客户端）。② 限流计数器是**进程内**状态，`uvicorn --workers N>1` 时各 worker 独立计数，实际配额约为单 worker 的 N 倍；需要严格全局配额请前置统一网关或改用外部存储限流。
+>
+> 审核与内存快照：`python -m app.moderation approve` 会把 `contributions.status='approved'` 落库并原子写入排行榜行，但**正在运行的 web worker** 里那个信誉系统实例是启动时从 DB 载入的内存快照，不会自动感知这次 approve——其 `get_contributor_stats` / `get_top_contributors` 的 `valid_contributions` 计数会保持陈旧，直到 worker 重启。如需立即反映到前端贡献者计数，请在 CLI approve 后滚动重启 web worker（systemd `restart=always` 或 k8s rolling restart 均可）；排行榜数据本身读 DB，不受此影响。
 
 ### 💻 本地运行
 

@@ -1943,10 +1943,16 @@ function showContributeSuccess(title, message) {
   // turn newlines into real <br> line breaks — escaping after inserting <br>
   // would mangle the tags into &lt;br&gt;.
   const safeMessage = escapeHtml(message).replace(/\n/g, '<br>');
+  // R5-1: same latent hole as the message fix — title was interpolated raw.
+  // All current callers pass a hardcoded literal (emoji + space + CJK label),
+  // so it was unreachable today, but any future caller passing user/relay data
+  // would resurrect the same DOM-XSS. Escape the whole title FIRST, then split
+  // on the space (escapeHtml leaves spaces alone, so positions are preserved).
+  const safeTitle = escapeHtml(title);
   content.innerHTML = `
     <div class="contribute-success">
-      <div class="check-icon">${title.split(' ')[0]}</div>
-      <h3>${title.substring(title.indexOf(' ') + 1)}</h3>
+      <div class="check-icon">${safeTitle.split(' ')[0]}</div>
+      <h3>${safeTitle.substring(safeTitle.indexOf(' ') + 1)}</h3>
       <p style="color:var(--muted);font-size:0.875rem;text-align:left;margin:16px 0;">${safeMessage}</p>
       <button class="btn" onclick="closeContributeModal()">完成</button>
     </div>

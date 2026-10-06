@@ -1,8 +1,5 @@
 """Database initialization and operations."""
-import json
 import sqlite3
-from datetime import datetime
-from pathlib import Path
 from typing import Optional
 
 from .config import DB_PATH, DATA_DIR
@@ -207,7 +204,10 @@ def list_audits(limit: int = 50, model: str = None, base_url: str = None) -> lis
     """List audit results."""
     conn = get_db()
     cursor = conn.cursor()
-    query = "SELECT audit_id, status, model, base_url, started_at, completed_at, overall_score, trust_level FROM audits WHERE 1=1"
+    query = (
+        "SELECT audit_id, status, model, base_url, started_at, completed_at, "
+        "overall_score, trust_level FROM audits WHERE 1=1"
+    )
     params = []
     if model:
         query += " AND model = ?"
