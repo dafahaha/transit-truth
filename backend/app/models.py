@@ -95,6 +95,7 @@ class AuditResult(BaseModel):
     fingerprint: Optional[FingerprintResult] = None
     summary: str = ""
     recommendations: list[str] = Field(default_factory=list)
+    model_reference: Optional[dict] = None
     error: Optional[str] = None
 
 

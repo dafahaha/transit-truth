@@ -1,10 +1,9 @@
 """Main audit engine - orchestrates all checks."""
-import asyncio
+import logging
 import uuid
 from datetime import datetime
 from typing import Optional
 
-from ..config import DEFAULT_PROBE_COUNT
 from ..models import (
     AuditRequest,
     AuditResult,
@@ -17,6 +16,8 @@ from .fingerprint import ModelFingerprinter
 from .latency_protocol import LatencyChecker, ProtocolChecker
 from .token_check import TokenVerifier
 from .randomized_probes import generate_randomized_probes
+
+logger = logging.getLogger(__name__)
 
 
 class AuditEngine:
@@ -50,17 +51,13 @@ class AuditEngine:
                 avail = await client.check_availability(request.model)
                 if "error" in avail:
                     result.status = AuditStatus.FAILED
-                    result.error = f"API unavailable: {avail.get('error', {})}"
+                    # Never echo the upstream response body back to the caller
+                    # (SSRF read-back); only report the status code.
+                    err = avail.get("error", {})
+                    status_code = err.get("status_code", "unknown") if isinstance(err, dict) else "unknown"
+                    result.error = f"API unavailable (HTTP {status_code})"
                     result.completed_at = datetime.now()
                     return result
-
-                # Official API client for comparison (if provided)
-                official_client = None
-                if request.official_api_key:
-                    # Determine official base URL from model
-                    official_base = self._get_official_base(request.model)
-                    if official_base:
-                        official_client = AsyncAPIClient(request.official_api_key, official_base)
 
                 checks = []
 
@@ -76,7 +73,17 @@ class AuditEngine:
                     checks.append(token_check)
 
                     verifier = TokenVerifier(client, request.model)
-                    token_result = await verifier.verify(official_client=official_client)
+                    # Official API client for comparison (if provided). Managed
+                    # with `async with` so its httpx session is opened/closed.
+                    official_base = (
+                        self._get_official_base(request.model)
+                        if request.official_api_key else None
+                    )
+                    if official_base:
+                        async with AsyncAPIClient(request.official_api_key, official_base) as official_client:
+                            token_result = await verifier.verify(official_client=official_client)
+                    else:
+                        token_result = await verifier.verify(official_client=None)
                     result.token_comparison = token_result
 
                     token_check.passed = not token_result.suspicious
@@ -171,10 +178,6 @@ class AuditEngine:
                     proto_check.details = f"{summary.get('passed', 0)}/{summary.get('total', 0)} checks passed"
                     proto_check.evidence = {k: v for k, v in proto_result.items() if k != "_summary"}
 
-                # Close official client if opened
-                if official_client:
-                    await official_client.__aexit__(None, None, None)
-
                 # Calculate overall score
                 result.checks = checks
                 if checks:
@@ -205,7 +208,9 @@ class AuditEngine:
                             "release_date": ref.release_date,
                         }
                 except Exception:
-                    pass  # Reference data is optional
+                    # Reference data is optional; never let it fail the audit,
+                    # but record the failure instead of silently swallowing it.
+                    logger.exception("Failed to attach model reference data for %s", result.model)
 
                 result.status = AuditStatus.COMPLETED
                 result.completed_at = datetime.now()

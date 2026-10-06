@@ -14,7 +14,22 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
+import json
+import logging
 from typing import Optional
+import uuid
+
+logger = logging.getLogger(__name__)
+
+
+def _parse_dt(value):
+    """Parse an ISO datetime string from SQLite, returning None on failure."""
+    if not value:
+        return None
+    try:
+        return datetime.fromisoformat(value)
+    except (ValueError, TypeError):
+        return None
 
 
 class ContributionType(Enum):
@@ -217,6 +232,109 @@ class ContributorReputationSystem:
     def __init__(self):
         self.contributors: dict[str, Contributor] = {}
         self.contributions: list[Contribution] = []
+        self._load_from_db()
+
+    # ─── SQLite persistence (S4) ──────────────────────────────
+    def _connect(self):
+        # Imported lazily to avoid an import cycle with app.database.
+        from ..database import get_db
+        return get_db()
+
+    def _load_from_db(self):
+        """Load contributors & contributions from SQLite.
+
+        Runs at construction. The schema may not exist yet on the very first
+        import (init_db() runs after router import), in which case we start
+        empty rather than crashing the app.
+        """
+        try:
+            conn = self._connect()
+        except Exception:
+            logger.debug("Contributor DB not available yet; starting in-memory.")
+            return
+        try:
+            rows = conn.execute("SELECT * FROM contributors").fetchall()
+            for r in rows:
+                try:
+                    self.contributors[r["id"]] = Contributor(
+                        id=r["id"],
+                        name=r["name"],
+                        contribution_type=ContributionType(r["contribution_type"]),
+                        level=ContributorLevel(r["level"]),
+                        channel=ContributionChannel(r["channel"]),
+                        is_anonymous=bool(r["is_anonymous"]),
+                        is_core_maintainer=bool(r["is_core_maintainer"]),
+                        total_contributions=r["total_contributions"],
+                        valid_contributions=r["valid_contributions"],
+                        first_contribution_at=_parse_dt(r["first_contribution_at"]),
+                        last_contribution_at=_parse_dt(r["last_contribution_at"]),
+                        badges=json.loads(r["badges"] or "[]"),
+                    )
+                except (ValueError, KeyError):
+                    continue
+            crows = conn.execute("SELECT * FROM contributions").fetchall()
+            for r in crows:
+                try:
+                    self.contributions.append(Contribution(
+                        id=r["id"],
+                        contributor_id=r["contributor_id"],
+                        contribution_type=ContributionType(r["contribution_type"]),
+                        channel=ContributionChannel(r["channel"]),
+                        content=json.loads(r["content"] or "{}"),
+                        created_at=_parse_dt(r["created_at"]) or datetime.now(),
+                        is_valid=bool(r["is_valid"]),
+                        quality_score=r["quality_score"],
+                        notes=r["notes"],
+                    ))
+                except (ValueError, KeyError):
+                    continue
+        except Exception:
+            # Tables not created yet (first boot) -> start empty.
+            logger.debug("Contributor tables not present yet; starting empty.")
+        finally:
+            conn.close()
+
+    def _persist_contributor(self, c: Contributor):
+        try:
+            conn = self._connect()
+            conn.execute(
+                """INSERT OR REPLACE INTO contributors
+                (id, name, contribution_type, level, channel, is_anonymous,
+                 is_core_maintainer, total_contributions, valid_contributions,
+                 first_contribution_at, last_contribution_at, badges)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    c.id, c.name, c.contribution_type.value, c.level.value,
+                    c.channel.value, int(c.is_anonymous), int(c.is_core_maintainer),
+                    c.total_contributions, c.valid_contributions,
+                    c.first_contribution_at.isoformat() if c.first_contribution_at else None,
+                    c.last_contribution_at.isoformat() if c.last_contribution_at else None,
+                    json.dumps(c.badges),
+                ),
+            )
+            conn.commit()
+            conn.close()
+        except Exception:
+            logger.exception("Failed to persist contributor %s", c.id)
+
+    def _persist_contribution(self, c: Contribution):
+        try:
+            conn = self._connect()
+            conn.execute(
+                """INSERT OR REPLACE INTO contributions
+                (id, contributor_id, contribution_type, channel, content,
+                 created_at, is_valid, quality_score, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    c.id, c.contributor_id, c.contribution_type.value, c.channel.value,
+                    json.dumps(c.content), c.created_at.isoformat(),
+                    int(c.is_valid), c.quality_score, c.notes,
+                ),
+            )
+            conn.commit()
+            conn.close()
+        except Exception:
+            logger.exception("Failed to persist contribution %s", c.id)
 
     def register_contributor(self,
                                id: str,
@@ -237,6 +355,7 @@ class ContributorReputationSystem:
             first_contribution_at=datetime.now(),
         )
         self.contributors[id] = contributor
+        self._persist_contributor(contributor)
         return contributor
 
     def add_contribution(self,
@@ -251,7 +370,8 @@ class ContributorReputationSystem:
             raise ValueError(f"Contributor {contributor_id} not found")
 
         contributor = self.contributors[contributor_id]
-        contribution_id = f"contrib_{len(self.contributions) + 1}"
+        # UUID-based id: avoids collisions under concurrency / restarts.
+        contribution_id = f"contrib_{uuid.uuid4().hex[:12]}"
 
         contribution = Contribution(
             id=contribution_id,
@@ -278,6 +398,8 @@ class ContributorReputationSystem:
                 contributor.level = new_level
 
         self.contributions.append(contribution)
+        self._persist_contribution(contribution)
+        self._persist_contributor(contributor)
         return contribution
 
     def _auto_validate(self, contribution: Contribution) -> bool:

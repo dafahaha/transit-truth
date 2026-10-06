@@ -10,6 +10,7 @@ Contribution API endpoints - 贡献API端点
 - 匿名贡献可接受，但信誉权重低
 - 自动检测恶意数据和异常值
 """
+import logging
 import uuid
 from datetime import datetime
 from typing import Optional
@@ -22,11 +23,43 @@ from ..core.contributor_reputation import (
     ContributionType,
     ContributionChannel,
 )
+from ..database import upsert_ranking
+from ..models import RankingEntry
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/contribute", tags=["contribute"])
 
 # 全局贡献者信誉系统实例
 _reputation_system = ContributorReputationSystem()
+
+
+def _build_ranking_entry(request: AuditContributionRequest, audit: dict):
+    """Best-effort build of a public RankingEntry from a contributed audit.
+
+    Returns None if essential fields are unusable. Never raises: a ranking
+    write failure must not turn a valid contribution into a 500.
+    """
+    try:
+        relay_name = request.relay_name or (audit.get("base_url", "") or "").split("//")[-1].split("/")[0] or "unknown"
+        token_cmp = audit.get("token_comparison") or {}
+        latency = audit.get("latency") or {}
+        fp = audit.get("fingerprint") or {}
+        return RankingEntry(
+            relay_name=str(relay_name),
+            base_url=str(audit.get("base_url", "")),
+            model=str(audit.get("model", "")),
+            avg_trust_score=float(audit.get("overall_score", 0)),
+            audit_count=1,
+            last_audited=datetime.now(),
+            token_inflation_avg=float(token_cmp.get("prompt_inflation_pct", 0) or 0),
+            model_authenticity_rate=1.0 if fp.get("family_match", True) else 0.0,
+            avg_latency_ms=float(latency.get("avg_latency_ms", 0) or 0),
+            uptime_rate=1.0,
+            notes=(request.notes or "")[:500],
+        )
+    except (TypeError, ValueError, AttributeError):
+        return None
 
 
 # ─── 请求/响应模型 ────────────────────────────────────
@@ -158,6 +191,15 @@ async def contribute_audit_result(request: AuditContributionRequest):
             audit_result=contribution_content,
         )
 
+        # 7b. 自动审核通过的贡献，写入公开排行榜（S4: 之前此路径断连）。
+        if contribution.is_valid:
+            self_rank = _build_ranking_entry(request, audit)
+            if self_rank is not None:
+                try:
+                    upsert_ranking(self_rank)
+                except Exception:
+                    logger.exception("Failed to upsert ranking for contribution %s", contribution.id)
+
         # 8. 构建响应
         if contribution.is_valid:
             message = "贡献成功！审计结果已通过质量审核，将计入排行榜。"
@@ -189,8 +231,11 @@ async def contribute_audit_result(request: AuditContributionRequest):
             next_steps=next_steps,
         )
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"贡献失败: {str(e)}")
+    except Exception:
+        # Log the full error server-side, but return a generic message so we
+        # never leak internals (paths/SQL/dependency details) to the caller.
+        logger.exception("Contribution submission failed")
+        raise HTTPException(status_code=500, detail="贡献处理失败，请稍后重试")
 
 
 @router.get("/contributor/{contributor_id}", response_model=ContributorStatsResponse)

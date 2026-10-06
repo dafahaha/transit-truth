@@ -2,14 +2,12 @@
 
 Main FastAPI application entry point.
 """
-from pathlib import Path
-
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 
-from .config import BASE_DIR
+from .config import APP_VERSION, BASE_DIR
 from .database import init_db
 from .api.audit import router as audit_router
 from .api.ranking import router as ranking_router
@@ -20,15 +18,17 @@ from .api.contribute import router as contribute_router
 app = FastAPI(
     title="TransitTruth",
     description="AI API Relay Audit Tool - Verify token counts, model authenticity, and protocol compliance",
-    version="0.2.0",
+    version=APP_VERSION,
 )
 
-# CORS
+# CORS: this service has no cookie/session auth, so credentials are disabled.
+# allow_credentials=True with allow_origins=["*"] would otherwise let any site
+# drive a victim browser to call this server (e.g. to abuse its SSRF surface).
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
 
@@ -55,4 +55,4 @@ if FRONTEND_DIR.exists():
 @app.get("/api/health")
 async def health():
     """Health check endpoint."""
-    return {"status": "ok", "service": "TransitTruth", "version": "0.2.0"}
+    return {"status": "ok", "service": "TransitTruth", "version": APP_VERSION}

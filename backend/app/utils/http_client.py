@@ -138,9 +138,11 @@ class AsyncAPIClient:
                         logger.info(f"Success on attempt {attempt + 1} for model={model}")
                     return data
                 else:
+                    # Do NOT echo the upstream response body back to the caller:
+                    # with a caller-controlled base_url this turns a blind SSRF
+                    # into a read-SSRF. Only the status code leaves the server.
                     last_error = {
                         "status_code": response.status_code,
-                        "body": response.text[:500],
                         "latency_ms": latency_ms,
                     }
 

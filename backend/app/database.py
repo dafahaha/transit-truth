@@ -12,8 +12,12 @@ from .models import AuditResult, RankingEntry
 def get_db() -> sqlite3.Connection:
     """Get a database connection."""
     DATA_DIR.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(DB_PATH), timeout=30)
     conn.row_factory = sqlite3.Row
+    # WAL allows readers/writers to overlap and dramatically reduces
+    # "database is locked" under concurrent requests (S7).
+    conn.execute("PRAGMA journal_mode=WAL")
+    conn.execute("PRAGMA busy_timeout=30000")
     return conn
 
 
@@ -58,6 +62,39 @@ def init_db():
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_audits_model ON audits(model)
     """)
+
+    # Contributor reputation system (S4): persist contributors & contributions
+    # so they survive restarts and are shared across workers.
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS contributors (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            contribution_type TEXT NOT NULL,
+            level TEXT NOT NULL DEFAULT 'bronze',
+            channel TEXT NOT NULL DEFAULT 'api',
+            is_anonymous INTEGER DEFAULT 0,
+            is_core_maintainer INTEGER DEFAULT 0,
+            total_contributions INTEGER DEFAULT 0,
+            valid_contributions INTEGER DEFAULT 0,
+            first_contribution_at TEXT,
+            last_contribution_at TEXT,
+            badges TEXT DEFAULT '[]'
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS contributions (
+            id TEXT PRIMARY KEY,
+            contributor_id TEXT NOT NULL,
+            contribution_type TEXT NOT NULL,
+            channel TEXT NOT NULL,
+            content TEXT NOT NULL,
+            created_at TEXT,
+            is_valid INTEGER DEFAULT 0,
+            quality_score REAL DEFAULT 0,
+            notes TEXT
+        )
+    """)
+
     cursor.execute("""
         CREATE INDEX IF NOT EXISTS idx_audits_base_url ON audits(base_url)
     """)

@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from typing import Optional
 
 from ..core.detect import detect_and_suggest, fetch_models
+from ..utils.ssrf_guard import require_public_url
 
 router = APIRouter(prefix="/api/detect", tags=["detect"])
 
@@ -21,6 +22,8 @@ class ModelsRequest(BaseModel):
 @router.post("/")
 async def detect_relay(request: DetectRequest):
     """Auto-detect relay base URL and suggest likely services."""
+    if request.base_url:
+        require_public_url(request.base_url)
     result = await detect_and_suggest(request.api_key, request.base_url)
     return result
 
@@ -28,6 +31,7 @@ async def detect_relay(request: DetectRequest):
 @router.post("/models")
 async def get_models(request: ModelsRequest):
     """Fetch supported models from a relay's /models endpoint."""
+    require_public_url(request.base_url)
     models = await fetch_models(request.base_url, request.api_key)
     return {
         "base_url": request.base_url,

@@ -2,11 +2,12 @@
 余额查询 API 端点
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter
 from pydantic import BaseModel, Field
 from typing import Optional
 
-from app.core.balance_checker import BalanceChecker, BalanceResult
+from app.core.balance_checker import BalanceChecker
+from app.utils.ssrf_guard import require_public_url
 
 router = APIRouter(prefix="/api/balance", tags=["balance"])
 
@@ -21,12 +22,13 @@ class BalanceCheckRequest(BaseModel):
 
 class BatchBalanceCheckRequest(BaseModel):
     """批量余额查询请求"""
-    accounts: list[dict] = Field(..., description="账户列表")
+    accounts: list[dict] = Field(..., description="账户列表", max_length=5)
 
 
 @router.post("/check")
 async def check_balance(request: BalanceCheckRequest):
     """查询单个账户余额"""
+    require_public_url(request.base_url)
     checker = BalanceChecker()
     result = await checker.check_balance(
         api_key=request.api_key,
@@ -40,6 +42,9 @@ async def check_balance(request: BalanceCheckRequest):
 @router.post("/batch")
 async def batch_check_balance(request: BatchBalanceCheckRequest):
     """批量查询多个账户余额"""
+    # SSRF guard: every account must point at a public host before we fan out.
+    for acc in request.accounts:
+        require_public_url(acc.get("base_url", ""))
     checker = BalanceChecker()
     results = await checker.check_multiple(request.accounts)
     return {

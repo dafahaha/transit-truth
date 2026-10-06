@@ -3,6 +3,7 @@ import html
 from datetime import datetime
 from typing import Optional
 
+from ..config import APP_VERSION
 from ..models import AuditResult, CheckResult, CheckType
 
 
@@ -182,7 +183,7 @@ def generate_html_report(result: AuditResult) -> str:
         {recs_html}
 
         <div class="footer">
-            <p>由 TransitTruth v0.1.0 生成 | 开源 AI API 中转站验真器</p>
+            <p>由 TransitTruth v{APP_VERSION} 生成 | 开源 AI API 中转站验真器</p>
             <p>本报告基于有限样本，不构成对任何服务的最终评价 | API Key 未被存储</p>
         </div>
     </div>
