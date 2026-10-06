@@ -153,14 +153,24 @@ class GuardedAsyncNetworkBackend:
         except Exception:
             peer = None
         ip_str = _peer_ip(peer)
-        if ip_str is not None and _is_blocked_ip(ip_str):
+        # Import lazily to avoid a hard import-time dependency at module load.
+        import httpcore
+        if ip_str is None:
+            # Fail CLOSED (R3-4): we could not read the actual peer address
+            # (httpcore version drift / unexpected backend). Refusing is safer
+            # than silently proxying to an address we have not proven public.
+            try:
+                await stream.aclose()
+            except Exception:
+                pass
+            logger.warning("Blocked connect to host=%s: unable to determine peer address", host)
+            raise httpcore.ConnectError("Refused: unable to verify target peer address")
+        if _is_blocked_ip(ip_str):
             try:
                 await stream.aclose()
             except Exception:
                 pass
             logger.warning("Blocked connect to host=%s (actual peer %s is non-public)", host, ip_str)
-            # Import lazily to avoid a hard import-time dependency at module load.
-            import httpcore
             raise httpcore.ConnectError("Refused: target resolves to a non-public address")
         return stream
 

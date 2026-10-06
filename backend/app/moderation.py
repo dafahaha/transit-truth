@@ -98,9 +98,22 @@ def cmd_approve(args) -> int:
         )
         return 2
 
-    sys_.set_contribution_status(args.id, "approved", reviewer="cli")
+    # R3-5: write the public ranking row FIRST. The old order flipped the
+    # contribution to "approved" and only then upserted the ranking; if upsert
+    # crashed (e.g. DB lock) the contribution was left approved with no public
+    # row. Upserting first means a failure leaves the contribution still pending,
+    # so the operator can simply re-run `approve` (idempotent).
+    try:
+        upsert_ranking(entry)
+    except Exception as exc:
+        print(
+            f"error writing ranking for {args.id}: {exc}; contribution left "
+            "pending — fix the cause and re-run approve.",
+            file=sys.stderr,
+        )
+        return 3
     # audit_count accumulates in the SQL upsert (read old value +1).
-    upsert_ranking(entry)
+    sys_.set_contribution_status(args.id, "approved", reviewer="cli")
     print(f"approved {args.id} -> ranking[{entry.base_url} / {entry.model}]")
     return 0
 

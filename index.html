@@ -1915,14 +1915,18 @@ function contributeViaCommunity() {
 }
 
 function contributeViaAPI() {
+  // relay_name/base_url/model are echoed back into this doc and then rendered
+  // via innerHTML in showContributeSuccess; escape them so a self-entered value
+  // (e.g. a model name like `"><img onerror=...>`) cannot break out into HTML
+  // (R3-3, self-XSS). Escaped entities render back to the same visible text.
   const apiDoc = `POST /api/contribute/audit\n\n` +
     `Content-Type: application/json\n\n` +
     `{\n` +
-    `  "relay_name": "${auditResult.relay_name}",\n` +
-    `  "base_url": "${auditResult.base_url}",\n` +
-    `  "model": "${auditResult.model}",\n` +
+    `  "relay_name": "${escapeHtml(auditResult.relay_name)}",\n` +
+    `  "base_url": "${escapeHtml(auditResult.base_url)}",\n` +
+    `  "model": "${escapeHtml(auditResult.model)}",\n` +
     `  "overall_score": ${auditResult.overall_score},\n` +
-    `  "trust_level": "${auditResult.trust_level}",\n` +
+    `  "trust_level": "${escapeHtml(auditResult.trust_level)}",\n` +
     `  "contributor_id": "your-email-or-id",\n` +
     `  "audit_result": ${JSON.stringify(auditResult).substring(0, 500)}...\n` +
     `}`;

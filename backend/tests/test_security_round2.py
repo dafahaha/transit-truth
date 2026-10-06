@@ -116,6 +116,20 @@ def test_guarded_backend_allows_public_peer():
     assert inner.stream.closed is False
 
 
+def test_guarded_backend_fails_closed_when_peer_unknown():
+    # R3-4: if the actual peer address cannot be determined (httpcore version
+    # drift / unexpected backend), the guard must refuse the connection rather
+    # than silently proxying to an address we haven't proven public.
+    import httpcore
+    from app.utils.ssrf_guard import GuardedAsyncNetworkBackend
+
+    inner = _FakeInner(None)  # get_extra_info("server_addr") -> None
+    bw = GuardedAsyncNetworkBackend(inner)
+    with pytest.raises(httpcore.ConnectError):
+        asyncio.run(bw.connect_tcp("mystery.example.com", 80))
+    assert inner.stream.closed is True
+
+
 def test_dns_rebinding_second_resolution_is_blocked(monkeypatch):
     """First getaddrinfo (URL guard) returns public -> passes; second
     getaddrinfo (connect time) returns internal -> connect is refused."""
@@ -209,6 +223,34 @@ def test_anonymous_contribute_does_not_write_ranking():
     assert rows2[0]["audit_count"] == 2
 
 
+def test_approve_leaves_pending_when_ranking_write_fails(monkeypatch):
+    # R3-5: if upsert_ranking fails, the contribution must NOT be left
+    # "approved" without a public row. Ordering is upsert-first, so a failure
+    # leaves it pending for a clean retry.
+    from types import SimpleNamespace
+    from app import moderation
+    from app.core.contributor_reputation import ContributorReputationSystem
+
+    payload = {
+        "audit_result": {
+            "model": "gpt-4o-r35",
+            "base_url": "https://r35.example.com/v1",
+            "overall_score": 80,
+        },
+    }
+    cid = client.post("/api/contribute/audit", json=payload).json()["contribution_id"]
+
+    def boom(entry):
+        raise RuntimeError("simulated DB lock")
+
+    monkeypatch.setattr(moderation, "upsert_ranking", boom)
+
+    rc = moderation.cmd_approve(SimpleNamespace(id=cid))
+    assert rc == 3
+    contrib = ContributorReputationSystem().get_contribution(cid)
+    assert contrib.status == "pending"
+
+
 # ─── N3: contributed payload size/shape bounds ───────────────────────────
 
 def test_contribute_oversized_string_is_422():
@@ -248,6 +290,100 @@ def test_contribute_body_too_large_is_413():
     assert r.status_code == 413, r.text
 
 
+# ─── R3-1: streaming body cap covers chunked (no Content-Length) ──────────
+
+def _drive_asgi(chunks, headers):
+    """Drive the app directly as ASGI, feeding *chunks* as http.request events.
+
+    No Content-Length is emitted unless the caller passes one, so this can
+    exercise the chunked path that TestClient's JSON helper hides. Returns
+    (status_code, raw_body_bytes).
+    """
+    from app.main import app
+
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": "POST",
+        "path": "/api/contribute/audit",
+        "raw_path": b"/api/contribute/audit",
+        "query_string": b"",
+        "headers": [(k.lower().encode(), v.encode()) for k, v in headers],
+        "client": ("203.0.113.9", 50000),
+        "server": ("testserver", 80),
+    }
+    state = {"i": 0}
+
+    async def receive():
+        i = state["i"]
+        if i < len(chunks):
+            state["i"] += 1
+            more_body = i < len(chunks) - 1
+            return {"type": "http.request", "body": chunks[i], "more_body": more_body}
+        return {"type": "http.disconnect"}
+
+    messages = []
+
+    async def send(message):
+        messages.append(message)
+
+    asyncio.run(app(scope, receive, send))
+    status = messages[0]["status"]
+    body = b"".join(
+        m.get("body", b"") for m in messages if m["type"] == "http.response.body"
+    )
+    return status, body
+
+
+def test_chunked_body_without_content_length_is_413():
+    # The R3-1 bypass: Transfer-Encoding: chunked with NO Content-Length used
+    # to slip past the header check and be fully buffered (returning 422). Now
+    # the streaming receive guard must abort at 1 MiB with 413.
+    mb = 1024 * 1024
+    status, _ = _drive_asgi(
+        [b" " * mb, b" " * mb],  # ~2 MiB streamed in two chunks, no CL header
+        [("content-type", "application/json")],
+    )
+    assert status == 413, f"expected 413 for chunked upload, got {status}"
+
+
+def test_declared_content_length_over_limit_is_413():
+    # Explicit Content-Length path (declared up front, single chunk).
+    mb = 1024 * 1024
+    payload = b"{}".ljust(2 * mb, b"x")
+    status, _ = _drive_asgi(
+        [payload],
+        [("content-type", "application/json"), ("content-length", str(len(payload)))],
+    )
+    assert status == 413, f"expected 413 for over-limit Content-Length, got {status}"
+
+
+def test_exactly_one_mib_body_is_not_413():
+    # Boundary rule (fixed here): the cap is INCLUSIVE on 1 MiB. Exactly
+    # 1 MiB must NOT be rejected by the size guard (it reaches the app and is
+    # then rejected as invalid JSON with 422 — never 413).
+    mb = 1024 * 1024
+    status, _ = _drive_asgi(
+        [b"x" * mb],  # exactly the cap, not valid JSON
+        [("content-type", "application/json")],
+    )
+    assert status != 413, "exactly 1 MiB must not be treated as over-limit"
+
+
+def test_small_request_still_200():
+    # The streaming wrapper must not break normal small requests.
+    import json
+    payload = json.dumps({
+        "audit_result": {"model": "m", "base_url": "https://e.com/v1", "overall_score": 90}
+    }).encode()
+    status, body = _drive_asgi(
+        [payload],
+        [("content-type", "application/json"), ("content-length", str(len(payload)))],
+    )
+    assert status == 200, body
+
+
 # ─── S2: per-IP rate limiting ────────────────────────────────────────────
 
 def test_rate_limit_returns_429():
@@ -267,6 +403,43 @@ def test_rate_limit_returns_429():
     finally:
         rate_limit.configure(100, 60)
         rate_limit.reset()
+
+
+# ─── R3-2: trusted-proxy X-Forwarded-For resolution ───────────────────────
+
+def _make_request(client_host, xff=None):
+    from starlette.requests import Request
+    headers = []
+    if xff is not None:
+        headers.append((b"x-forwarded-for", xff.encode()))
+    scope = {"type": "http", "client": (client_host, 1234), "headers": headers}
+    return Request(scope)
+
+
+def test_direct_client_ignores_x_forwarded_for():
+    # Default: no trusted proxies configured -> XFF must never be the identity,
+    # otherwise a caller could forge it to borrow/steal another bucket.
+    from app.utils import rate_limit
+    rate_limit.configure_trusted_proxies("")
+    req = _make_request("203.0.113.9", xff="1.2.3.4")
+    assert rate_limit._client_ip(req) == "203.0.113.9"
+
+
+def test_trusted_proxy_uses_rightmost_untrusted_xff_hop():
+    # Direct peer is a configured trusted proxy; XFF chain client, inner, outer.
+    # Walk right-to-left, skip trusted hops, take the first untrusted address.
+    from app.utils import rate_limit
+    rate_limit.configure_trusted_proxies("10.0.0.1,10.0.0.2")
+    req = _make_request("10.0.0.1", xff="1.2.3.4, 10.0.0.2, 10.0.0.1")
+    assert rate_limit._client_ip(req) == "1.2.3.4"
+
+
+def test_forged_xff_ignored_when_peer_not_trusted():
+    # A caller NOT behind a trusted proxy forges XFF -> ignored, TCP peer wins.
+    from app.utils import rate_limit
+    rate_limit.configure_trusted_proxies("10.0.0.1")
+    req = _make_request("198.51.100.7", xff="9.9.9.9")
+    assert rate_limit._client_ip(req) == "198.51.100.7"
 
 
 # ─── N7: batch balance accounts are validated elements ──────────────────
