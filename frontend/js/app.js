@@ -3,6 +3,19 @@
 const API_BASE = '';
 const STORAGE_KEY = 'transittruth_history';
 
+// Escape strings before interpolating into innerHTML. Fields from anonymous
+// GitHub issue frontmatter (relay/model/contributor/token_inflation_pct) and
+// user-supplied audit values are attacker-influenced; quoting " and ' also
+// closes attribute injection. Storage-XSS defense (mirrors docs/ranking.html).
+function escapeHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // ===== Tab Navigation =====
 document.querySelectorAll('.nav-link').forEach(link => {
     link.addEventListener('click', (e) => {
@@ -273,8 +286,8 @@ function displayResults(result) {
         item.innerHTML = `
             <div class="check-icon ${passed ? 'pass' : 'fail'}">${passed ? '✓' : '✗'}</div>
             <div class="check-content">
-                <div class="check-name">${check.name}</div>
-                <div class="check-details">${check.details}</div>
+                <div class="check-name">${escapeHtml(check.name)}</div>
+                <div class="check-details">${escapeHtml(check.details)}</div>
             </div>
             <div class="check-score ${passed ? 'pass' : 'fail'}">${Math.round(check.score)}</div>
         `;
@@ -432,11 +445,11 @@ function loadHistory() {
         history.forEach(a => {
             const level = getScoreLevel(a.overall_score);
             const date = new Date(a.started_at).toLocaleString();
-            html += `<div class="history-item" data-id="${a.audit_id}">
-                <div class="history-model">${a.model}</div>
-                <div class="history-url">${a.base_url}</div>
+            html += `<div class="history-item" data-id="${escapeHtml(a.audit_id)}">
+                <div class="history-model">${escapeHtml(a.model)}</div>
+                <div class="history-url">${escapeHtml(a.base_url)}</div>
                 <div class="history-score ${level}">${Math.round(a.overall_score)}</div>
-                <div class="history-date">${date}</div>
+                <div class="history-date">${escapeHtml(date)}</div>
             </div>`;
         });
         container.innerHTML = html;
@@ -455,7 +468,7 @@ function loadHistory() {
             });
         });
     } catch (err) {
-        container.innerHTML = `<p class="empty-text">加载失败: ${err.message}</p>`;
+        container.innerHTML = `<p class="empty-text">加载失败: ${escapeHtml(err.message)}</p>`;
     }
 }
 
@@ -505,13 +518,13 @@ async function loadRanking() {
             const level = getScoreLevel(r.overall_score);
             html += `<tr>
                 <td>${i + 1}</td>
-                <td><strong>${r.relay}</strong></td>
-                <td>${r.model}</td>
+                <td><strong>${escapeHtml(r.relay)}</strong></td>
+                <td>${escapeHtml(r.model)}</td>
                 <td><span class="score-badge ${level}">${Math.round(r.overall_score)}</span></td>
-                <td>${r.token_inflation_pct !== 'N/A' ? r.token_inflation_pct + '%' : '-'}</td>
+                <td>${r.token_inflation_pct !== 'N/A' ? escapeHtml(r.token_inflation_pct) + '%' : '-'}</td>
                 <td>${r.avg_latency_ms !== 'N/A' ? Math.round(r.avg_latency_ms) + 'ms' : '-'}</td>
-                <td>${r.contributor || '-'}</td>
-                <td>${r.tested_at ? new Date(r.tested_at).toLocaleDateString() : '-'}</td>
+                <td>${escapeHtml(r.contributor || '-')}</td>
+                <td>${r.tested_at ? escapeHtml(new Date(r.tested_at).toLocaleDateString()) : '-'}</td>
             </tr>`;
         });
 
@@ -521,7 +534,7 @@ async function loadRanking() {
         container.innerHTML = `
             <p class="empty-text">排行榜加载中...</p>
             <p style="text-align:center;color:#666;font-size:12px;">排行榜基于 GitHub Issues，首次加载可能需要几秒。</p>
-            <p style="text-align:center;color:#999;font-size:11px;">${err.message}</p>
+            <p style="text-align:center;color:#999;font-size:11px;">${escapeHtml(err.message)}</p>
         `;
     }
 }

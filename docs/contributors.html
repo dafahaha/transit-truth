@@ -269,7 +269,7 @@
             } catch (err) {
                 content.innerHTML = `
                     <div class="loading">
-                        <p>⚠️ 加载失败: ${err.message}</p>
+                        <p>⚠️ 加载失败: ${escapeHtml(err.message)}</p>
                         <p style="margin-top:8px;font-size:13px;">可能是 GitHub API 速率限制，请稍后重试。</p>
                     </div>
                 `;
