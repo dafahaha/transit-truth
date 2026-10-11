@@ -192,6 +192,8 @@ transit-truth sk-your-key --base-url https://your-relay.com/v1 --model gpt-4o
 | gpt-4o-mini | 50 | 26 | 1300 | 15 分钟 | `data/baselines/gpt-4o-mini.json` |
 | gpt-4o | 50 | 26 | 1300 | 12 分钟 | `data/baselines/gpt-4o.json` |
 
+> **数据缺口披露（gpt-4o-mini）**：mini 的 tokenizer 探针未全部拿到可用样本——`tok-digits`、`tok-cjk`、`tok-emoji` 三个探针零可用响应（冷启动限流），`tok-whitespace` 仅 37/50 条可用；实际拿到可用样本的 tokenizer 探针为 5/8（4 个 n=50、1 个 n=37）。上表"26 探针 / 1300 请求"为设计口径（gpt-4o 侧为完整 26/1300）。所有头条行为指纹结论（Okapi、TVD=0.90、后验 0.913 等）均来自 8 个 n=50 齐全的 behavioral 探针，不受此缺口影响。
+
 数据采集脚本：`collect_baseline.py`（支持并发，用任何 OpenAI 兼容 API 即可）；分布/TVD/卡方/分类器表格由 `docs/generate_tables.py` 从 JSON 自动生成。
 
 ## 学术产出（Tech Report）

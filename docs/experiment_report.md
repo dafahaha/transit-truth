@@ -12,7 +12,7 @@
 
 ## Abstract
 
-This study investigates whether large language models (LLMs) exhibit measurable "behavioral fingerprints"—consistent distributional biases in seemingly random generation tasks—that can be used to verify the identity of models served by API relay services. We collected 1,300 API responses from gpt-4o-mini across 26 probe categories (8 tokenizer, 8 behavioral, 10 capability) with 50 samples per probe. Our analysis reveals **extremely strong behavioral fingerprints**: gpt-4o-mini returns "7" for 1-10 number selection **100% of the time**, returns "4" for dice rolls **96% of the time**, and prefers "Cerulean" for color selection **74% of the time**—deviations of 10-74x from uniform random expectation. We demonstrate that these fingerprints, combined with Kolmogorov-Smirnov tests and Bayesian updating, yield an **in-distribution resubstitution posterior of 91.3%** (a baseline scored against its own reference; not held-out accuracy). All data were collected through a single OpenAI-compatible relay, not official provider endpoints. These findings suggest that behavioral fingerprinting is a promising, low-cost method for screening model substitution in API relay services; establishing an official, provider-ground-truth baseline is future work.
+This study investigates whether large language models (LLMs) exhibit measurable "behavioral fingerprints"—consistent distributional biases in seemingly random generation tasks—that can be used to verify the identity of models served by API relay services. We designed 26 probe categories (8 tokenizer, 8 behavioral, 10 capability) targeting 50 samples each on gpt-4o-mini; due to cold-start rate limiting, 3 of 8 tokenizer probes (tok-digits, tok-cjk, tok-emoji) returned zero usable responses and tok-whitespace returned only 37/50, so the tokenizer section rests on 5/8 probes (see §4.1). Our analysis reveals **extremely strong behavioral fingerprints** on the complete n=50 behavioral probes: gpt-4o-mini returns "7" for 1-10 number selection **100% of the time**, returns "4" for dice rolls **96% of the time**, and prefers "Cerulean" for color selection **74% of the time**—deviations of 10-74x from uniform random expectation. We demonstrate that these fingerprints, combined with Kolmogorov-Smirnov tests and Bayesian updating, yield an **in-distribution resubstitution posterior of 91.3%** (a baseline scored against its own reference; not held-out accuracy). All data were collected through a single OpenAI-compatible relay, not official provider endpoints. These findings suggest that behavioral fingerprinting is a promising, low-cost method for screening model substitution in API relay services; establishing an official, provider-ground-truth baseline is future work.
 
 **Keywords:** LLM fingerprinting, API relay verification, behavioral biometrics, statistical model checking, AI security
 
@@ -205,7 +205,7 @@ All 5 successful tokenizer probes showed **zero variance** (std = 0.0) across 50
 | tok-mixed-unicode | 22.0 | 0.0 | 22 | 22 | 50 |
 | tok-repeated-chars | 18.0 | 0.0 | 18 | 18 | 50 |
 
-*Note: tok-digits, tok-cjk, tok-emoji failed due to initial rate limiting (first 3 probes). This is a known issue with cold-start rate limiting and will be addressed with retry logic in future work.*
+*Note: tok-digits, tok-cjk, tok-emoji returned zero usable responses due to initial rate limiting (first 3 probes); tok-whitespace returned only 37/50 usable samples (partial). Thus for gpt-4o-mini only 5 of 8 tokenizer probes have usable data (4 at n=50, 1 at n=37), out of the designed 8 × 50 = 400 tokenizer samples. This is a known cold-start rate-limiting issue and will be addressed with retry logic in future work. All headline behavioral findings (Okapi preference, TVD=0.90, posterior 0.913) are based on the 8 complete behavioral probes (n=50 each) and are unaffected by this gap.*
 
 **Interpretation**: These token counts are consistent with the GPT family tokenizer (cl100k/o200k), confirming that the model uses a GPT-compatible tokenizer. However, tokenizer fingerprinting alone cannot distinguish gpt-4o from gpt-4o-mini.
 
@@ -525,7 +525,7 @@ Our key contributions:
 ## Appendix A: Data Availability
 
 All baseline data collected in this study is available in the TransitTruth GitHub repository:
-- `data/baselines/gpt-4o-mini.json` (47.3 KB, 50 samples × 26 probes, 12.5% request failure rate)
+- `data/baselines/gpt-4o-mini.json` (47.3 KB, designed 50 samples × 26 probes, 12.5% request failure rate; tokenizer coverage 5/8 probes usable — tok-digits/tok-cjk/tok-emoji zero, tok-whitespace 37/50; see §4.1)
 - `data/baselines/gpt-4o.json` (56.1 KB, 50 samples × 26 probes, 0% failure rate; used for the Section 6 cross-model comparison)
 
 Collection script: `collect_baseline.py`
