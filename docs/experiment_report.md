@@ -309,7 +309,7 @@ We tested our statistical framework by scoring the collected baseline against it
 | Chi-square statistic | 0.0000 |
 | Chi-square p-value | 1.0000 |
 | Likelihood ratio | 4.5 |
-| Confidence level | **high (in-distribution)** |
+| Confidence level | **medium (in-distribution; downgraded for small baseline n=50)** |
 
 **Interpretation**: The statistical framework is internally self-consistent: a baseline sample scored against its own reference returns a high posterior (0.913) and non-significant KS (p=1.0) / chi-square (p=1.000). This verifies the pipeline does not flag a sample that comes from the same distribution it was calibrated on. It does **not** estimate real-world detection accuracy, which requires scoring independently collected traffic against the baseline.
 
