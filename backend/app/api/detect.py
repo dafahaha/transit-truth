@@ -1,11 +1,13 @@
 """Detection API endpoints - auto-detect base URL and fetch models."""
-from fastapi import APIRouter, Depends
-from pydantic import BaseModel
+
 from typing import Optional
 
+from fastapi import APIRouter, Depends
+from pydantic import BaseModel
+
 from ..core.detect import detect_and_suggest, fetch_models
-from ..utils.ssrf_guard import require_public_url_async
 from ..utils.rate_limit import enforce_rate_limit
+from ..utils.ssrf_guard import require_public_url_async
 
 router = APIRouter(prefix="/api/detect", tags=["detect"])
 

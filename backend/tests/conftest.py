@@ -12,28 +12,26 @@ Pytest configuration - 测试配置
 - 只运行集成测试：pytest tests/ -m integration
 - 跳过慢速测试：pytest tests/ -m "not slow"
 """
-import pytest
+
 import os
+
+import pytest
 
 
 def pytest_configure(config):
     """注册自定义标记"""
-    config.addinivalue_line(
-        "markers", "integration: 端到端集成测试，需要真实API密钥"
-    )
-    config.addinivalue_line(
-        "markers", "slow: 慢速测试，需要较长时间运行"
-    )
-    config.addinivalue_line(
-        "markers", "benchmark: 基准测试，需要大量API调用"
-    )
+    config.addinivalue_line("markers", "integration: 端到端集成测试，需要真实API密钥")
+    config.addinivalue_line("markers", "slow: 慢速测试，需要较长时间运行")
+    config.addinivalue_line("markers", "benchmark: 基准测试，需要大量API调用")
 
 
 def pytest_collection_modifyitems(config, items):
     """默认跳过集成测试，除非显式指定"""
     if not config.getoption("-m"):
         # 如果没有指定-m，默认跳过integration测试
-        skip_integration = pytest.mark.skip(reason="需要 -m integration 才能运行集成测试")
+        skip_integration = pytest.mark.skip(
+            reason="需要 -m integration 才能运行集成测试"
+        )
         for item in items:
             if "integration" in item.keywords:
                 item.add_marker(skip_integration)
@@ -85,6 +83,7 @@ def _reset_rate_limiter():
     tests that need a tiny quota can call ``rate_limit.configure(...)``.
     """
     from app.utils import rate_limit
+
     rate_limit.reset()
     rate_limit.configure(100, 60)
     yield

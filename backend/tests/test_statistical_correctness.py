@@ -1,10 +1,12 @@
 """Regression tests for statistical correctness (post Round-1 review fixes)."""
+
 import math
+
 import pytest
 
 from app.core.statistical_analyzer import (
-    StatisticalAnalyzer,
     BaselineDistribution,
+    StatisticalAnalyzer,
     wilson_score_interval,
 )
 
@@ -28,7 +30,9 @@ class TestBaselineResolution:
         an = StatisticalAnalyzer()
         an.load_default_baselines()
         assert an._resolve_baseline("gpt-3.5-turbo").model_name == "gpt-3.5-turbo"
-        assert an._resolve_baseline("CLAUDE-3-5-SONNET").model_name == "claude-3-5-sonnet"
+        assert (
+            an._resolve_baseline("CLAUDE-3-5-SONNET").model_name == "claude-3-5-sonnet"
+        )
 
 
 class TestBayesBoundaries:
@@ -73,7 +77,8 @@ class TestChi2Dof:
     def setup_method(self):
         self.an = StatisticalAnalyzer()
         self.bl = BaselineDistribution(
-            model_family="x", model_name="x",
+            model_family="x",
+            model_name="x",
             behavioral_distributions={
                 "beh-a": ["heads"] * 6 + ["tails"] * 4,
                 "beh-b": ["up"] * 8 + ["down"] * 2,
@@ -82,8 +87,10 @@ class TestChi2Dof:
 
     def test_matching_distribution_p_near_one(self):
         s, p = self.an.chi2_test_behavioral(
-            {"beh-a": ["heads"] * 6 + ["tails"] * 4,
-             "beh-b": ["up"] * 8 + ["down"] * 2},
+            {
+                "beh-a": ["heads"] * 6 + ["tails"] * 4,
+                "beh-b": ["up"] * 8 + ["down"] * 2,
+            },
             self.bl,
         )
         assert s == pytest.approx(0.0, abs=1e-9)
@@ -98,10 +105,14 @@ class TestChi2Dof:
 
     def test_single_probe_matches_chi2_reference(self):
         # One probe, 2 categories -> df = 1. Statistic should match chi2 cdf.
-        bl = BaselineDistribution(model_family="x", model_name="x",
-            behavioral_distributions={"beh-a": ["heads"] * 5 + ["tails"] * 5})
+        bl = BaselineDistribution(
+            model_family="x",
+            model_name="x",
+            behavioral_distributions={"beh-a": ["heads"] * 5 + ["tails"] * 5},
+        )
         s, p = self.an.chi2_test_behavioral(
-            {"beh-a": ["heads"] * 9 + ["tails"] * 1}, bl)
+            {"beh-a": ["heads"] * 9 + ["tails"] * 1}, bl
+        )
         # Expected: heads=5, tails=5; observed 9/10 vs 1/10 -> chi2=6.4, df=1
         assert s == pytest.approx(6.4, abs=0.01)
 
@@ -111,29 +122,42 @@ class TestEntropy:
         # Import via fingerprint to check the formula is now -sum p ln p.
         from app.core.fingerprint import ModelFingerprinter
         from app.core.statistical_analyzer import StatisticalAnalyzer
+
         fp = ModelFingerprinter.__new__(ModelFingerprinter)
         fp.behavioral_results = {"beh-x": ["a", "a", "a", "a", "b"]}
         fp.stat_analyzer = StatisticalAnalyzer()
         fp.model = "unknown-model"
         sig = fp._analyze_behavioral()
         # 4/5 a, 1/5 b -> entropy = -(0.8 ln0.8 + 0.2 ln0.2) ~= 0.5004 nats
-        assert sig["signatures"]["beh-x"]["entropy_nats"] == pytest.approx(0.5004, abs=0.01)
+        assert sig["signatures"]["beh-x"]["entropy_nats"] == pytest.approx(
+            0.5004, abs=0.01
+        )
 
 
 class TestKsTwoSample:
     def test_matching_observations_not_significant(self):
         an = StatisticalAnalyzer()
-        bl = BaselineDistribution(model_family="x", model_name="x",
-            tokenizer_distributions={"a": [22, 23, 22, 24, 23],
-                                     "b": [50, 51, 50, 52, 51]})
+        bl = BaselineDistribution(
+            model_family="x",
+            model_name="x",
+            tokenizer_distributions={
+                "a": [22, 23, 22, 24, 23],
+                "b": [50, 51, 50, 52, 51],
+            },
+        )
         s, p = an.ks_test_tokenizer({"a": 23, "b": 51}, bl)
         assert p > 0.2
 
     def test_far_observations_significant(self):
         an = StatisticalAnalyzer()
-        bl = BaselineDistribution(model_family="x", model_name="x",
-            tokenizer_distributions={"a": [22, 23, 22, 24, 23],
-                                     "b": [50, 51, 50, 52, 51]})
+        bl = BaselineDistribution(
+            model_family="x",
+            model_name="x",
+            tokenizer_distributions={
+                "a": [22, 23, 22, 24, 23],
+                "b": [50, 51, 50, 52, 51],
+            },
+        )
         s, p = an.ks_test_tokenizer({"a": 100, "b": 200}, bl)
         assert p < 0.05
 
@@ -146,6 +170,7 @@ class TestFusionAsymmetry:
 
     def _obs(self, bl):
         import statistics
+
         beh = {pid: list(v) for pid, v in bl.behavioral_distributions.items()}
         tok = {pid: statistics.mean(v) for pid, v in bl.tokenizer_distributions.items()}
         return tok, beh
@@ -158,7 +183,9 @@ class TestFusionAsymmetry:
         v = an.analyze("gpt-4o", tok, beh, 0.0)
         # tokenizer is identical across the family -> ks_p high, but it must
         # NOT push posterior up. Behavioral chi2 strongly rejects -> mismatch.
-        assert v.conclusion == "mismatch", f"got {v.conclusion}, posterior={v.posterior_probability}"
+        assert (
+            v.conclusion == "mismatch"
+        ), f"got {v.conclusion}, posterior={v.posterior_probability}"
         assert v.posterior_probability < 0.3
         assert v.posterior_ci_upper < 0.5
 
@@ -168,7 +195,9 @@ class TestFusionAsymmetry:
         full = an._resolve_baseline("gpt-4o")
         tok, beh = self._obs(full)
         v = an.analyze("gpt-4o", tok, beh, 0.0)
-        assert v.conclusion == "match", f"got {v.conclusion}, posterior={v.posterior_probability}"
+        assert (
+            v.conclusion == "match"
+        ), f"got {v.conclusion}, posterior={v.posterior_probability}"
         assert v.posterior_probability > 0.8
 
     def test_tokenizer_consistent_factor_never_rewards(self):
@@ -176,13 +205,15 @@ class TestFusionAsymmetry:
         # the LR unchanged relative to a neutral baseline; only chi2 moves it.
         an = StatisticalAnalyzer()
         # neutral chi2 p=0.2 (no behavioral evidence), capability=0
-        lr_consistent = an.calculate_likelihood_ratio(ks_pvalue=0.9, chi2_pvalue=0.2,
-                                                      capability_failure_rate=0.0)
+        lr_consistent = an.calculate_likelihood_ratio(
+            ks_pvalue=0.9, chi2_pvalue=0.2, capability_failure_rate=0.0
+        )
         # tokenizer consistent contributes factor 1.0; capability<0.1 -> 1.5
         assert lr_consistent == pytest.approx(1.5, abs=1e-9)
         # tokenizer INCONSISTENT (off-family) pulls LR below 1
-        lr_off = an.calculate_likelihood_ratio(ks_pvalue=0.001, chi2_pvalue=0.2,
-                                               capability_failure_rate=0.0)
+        lr_off = an.calculate_likelihood_ratio(
+            ks_pvalue=0.001, chi2_pvalue=0.2, capability_failure_rate=0.0
+        )
         assert lr_off < 1.0
 
 
@@ -192,11 +223,13 @@ class TestSyntheticPurge:
 
     def test_gpt4_alias_not_synthetic_after_real_load(self):
         an = StatisticalAnalyzer()
-        an.load_default_baselines()      # creates synthetic "gpt-4" (n=10)
-        an.load_real_baselines()         # loads real gpt-4o / gpt-4o-mini
+        an.load_default_baselines()  # creates synthetic "gpt-4" (n=10)
+        an.load_real_baselines()  # loads real gpt-4o / gpt-4o-mini
         g4 = an._resolve_baseline("gpt-4")
         # Either gone, or backed by a real (n>10) distribution -- never the n=10 placeholder.
-        assert g4 is None or g4.sample_size > 10, f"gpt-4 still resolves to n={g4.sample_size} synthetic"
+        assert (
+            g4 is None or g4.sample_size > 10
+        ), f"gpt-4 still resolves to n={g4.sample_size} synthetic"
 
 
 class TestChi2NovelCategory:
@@ -204,8 +237,11 @@ class TestChi2NovelCategory:
 
     def test_novel_response_category_counted(self):
         an = StatisticalAnalyzer()
-        bl = BaselineDistribution(model_family="x", model_name="x",
-            behavioral_distributions={"beh-a": ["heads"] * 8 + ["tails"] * 2})
+        bl = BaselineDistribution(
+            model_family="x",
+            model_name="x",
+            behavioral_distributions={"beh-a": ["heads"] * 8 + ["tails"] * 2},
+        )
         # observed emits a category the baseline never produced
         s, p = an.chi2_test_behavioral({"beh-a": ["okapi"] * 10}, bl)
         assert s > 0.0, "novel category was dropped (expected>0 check)"

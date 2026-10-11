@@ -15,17 +15,18 @@ End-to-end integration tests - 端到端集成测试
     # 运行所有测试（包括单元测试和集成测试）
     pytest tests/ -m "integration or not integration" -v
 """
-import pytest
+
 import asyncio
 
-from app.core.auditor import AuditRequest, AuditEngine
+import pytest
+
+from app.core.auditor import AuditEngine, AuditRequest
 from app.core.model_reference import get_model_reference
 from app.core.statistical_analyzer import (
     StatisticalAnalyzer,
-    wilson_score_interval,
     assess_sample_adequacy,
+    wilson_score_interval,
 )
-
 
 
 @pytest.mark.integration
@@ -88,10 +89,11 @@ class TestHTTPClientIntegration:
 
         results, stats = asyncio.run(run())
         # 至少大部分请求应该成功（即使有限流，重试后应该成功）
-        success_count = sum(1 for r in results if isinstance(r, dict) and "error" not in r)
+        success_count = sum(
+            1 for r in results if isinstance(r, dict) and "error" not in r
+        )
         assert success_count >= 15, f"成功率太低: {success_count}/20"
         assert stats["total_requests"] == 20
-
 
 
 @pytest.mark.integration
@@ -253,7 +255,6 @@ class TestStatisticalAnalysisIntegration:
         assert verdict.baseline_sample_size > 0
         assert verdict.sample_adequacy in ["sufficient", "moderate", "insufficient"]
         assert verdict.posterior_probability is not None
-
 
 
 @pytest.mark.integration

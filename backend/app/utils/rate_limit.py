@@ -17,6 +17,7 @@ proxy and all callers would share one bucket. Set the comma-separated
 consulted, and only the first hop *outside* the trusted set is trusted as the
 real client identity.
 """
+
 import os
 import threading
 import time
@@ -106,7 +107,9 @@ async def enforce_rate_limit(request: Request) -> None:
     """FastAPI dependency: reject bursty callers with HTTP 429."""
     ip = _client_ip(request)
     if not _check(ip):
-        raise HTTPException(status_code=429, detail="Too many requests; please slow down")
+        raise HTTPException(
+            status_code=429, detail="Too many requests; please slow down"
+        )
 
 
 # Read TRUSTED_PROXIES at import so a deployment configures it purely by env.

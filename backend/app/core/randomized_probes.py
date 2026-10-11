@@ -10,6 +10,7 @@ behavioral probes) while randomizing the *specific content*.
 This makes it impossible for a relay to whitelist specific probe strings
 while still allowing us to measure the same underlying characteristics.
 """
+
 import random
 import string
 from dataclasses import dataclass
@@ -17,12 +18,69 @@ from typing import Optional
 
 from .probes import Probe
 
-
 # Character pools for randomization
 CJK_CHARS = "的一是不了人我在有他这为之大来以个中上们到说国和地也子时道出而要于就下得可你年生自那后能对着事其景"
-EMOJIS = ["🤖", "🧠", "🚀", "💻", "🎯", "🔥", "✨", "🌟", "💡", "🎨", "🐱", "🐶", "🌍", "⚡", "🎵", "📚", "🔧", "🎮", "🌸", "🍕"]
-COLORS = ["red", "blue", "green", "yellow", "purple", "orange", "pink", "brown", "black", "white", "gray", "cyan", "magenta", "lime", "teal"]
-ANIMALS = ["cat", "dog", "elephant", "tiger", "lion", "bear", "wolf", "fox", "rabbit", "mouse", "bird", "fish", "snake", "monkey", "horse", "cow", "pig", "sheep", "chicken", "duck"]
+EMOJIS = [
+    "🤖",
+    "🧠",
+    "🚀",
+    "💻",
+    "🎯",
+    "🔥",
+    "✨",
+    "🌟",
+    "💡",
+    "🎨",
+    "🐱",
+    "🐶",
+    "🌍",
+    "⚡",
+    "🎵",
+    "📚",
+    "🔧",
+    "🎮",
+    "🌸",
+    "🍕",
+]
+COLORS = [
+    "red",
+    "blue",
+    "green",
+    "yellow",
+    "purple",
+    "orange",
+    "pink",
+    "brown",
+    "black",
+    "white",
+    "gray",
+    "cyan",
+    "magenta",
+    "lime",
+    "teal",
+]
+ANIMALS = [
+    "cat",
+    "dog",
+    "elephant",
+    "tiger",
+    "lion",
+    "bear",
+    "wolf",
+    "fox",
+    "rabbit",
+    "mouse",
+    "bird",
+    "fish",
+    "snake",
+    "monkey",
+    "horse",
+    "cow",
+    "pig",
+    "sheep",
+    "chicken",
+    "duck",
+]
 DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 LETTERS = list(string.ascii_uppercase)
 
@@ -30,6 +88,7 @@ LETTERS = list(string.ascii_uppercase)
 @dataclass
 class RandomizedProbe(Probe):
     """A probe with randomized content."""
+
     original_id: str = ""
     random_seed: int = 0
 
@@ -85,19 +144,42 @@ class ProbeRandomizer:
             chars = self.rng.sample(string.ascii_lowercase, 8)
             return f"Repeat this string exactly: {'    '.join(chars)}"
         elif probe_id == "tok-code":
-            var_name = "".join(self.rng.choice(string.ascii_lowercase) for _ in range(self.rng.randint(3, 8)))
+            var_name = "".join(
+                self.rng.choice(string.ascii_lowercase)
+                for _ in range(self.rng.randint(3, 8))
+            )
             num1 = self.rng.randint(1, 10)
             num2 = self.rng.randint(1, 10)
             return f"Repeat this string exactly: def {var_name}(x): return x*{num1}+{num2}  # test"
         elif probe_id == "tok-url":
-            domain = "".join(self.rng.choice(string.ascii_lowercase) for _ in range(self.rng.randint(5, 12)))
-            path = "".join(self.rng.choice(string.ascii_lowercase) for _ in range(self.rng.randint(3, 10)))
+            domain = "".join(
+                self.rng.choice(string.ascii_lowercase)
+                for _ in range(self.rng.randint(5, 12))
+            )
+            path = "".join(
+                self.rng.choice(string.ascii_lowercase)
+                for _ in range(self.rng.randint(3, 10))
+            )
             model = f"model-{self.rng.randint(1, 9)}.{self.rng.choice(['0', '1', '5'])}"
             return f"Repeat this string exactly: https://api.{domain}.com/v1/{path}/completions?model={model}"
         elif probe_id == "tok-mixed-unicode":
-            accented = self.rng.sample(["café", "résumé", "naïve", "über", "façade", "jalapeño", "señor", "piñata"], 3)
+            accented = self.rng.sample(
+                [
+                    "café",
+                    "résumé",
+                    "naïve",
+                    "über",
+                    "façade",
+                    "jalapeño",
+                    "señor",
+                    "piñata",
+                ],
+                3,
+            )
             cjk = "".join(self.rng.choice(CJK_CHARS) for _ in range(4))
-            korean = "".join(self.rng.choice("가나다라마바사아자차카타파하") for _ in range(3))
+            korean = "".join(
+                self.rng.choice("가나다라마바사아자차카타파하") for _ in range(3)
+            )
             arabic = "".join(self.rng.choice("مرحباالسلامعليكم") for _ in range(4))
             return f"Repeat this string exactly: {' '.join(accented)} {cjk} {korean} {arabic}"
         elif probe_id == "tok-repeated-chars":
@@ -181,28 +263,38 @@ class ProbeRandomizer:
             ]
             return self.rng.choice(templates), {"no"}
         elif probe_id == "cap-code-syntax":
-            func_name = "".join(self.rng.choice(string.ascii_lowercase) for _ in range(self.rng.randint(3, 6)))
-            return (f"Write a Python one-liner that returns the sum of even numbers in a list called {func_name}. "
-                    f"Reply with ONLY the code.", set())
+            func_name = "".join(
+                self.rng.choice(string.ascii_lowercase)
+                for _ in range(self.rng.randint(3, 6))
+            )
+            return (
+                f"Write a Python one-liner that returns the sum of even numbers in a list called {func_name}. "
+                f"Reply with ONLY the code.",
+                set(),
+            )
         elif probe_id == "cap-following-instructions":
             start = self.rng.randint(1, 3)
             end = self.rng.randint(6, 9)
             skip = self.rng.randint(start + 1, end - 1)
             expected = ",".join(str(i) for i in range(start, end + 1) if i != skip)
-            return (f"Count from {start} to {end}, but skip {skip}. "
-                    f"Reply with ONLY the numbers separated by commas.",
-                    {expected, expected.replace(",", ", ")})
+            return (
+                f"Count from {start} to {end}, but skip {skip}. "
+                f"Reply with ONLY the numbers separated by commas.",
+                {expected, expected.replace(",", ", ")},
+            )
         else:
             return "What is 2 + 2? Reply with ONLY the number.", {"4"}
 
 
-def generate_randomized_probes(seed: Optional[int] = None) -> tuple[list[RandomizedProbe], int]:
+def generate_randomized_probes(
+    seed: Optional[int] = None,
+) -> tuple[list[RandomizedProbe], int]:
     """Generate a full set of randomized probes.
 
     Returns:
         Tuple of (randomized_probes, seed_used)
     """
-    from .probes import TOKENIZER_PROBES, BEHAVIORAL_PROBES, CAPABILITY_PROBES
+    from .probes import BEHAVIORAL_PROBES, CAPABILITY_PROBES, TOKENIZER_PROBES
 
     randomizer = ProbeRandomizer(seed)
     all_probes = TOKENIZER_PROBES + BEHAVIORAL_PROBES + CAPABILITY_PROBES

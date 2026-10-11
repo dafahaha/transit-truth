@@ -18,6 +18,7 @@ Usage:
         --base-url https://generativelanguage.googleapis.com/v1beta/openai/ \
         --api-key AIza... --output data/baselines/gemini-1.5-pro.json
 """
+
 import argparse
 import asyncio
 import json
@@ -32,7 +33,7 @@ import httpx
 # Add backend to path
 sys.path.insert(0, str(Path(__file__).parent / "backend"))
 
-from app.core.probes import TOKENIZER_PROBES, BEHAVIORAL_PROBES, CAPABILITY_PROBES
+from app.core.probes import BEHAVIORAL_PROBES, CAPABILITY_PROBES, TOKENIZER_PROBES
 
 
 async def collect_baseline(
@@ -58,8 +59,12 @@ async def collect_baseline(
     print(f"Collecting baseline for model: {model}")
     print(f"  Base URL: {base_url}")
     print(f"  Samples per probe: {samples}")
-    print(f"  Total probes: {len(TOKENIZER_PROBES) + len(BEHAVIORAL_PROBES) + len(CAPABILITY_PROBES)}")
-    print(f"  Estimated total requests: {samples * (len(TOKENIZER_PROBES) + len(BEHAVIORAL_PROBES) + len(CAPABILITY_PROBES))}")
+    print(
+        f"  Total probes: {len(TOKENIZER_PROBES) + len(BEHAVIORAL_PROBES) + len(CAPABILITY_PROBES)}"
+    )
+    print(
+        f"  Estimated total requests: {samples * (len(TOKENIZER_PROBES) + len(BEHAVIORAL_PROBES) + len(CAPABILITY_PROBES))}"
+    )
     print("=" * 60)
 
     headers = {
@@ -112,14 +117,15 @@ async def collect_baseline(
         # ─── Tokenizer Probes ────────────────────────────────────
         print("\n[1/3] Collecting tokenizer probe data...")
         for i, probe in enumerate(TOKENIZER_PROBES):
-            print(f"  Probe {i+1}/{len(TOKENIZER_PROBES)}: {probe.id}...", end=" ", flush=True)
+            print(
+                f"  Probe {i+1}/{len(TOKENIZER_PROBES)}: {probe.id}...",
+                end=" ",
+                flush=True,
+            )
 
             # Run all samples concurrently
             tasks = [
-                run_request(
-                    [{"role": "user", "content": probe.prompt}],
-                    128, 0
-                )
+                run_request([{"role": "user", "content": probe.prompt}], 128, 0)
                 for _ in range(samples)
             ]
             results = await asyncio.gather(*tasks)
@@ -153,7 +159,11 @@ async def collect_baseline(
                     "description": probe.description,
                     "prompt_tokens": {
                         "mean": statistics.mean(prompt_tokens_list),
-                        "std": statistics.stdev(prompt_tokens_list) if len(prompt_tokens_list) > 1 else 0,
+                        "std": (
+                            statistics.stdev(prompt_tokens_list)
+                            if len(prompt_tokens_list) > 1
+                            else 0
+                        ),
                         "min": min(prompt_tokens_list),
                         "max": max(prompt_tokens_list),
                         "median": statistics.median(prompt_tokens_list),
@@ -162,7 +172,11 @@ async def collect_baseline(
                     },
                     "completion_tokens": {
                         "mean": statistics.mean(completion_tokens_list),
-                        "std": statistics.stdev(completion_tokens_list) if len(completion_tokens_list) > 1 else 0,
+                        "std": (
+                            statistics.stdev(completion_tokens_list)
+                            if len(completion_tokens_list) > 1
+                            else 0
+                        ),
                         "sample_count": len(completion_tokens_list),
                     },
                     "latency_ms": {
@@ -173,19 +187,26 @@ async def collect_baseline(
                     "response_samples": responses[:5],
                 }
                 all_results["latency"].extend(latencies)
-                print(f"✓ mean_prompt_tokens={statistics.mean(prompt_tokens_list):.1f}, n={len(prompt_tokens_list)}")
+                print(
+                    f"✓ mean_prompt_tokens={statistics.mean(prompt_tokens_list):.1f}, n={len(prompt_tokens_list)}"
+                )
             else:
                 print(f"✗ all requests failed")
 
         # ─── Behavioral Probes ───────────────────────────────────
         print("\n[2/3] Collecting behavioral probe data...")
         for i, probe in enumerate(BEHAVIORAL_PROBES):
-            print(f"  Probe {i+1}/{len(BEHAVIORAL_PROBES)}: {probe.id}...", end=" ", flush=True)
+            print(
+                f"  Probe {i+1}/{len(BEHAVIORAL_PROBES)}: {probe.id}...",
+                end=" ",
+                flush=True,
+            )
 
             tasks = [
                 run_request(
                     [{"role": "user", "content": probe.prompt}],
-                    probe.max_tokens, probe.temperature
+                    probe.max_tokens,
+                    probe.temperature,
                 )
                 for _ in range(samples)
             ]
@@ -213,6 +234,7 @@ async def collect_baseline(
             if responses:
                 # Count frequency of each response
                 from collections import Counter
+
                 counter = Counter(responses)
                 all_results["behavioral"][probe.id] = {
                     "description": probe.description,
@@ -225,20 +247,27 @@ async def collect_baseline(
                     },
                 }
                 all_results["latency"].extend(latencies)
-                print(f"✓ unique_responses={len(counter)}, top={counter.most_common(1)[0] if counter else 'N/A'}")
+                print(
+                    f"✓ unique_responses={len(counter)}, top={counter.most_common(1)[0] if counter else 'N/A'}"
+                )
             else:
                 print(f"✗ all requests failed")
 
         # ─── Capability Probes ───────────────────────────────────
         print("\n[3/3] Collecting capability probe data...")
         for i, probe in enumerate(CAPABILITY_PROBES):
-            print(f"  Probe {i+1}/{len(CAPABILITY_PROBES)}: {probe.id}...", end=" ", flush=True)
+            print(
+                f"  Probe {i+1}/{len(CAPABILITY_PROBES)}: {probe.id}...",
+                end=" ",
+                flush=True,
+            )
 
             n_samples = min(samples, 50)  # Capability probes only need 50 samples
             tasks = [
                 run_request(
                     [{"role": "user", "content": probe.prompt}],
-                    probe.max_tokens, probe.temperature
+                    probe.max_tokens,
+                    probe.temperature,
                 )
                 for _ in range(n_samples)
             ]
@@ -287,11 +316,17 @@ async def collect_baseline(
     if all_results["latency"]:
         all_results["latency_overall"] = {
             "mean": statistics.mean(all_results["latency"]),
-            "std": statistics.stdev(all_results["latency"]) if len(all_results["latency"]) > 1 else 0,
+            "std": (
+                statistics.stdev(all_results["latency"])
+                if len(all_results["latency"]) > 1
+                else 0
+            ),
             "min": min(all_results["latency"]),
             "max": max(all_results["latency"]),
             "median": statistics.median(all_results["latency"]),
-            "p95": sorted(all_results["latency"])[int(len(all_results["latency"]) * 0.95)],
+            "p95": sorted(all_results["latency"])[
+                int(len(all_results["latency"]) * 0.95)
+            ],
             "sample_count": len(all_results["latency"]),
         }
 
@@ -310,7 +345,9 @@ async def collect_baseline(
     print("=" * 60)
     print(f"  Model: {model}")
     print(f"  Total requests: {total_requests}")
-    print(f"  Failed requests: {failed_requests} ({failed_requests/max(total_requests,1)*100:.1f}%)")
+    print(
+        f"  Failed requests: {failed_requests} ({failed_requests/max(total_requests,1)*100:.1f}%)"
+    )
     print(f"  Elapsed time: {elapsed:.1f}s ({elapsed/60:.1f}min)")
     print(f"  Requests/sec: {total_requests/max(elapsed,1):.1f}")
     if all_results["latency"]:
@@ -321,15 +358,45 @@ async def collect_baseline(
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Collect baseline data for model fingerprinting")
-    parser.add_argument("--model", type=str, required=True, help="Model name (e.g., llama3.1, gpt-4o-mini)")
-    parser.add_argument("--samples", type=int, default=500, help="Number of samples per probe (default: 500)")
-    parser.add_argument("--base-url", type=str, default="http://localhost:11434/v1",
-                        help="OpenAI-compatible API base URL (default: http://localhost:11434/v1)")
-    parser.add_argument("--api-key", type=str, default="ollama", help="API key (default: ollama)")
-    parser.add_argument("--output", type=str, default=None, help="Output JSON file path")
-    parser.add_argument("--delay", type=float, default=0.1, help="Delay between requests in seconds (default: 0.1)")
-    parser.add_argument("--concurrency", type=int, default=5, help="Number of concurrent requests (default: 5)")
+    parser = argparse.ArgumentParser(
+        description="Collect baseline data for model fingerprinting"
+    )
+    parser.add_argument(
+        "--model",
+        type=str,
+        required=True,
+        help="Model name (e.g., llama3.1, gpt-4o-mini)",
+    )
+    parser.add_argument(
+        "--samples",
+        type=int,
+        default=500,
+        help="Number of samples per probe (default: 500)",
+    )
+    parser.add_argument(
+        "--base-url",
+        type=str,
+        default="http://localhost:11434/v1",
+        help="OpenAI-compatible API base URL (default: http://localhost:11434/v1)",
+    )
+    parser.add_argument(
+        "--api-key", type=str, default="ollama", help="API key (default: ollama)"
+    )
+    parser.add_argument(
+        "--output", type=str, default=None, help="Output JSON file path"
+    )
+    parser.add_argument(
+        "--delay",
+        type=float,
+        default=0.1,
+        help="Delay between requests in seconds (default: 0.1)",
+    )
+    parser.add_argument(
+        "--concurrency",
+        type=int,
+        default=5,
+        help="Number of concurrent requests (default: 5)",
+    )
 
     args = parser.parse_args()
 
@@ -338,15 +405,17 @@ def main():
         safe_model = args.model.replace("/", "_").replace(":", "_")
         args.output = f"data/baselines/{safe_model}.json"
 
-    asyncio.run(collect_baseline(
-        model=args.model,
-        samples=args.samples,
-        base_url=args.base_url,
-        api_key=args.api_key,
-        output_path=args.output,
-        delay=args.delay,
-        concurrency=args.concurrency,
-    ))
+    asyncio.run(
+        collect_baseline(
+            model=args.model,
+            samples=args.samples,
+            base_url=args.base_url,
+            api_key=args.api_key,
+            output_path=args.output,
+            delay=args.delay,
+            concurrency=args.concurrency,
+        )
+    )
 
 
 if __name__ == "__main__":

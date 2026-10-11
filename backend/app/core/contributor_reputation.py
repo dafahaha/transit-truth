@@ -11,13 +11,14 @@
 - 匿名贡献可接受，但信誉权重低
 - 多渠道贡献（GitHub/在线表单/邮件/社区/API）
 """
+
+import json
+import logging
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-import json
-import logging
 from typing import Optional
-import uuid
 
 logger = logging.getLogger(__name__)
 
@@ -34,40 +35,43 @@ def _parse_dt(value):
 
 class ContributionType(Enum):
     """贡献类型"""
-    CODE = "code"           # 代码贡献：PR被合并
-    DATA = "data"           # 基准数据贡献：模型基准数据被采纳
-    AUDIT = "audit"         # 审计结果贡献：中转站审计结果
-    DOC = "doc"             # 文档贡献：文档PR被合并
-    COMMUNITY = "community" # 社区贡献：回答问题、推广项目
+
+    CODE = "code"  # 代码贡献：PR被合并
+    DATA = "data"  # 基准数据贡献：模型基准数据被采纳
+    AUDIT = "audit"  # 审计结果贡献：中转站审计结果
+    DOC = "doc"  # 文档贡献：文档PR被合并
+    COMMUNITY = "community"  # 社区贡献：回答问题、推广项目
 
 
 class ContributorLevel(Enum):
     """贡献者等级（每个类型独立计算）"""
-    BRONZE = "bronze"       # 青铜：首次贡献
-    SILVER = "silver"       # 白银：3次有效贡献
-    GOLD = "gold"           # 黄金：10次有效贡献
-    PLATINUM = "platinum"   # 白金：30次有效贡献 + 质量审核
-    DIAMOND = "diamond"     # 钻石：100次有效贡献 + 核心贡献者认可
+
+    BRONZE = "bronze"  # 青铜：首次贡献
+    SILVER = "silver"  # 白银：3次有效贡献
+    GOLD = "gold"  # 黄金：10次有效贡献
+    PLATINUM = "platinum"  # 白金：30次有效贡献 + 质量审核
+    DIAMOND = "diamond"  # 钻石：100次有效贡献 + 核心贡献者认可
 
 
 class ContributionChannel(Enum):
     """贡献渠道"""
-    GITHUB_ISSUE = "github_issue"     # GitHub Issue（技术用户）
-    GITHUB_PR = "github_pr"           # GitHub PR（代码/文档/数据）
-    ONLINE_FORM = "online_form"       # 在线表单（普通用户）
-    EMAIL = "email"                   # 邮件提交（最简单）
-    COMMUNITY = "community"           # 社区提交（微信群/QQ群/评论区）
-    API = "api"                       # API批量提交（高级用户）
-    GITEE = "gitee"                   # Gitee（国内用户）
+
+    GITHUB_ISSUE = "github_issue"  # GitHub Issue（技术用户）
+    GITHUB_PR = "github_pr"  # GitHub PR（代码/文档/数据）
+    ONLINE_FORM = "online_form"  # 在线表单（普通用户）
+    EMAIL = "email"  # 邮件提交（最简单）
+    COMMUNITY = "community"  # 社区提交（微信群/QQ群/评论区）
+    API = "api"  # API批量提交（高级用户）
+    GITEE = "gitee"  # Gitee（国内用户）
 
 
 # 贡献类型对应的信誉权重（影响审计结果的可信度）
 CONTRIBUTION_TYPE_WEIGHT = {
-    ContributionType.CODE: 1.5,        # 代码贡献者最可信
-    ContributionType.DATA: 1.2,        # 基准数据贡献者次可信
-    ContributionType.DOC: 1.1,         # 文档贡献者
-    ContributionType.COMMUNITY: 1.0,   # 社区贡献者
-    ContributionType.AUDIT: 1.0,       # 审计贡献者（普通注册用户）
+    ContributionType.CODE: 1.5,  # 代码贡献者最可信
+    ContributionType.DATA: 1.2,  # 基准数据贡献者次可信
+    ContributionType.DOC: 1.1,  # 文档贡献者
+    ContributionType.COMMUNITY: 1.0,  # 社区贡献者
+    ContributionType.AUDIT: 1.0,  # 审计贡献者（普通注册用户）
 }
 
 # 等级对应的信誉权重乘数
@@ -98,15 +102,16 @@ NEW_USER_WEIGHT = 0.3
 @dataclass
 class Contributor:
     """贡献者信息"""
-    id: str                                    # 唯一标识（GitHub用户名/邮箱/匿名ID）
-    name: str                                  # 显示名称
-    contribution_type: ContributionType        # 主要贡献类型
+
+    id: str  # 唯一标识（GitHub用户名/邮箱/匿名ID）
+    name: str  # 显示名称
+    contribution_type: ContributionType  # 主要贡献类型
     level: ContributorLevel = ContributorLevel.BRONZE
     channel: ContributionChannel = ContributionChannel.GITHUB_ISSUE
     is_anonymous: bool = False
-    is_core_maintainer: bool = False          # 核心维护者
-    total_contributions: int = 0              # 总贡献次数
-    valid_contributions: int = 0              # 有效贡献次数
+    is_core_maintainer: bool = False  # 核心维护者
+    total_contributions: int = 0  # 总贡献次数
+    valid_contributions: int = 0  # 有效贡献次数
     first_contribution_at: Optional[datetime] = None
     last_contribution_at: Optional[datetime] = None
     badges: list[str] = field(default_factory=list)  # 徽章列表
@@ -134,9 +139,15 @@ class Contributor:
         """获取等级进度"""
         current_threshold = LEVEL_THRESHOLDS.get(self.level, 1)
         next_level = self._get_next_level()
-        next_threshold = LEVEL_THRESHOLDS.get(next_level, current_threshold) if next_level else None
+        next_threshold = (
+            LEVEL_THRESHOLDS.get(next_level, current_threshold) if next_level else None
+        )
 
-        progress = min(1.0, self.valid_contributions / current_threshold) if current_threshold > 0 else 1.0
+        progress = (
+            min(1.0, self.valid_contributions / current_threshold)
+            if current_threshold > 0
+            else 1.0
+        )
 
         return {
             "current_level": self.level.value,
@@ -145,7 +156,9 @@ class Contributor:
             "progress": progress,
             "next_level": next_level.value if next_level else None,
             "next_threshold": next_threshold,
-            "contributions_to_next": (next_threshold - self.valid_contributions) if next_threshold else 0,
+            "contributions_to_next": (
+                (next_threshold - self.valid_contributions) if next_threshold else 0
+            ),
         }
 
     def _get_next_level(self) -> Optional[ContributorLevel]:
@@ -162,12 +175,14 @@ class Contributor:
         if not next_level:
             return None
 
-        next_threshold = LEVEL_THRESHOLDS.get(next_level, float('inf'))
+        next_threshold = LEVEL_THRESHOLDS.get(next_level, float("inf"))
         if self.valid_contributions >= next_threshold:
             # Platinum和Diamond需要额外条件
             if next_level == ContributorLevel.PLATINUM:
                 # 需要质量审核通过（这里简化处理，实际需要人工审核）
-                return next_level if self.valid_contributions >= next_threshold else None
+                return (
+                    next_level if self.valid_contributions >= next_threshold else None
+                )
             elif next_level == ContributorLevel.DIAMOND:
                 # 需要核心贡献者认可（这里简化处理）
                 return next_level if self.is_core_maintainer else None
@@ -186,8 +201,16 @@ class Contributor:
             "is_core_maintainer": self.is_core_maintainer,
             "total_contributions": self.total_contributions,
             "valid_contributions": self.valid_contributions,
-            "first_contribution_at": self.first_contribution_at.isoformat() if self.first_contribution_at else None,
-            "last_contribution_at": self.last_contribution_at.isoformat() if self.last_contribution_at else None,
+            "first_contribution_at": (
+                self.first_contribution_at.isoformat()
+                if self.first_contribution_at
+                else None
+            ),
+            "last_contribution_at": (
+                self.last_contribution_at.isoformat()
+                if self.last_contribution_at
+                else None
+            ),
             "badges": self.badges,
             "reputation_weight": self.get_reputation_weight(),
             "level_progress": self.get_level_progress(),
@@ -197,16 +220,17 @@ class Contributor:
 @dataclass
 class Contribution:
     """单次贡献记录"""
+
     id: str
     contributor_id: str
     contribution_type: ContributionType
     channel: ContributionChannel
-    content: dict                           # 贡献内容（审计结果/基准数据/PR信息等）
+    content: dict  # 贡献内容（审计结果/基准数据/PR信息等）
     created_at: datetime = field(default_factory=datetime.now)
-    is_valid: bool = False                  # 是否通过质量审核
-    reviewed_by: Optional[str] = None      # 审核人
+    is_valid: bool = False  # 是否通过质量审核
+    reviewed_by: Optional[str] = None  # 审核人
     reviewed_at: Optional[datetime] = None
-    quality_score: float = 0.0             # 质量评分（0-1）
+    quality_score: float = 0.0  # 质量评分（0-1）
     notes: Optional[str] = None
     # Moderation queue state (N2): pending -> approved | rejected. The public
     # ranking row is only written when status transitions to approved.
@@ -242,6 +266,7 @@ class ContributorReputationSystem:
     def _connect(self):
         # Imported lazily to avoid an import cycle with app.database.
         from ..database import get_db
+
         return get_db()
 
     def _load_from_db(self):
@@ -279,20 +304,22 @@ class ContributorReputationSystem:
             crows = conn.execute("SELECT * FROM contributions").fetchall()
             for r in crows:
                 try:
-                    self.contributions.append(Contribution(
-                        id=r["id"],
-                        contributor_id=r["contributor_id"],
-                        contribution_type=ContributionType(r["contribution_type"]),
-                        channel=ContributionChannel(r["channel"]),
-                        content=json.loads(r["content"] or "{}"),
-                        created_at=_parse_dt(r["created_at"]) or datetime.now(),
-                        is_valid=bool(r["is_valid"]),
-                        quality_score=r["quality_score"],
-                        notes=r["notes"],
-                        # Older DBs may predate the status column (migration adds
-                        # it with a default); fall back to pending if absent.
-                        status=r["status"] if "status" in r.keys() else "pending",
-                    ))
+                    self.contributions.append(
+                        Contribution(
+                            id=r["id"],
+                            contributor_id=r["contributor_id"],
+                            contribution_type=ContributionType(r["contribution_type"]),
+                            channel=ContributionChannel(r["channel"]),
+                            content=json.loads(r["content"] or "{}"),
+                            created_at=_parse_dt(r["created_at"]) or datetime.now(),
+                            is_valid=bool(r["is_valid"]),
+                            quality_score=r["quality_score"],
+                            notes=r["notes"],
+                            # Older DBs may predate the status column (migration adds
+                            # it with a default); fall back to pending if absent.
+                            status=r["status"] if "status" in r.keys() else "pending",
+                        )
+                    )
                 except (ValueError, KeyError):
                     continue
         except Exception:
@@ -311,11 +338,25 @@ class ContributorReputationSystem:
                  first_contribution_at, last_contribution_at, badges)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    c.id, c.name, c.contribution_type.value, c.level.value,
-                    c.channel.value, int(c.is_anonymous), int(c.is_core_maintainer),
-                    c.total_contributions, c.valid_contributions,
-                    c.first_contribution_at.isoformat() if c.first_contribution_at else None,
-                    c.last_contribution_at.isoformat() if c.last_contribution_at else None,
+                    c.id,
+                    c.name,
+                    c.contribution_type.value,
+                    c.level.value,
+                    c.channel.value,
+                    int(c.is_anonymous),
+                    int(c.is_core_maintainer),
+                    c.total_contributions,
+                    c.valid_contributions,
+                    (
+                        c.first_contribution_at.isoformat()
+                        if c.first_contribution_at
+                        else None
+                    ),
+                    (
+                        c.last_contribution_at.isoformat()
+                        if c.last_contribution_at
+                        else None
+                    ),
                     json.dumps(c.badges),
                 ),
             )
@@ -333,9 +374,16 @@ class ContributorReputationSystem:
                  created_at, is_valid, quality_score, notes, status)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
-                    c.id, c.contributor_id, c.contribution_type.value, c.channel.value,
-                    json.dumps(c.content), c.created_at.isoformat(),
-                    int(c.is_valid), c.quality_score, c.notes, c.status,
+                    c.id,
+                    c.contributor_id,
+                    c.contribution_type.value,
+                    c.channel.value,
+                    json.dumps(c.content),
+                    c.created_at.isoformat(),
+                    int(c.is_valid),
+                    c.quality_score,
+                    c.notes,
+                    c.status,
                 ),
             )
             conn.commit()
@@ -343,12 +391,14 @@ class ContributorReputationSystem:
         except Exception:
             logger.exception("Failed to persist contribution %s", c.id)
 
-    def register_contributor(self,
-                               id: str,
-                               name: str,
-                               contribution_type: ContributionType,
-                               channel: ContributionChannel = ContributionChannel.ONLINE_FORM,
-                               is_anonymous: bool = False) -> Contributor:
+    def register_contributor(
+        self,
+        id: str,
+        name: str,
+        contribution_type: ContributionType,
+        channel: ContributionChannel = ContributionChannel.ONLINE_FORM,
+        is_anonymous: bool = False,
+    ) -> Contributor:
         """注册新贡献者"""
         if id in self.contributors:
             return self.contributors[id]
@@ -365,12 +415,14 @@ class ContributorReputationSystem:
         self._persist_contributor(contributor)
         return contributor
 
-    def add_contribution(self,
-                          contributor_id: str,
-                          contribution_type: ContributionType,
-                          channel: ContributionChannel,
-                          content: dict,
-                          auto_validate: bool = True) -> Contribution:
+    def add_contribution(
+        self,
+        contributor_id: str,
+        contribution_type: ContributionType,
+        channel: ContributionChannel,
+        content: dict,
+        auto_validate: bool = True,
+    ) -> Contribution:
         """添加贡献记录"""
         # 确保贡献者存在
         if contributor_id not in self.contributors:
@@ -481,8 +533,9 @@ class ContributorReputationSystem:
         items.sort(key=lambda c: c.created_at, reverse=True)
         return items
 
-    def set_contribution_status(self, contribution_id: str, status: str,
-                                reviewer: str = "cli") -> Optional[Contribution]:
+    def set_contribution_status(
+        self, contribution_id: str, status: str, reviewer: str = "cli"
+    ) -> Optional[Contribution]:
         """Approve/reject a contribution. Returns the updated record or None."""
         if status not in ("pending", "approved", "rejected"):
             raise ValueError(f"Invalid status: {status}")
@@ -499,14 +552,16 @@ class ContributorReputationSystem:
         self._persist_contribution(c)
         return c
 
-    def get_top_contributors(self,
-                               contribution_type: Optional[ContributionType] = None,
-                               limit: int = 10) -> list[Contributor]:
+    def get_top_contributors(
+        self, contribution_type: Optional[ContributionType] = None, limit: int = 10
+    ) -> list[Contributor]:
         """获取Top贡献者"""
         contributors = list(self.contributors.values())
 
         if contribution_type:
-            contributors = [c for c in contributors if c.contribution_type == contribution_type]
+            contributors = [
+                c for c in contributors if c.contribution_type == contribution_type
+            ]
 
         # 按有效贡献次数排序
         contributors.sort(key=lambda c: c.valid_contributions, reverse=True)
@@ -554,7 +609,9 @@ class ContributorReputationSystem:
 
         return badges
 
-    def calculate_audit_result_weight(self, contributor_id: str, audit_result: dict) -> float:
+    def calculate_audit_result_weight(
+        self, contributor_id: str, audit_result: dict
+    ) -> float:
         """计算审计结果的最终信誉权重"""
         contributor = self.contributors.get(contributor_id)
 
@@ -577,6 +634,7 @@ class ContributorReputationSystem:
 
 
 # ─── 便捷函数 ────────────────────────────────────
+
 
 def create_default_system() -> ContributorReputationSystem:
     """创建默认的贡献者信誉系统"""

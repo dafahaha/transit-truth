@@ -1,27 +1,38 @@
 """Tests for database operations."""
-import sys
+
 import os
+import sys
 import tempfile
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pytest
+
+from app.database import (
+    get_audit,
+    get_rankings,
+    init_db,
+    list_audits,
+    save_audit,
+    upsert_ranking,
+)
 from app.models import AuditResult, AuditStatus, RankingEntry
-from app.database import init_db, save_audit, get_audit, list_audits, upsert_ranking, get_rankings
 
 
 @pytest.fixture
 def temp_db():
     """Create a temporary database for testing."""
     import app.database as db_module
+
     original_path = db_module.DB_PATH
     temp_path = tempfile.mktemp(suffix=".db")
     db_module.DB_PATH = temp_path
     init_db()
     # Clear initial ranking data for isolated tests
     import sqlite3
+
     conn = sqlite3.connect(str(temp_path))
     conn.execute("DELETE FROM rankings")
     conn.commit()
@@ -35,7 +46,9 @@ def temp_db():
 class TestDatabase:
     def test_init_db_creates_tables(self, temp_db):
         import sqlite3
+
         from app.database import DB_PATH
+
         conn = sqlite3.connect(str(DB_PATH))
         cursor = conn.cursor()
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
@@ -153,26 +166,32 @@ class TestListAuditsInjection:
     (mutation M7, string concatenation, used to leave the suite green)."""
 
     def _seed(self):
-        save_audit(AuditResult(
-            audit_id="inj001",
-            status=AuditStatus.COMPLETED,
-            model="gpt-4o",
-            base_url="https://api.example.com/v1",
-            started_at=datetime.now(),
-            overall_score=90.0,
-        ))
-        save_audit(AuditResult(
-            audit_id="inj002",
-            status=AuditStatus.COMPLETED,
-            model="claude-3-opus",
-            base_url="https://relay.example.org/v1",
-            started_at=datetime.now(),
-            overall_score=80.0,
-        ))
+        save_audit(
+            AuditResult(
+                audit_id="inj001",
+                status=AuditStatus.COMPLETED,
+                model="gpt-4o",
+                base_url="https://api.example.com/v1",
+                started_at=datetime.now(),
+                overall_score=90.0,
+            )
+        )
+        save_audit(
+            AuditResult(
+                audit_id="inj002",
+                status=AuditStatus.COMPLETED,
+                model="claude-3-opus",
+                base_url="https://relay.example.org/v1",
+                started_at=datetime.now(),
+                overall_score=80.0,
+            )
+        )
 
     def test_or_payload_treated_as_literal(self, temp_db):
         import sqlite3
+
         import app.database as db_module
+
         self._seed()
         # Classic tautology: if concatenated, this would leak EVERY row.
         rows = list_audits(model="gpt-4o' OR '1'='1")
@@ -190,7 +209,9 @@ class TestListAuditsInjection:
 
     def test_drop_table_payload_treated_as_literal(self, temp_db):
         import sqlite3
+
         import app.database as db_module
+
         self._seed()
         rows = list_audits(base_url="x'; DROP TABLE audits;--")
         assert rows == []

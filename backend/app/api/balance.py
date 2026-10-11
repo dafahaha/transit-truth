@@ -2,19 +2,21 @@
 余额查询 API 端点
 """
 
-from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
 from typing import Optional
 
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field
+
 from app.core.balance_checker import BalanceChecker
-from app.utils.ssrf_guard import require_public_url_async
 from app.utils.rate_limit import enforce_rate_limit
+from app.utils.ssrf_guard import require_public_url_async
 
 router = APIRouter(prefix="/api/balance", tags=["balance"])
 
 
 class BalanceCheckRequest(BaseModel):
     """余额查询请求"""
+
     api_key: str = Field(..., description="API密钥")
     base_url: str = Field(..., description="基础URL")
     account_name: str = Field("default", description="账户名称")
@@ -27,7 +29,10 @@ class BatchBalanceCheckRequest(BaseModel):
     Each element is validated as :class:`BalanceCheckRequest` (N7): a missing
     ``api_key``/``base_url`` now returns 422 instead of a downstream KeyError.
     """
-    accounts: list[BalanceCheckRequest] = Field(..., description="账户列表", max_length=5)
+
+    accounts: list[BalanceCheckRequest] = Field(
+        ..., description="账户列表", max_length=5
+    )
 
 
 @router.post("/check", dependencies=[Depends(enforce_rate_limit)])
@@ -76,6 +81,7 @@ async def batch_check_balance(request: BatchBalanceCheckRequest):
 async def list_supported_endpoints():
     """列出支持的余额查询端点"""
     from app.core.balance_checker import COMMON_BALANCE_ENDPOINTS
+
     return {
         "endpoints": COMMON_BALANCE_ENDPOINTS,
         "description": "自动尝试以下端点，直到找到可用的。也可以通过custom_endpoint参数指定自定义端点。",

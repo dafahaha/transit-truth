@@ -2,19 +2,20 @@
 
 Main FastAPI application entry point.
 """
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.datastructures import Headers
 
-from .config import APP_VERSION, BASE_DIR
-from .database import init_db
 from .api.audit import router as audit_router
-from .api.ranking import router as ranking_router
-from .api.detect import router as detect_router
 from .api.balance import router as balance_router
 from .api.contribute import router as contribute_router
+from .api.detect import router as detect_router
+from .api.ranking import router as ranking_router
+from .config import APP_VERSION, BASE_DIR
+from .database import init_db
 
 app = FastAPI(
     title="TransitTruth",
@@ -64,7 +65,9 @@ class RequestBodyLimitMiddleware:
 
     @staticmethod
     def _too_large() -> JSONResponse:
-        return JSONResponse(status_code=413, content={"detail": "Request body too large"})
+        return JSONResponse(
+            status_code=413, content={"detail": "Request body too large"}
+        )
 
     async def __call__(self, scope, receive, send):
         if scope["type"] != "http":

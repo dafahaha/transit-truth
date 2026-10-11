@@ -1,20 +1,21 @@
 """Tests for data models."""
+
 import sys
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.models import (
+    AuditMode,
     AuditRequest,
     AuditResult,
     AuditStatus,
-    AuditMode,
     CheckResult,
     CheckType,
-    TokenComparison,
     FingerprintResult,
     RankingEntry,
+    TokenComparison,
 )
 
 
@@ -51,6 +52,7 @@ class TestAuditRequest:
 
     def test_invalid_probe_count(self):
         import pytest
+
         with pytest.raises(Exception):
             AuditRequest(
                 api_key="sk-test",
@@ -85,6 +87,7 @@ class TestAuditResult:
 
     def test_score_bounds(self):
         import pytest
+
         with pytest.raises(Exception):
             AuditResult(
                 audit_id="test",

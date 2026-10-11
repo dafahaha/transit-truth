@@ -1,16 +1,17 @@
 """Tests for probe definitions."""
+
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from app.core.probes import (
-    TOKENIZER_PROBES,
     BEHAVIORAL_PROBES,
     CAPABILITY_PROBES,
+    TOKENIZER_PROBES,
+    Probe,
     get_all_probes,
     get_probes_by_category,
-    Probe,
 )
 
 
@@ -43,15 +44,21 @@ class TestProbeDefinitions:
 
     def test_behavioral_probes_low_temperature(self):
         for probe in BEHAVIORAL_PROBES:
-            assert probe.temperature <= 0.1, "Behavioral probes should use low temperature (0) for stable, reproducible fingerprints. Academic papers (e.g. 'One Token Is Enough') use temperature=0 for model fingerprinting."
+            assert (
+                probe.temperature <= 0.1
+            ), "Behavioral probes should use low temperature (0) for stable, reproducible fingerprints. Academic papers (e.g. 'One Token Is Enough') use temperature=0 for model fingerprinting."
 
     def test_capability_probes_low_temperature(self):
         for probe in CAPABILITY_PROBES:
-            assert probe.temperature <= 0.1, "Capability probes should use low temperature for determinism"
+            assert (
+                probe.temperature <= 0.1
+            ), "Capability probes should use low temperature for determinism"
 
     def test_get_all_probes_count(self):
         all_probes = get_all_probes()
-        assert len(all_probes) == len(TOKENIZER_PROBES) + len(BEHAVIORAL_PROBES) + len(CAPABILITY_PROBES)
+        assert len(all_probes) == len(TOKENIZER_PROBES) + len(BEHAVIORAL_PROBES) + len(
+            CAPABILITY_PROBES
+        )
 
     def test_get_probes_by_category(self):
         assert len(get_probes_by_category("tokenizer")) == len(TOKENIZER_PROBES)

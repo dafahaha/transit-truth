@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class BalanceResult:
     """余额查询结果"""
+
     account_name: str
     base_url: str
     success: bool
@@ -302,9 +303,7 @@ class BalanceChecker:
                 error=f"解析响应失败: {e}",
             )
 
-    async def check_multiple(
-        self, accounts: list[dict]
-    ) -> list[BalanceResult]:
+    async def check_multiple(self, accounts: list[dict]) -> list[BalanceResult]:
         """
         批量查询多个账户的余额
 
@@ -339,7 +338,8 @@ class BalanceChecker:
             list[BalanceResult]: 低余额的账户列表
         """
         return [
-            r for r in results
+            r
+            for r in results
             if r.success and r.balance is not None and r.balance < threshold
         ]
 
@@ -372,8 +372,9 @@ class BalanceChecker:
                     low_count += 1
                 lines.append(
                     f"{status} {r.account_name}: ${r.balance:.2f} "
-                    f"(已用 ${r.used:.2f})" if r.used else
-                    f"{status} {r.account_name}: ${r.balance:.2f}"
+                    f"(已用 ${r.used:.2f})"
+                    if r.used
+                    else f"{status} {r.account_name}: ${r.balance:.2f}"
                 )
             else:
                 lines.append(f"⚪ {r.account_name}: 查询失败 - {r.error}")
@@ -396,9 +397,7 @@ async def check_balance(
 ) -> BalanceResult:
     """便捷函数：查询单个账户余额"""
     checker = BalanceChecker()
-    return await checker.check_balance(
-        api_key, base_url, account_name, custom_endpoint
-    )
+    return await checker.check_balance(api_key, base_url, account_name, custom_endpoint)
 
 
 async def check_multiple_balances(accounts: list[dict]) -> list[BalanceResult]:

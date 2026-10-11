@@ -13,6 +13,7 @@ Everything here runs fully offline:
 Outbound HTTP is intercepted either by rejecting the URL up front (so no
 client is ever constructed) or by swapping ``AsyncAPIClient`` for a fake.
 """
+
 import os
 import sys
 import tempfile
@@ -45,50 +46,67 @@ client = TestClient(app)
 
 # ─── M1: SSRF guard rejects internal targets before any request ──────────
 
-@pytest.mark.parametrize("bad_url", [
-    "http://127.0.0.1:1/v1",          # loopback IPv4
-    "http://[::1]/v1",                 # loopback IPv6
-    "http://169.254.169.254/latest/meta-data",  # cloud metadata (link-local)
-    "http://10.0.0.5/v1",              # RFC1918 /8
-    "http://172.16.0.2/v1",           # RFC1918 /12
-    "http://192.168.1.10/v1",         # RFC1918 /16
-])
+
+@pytest.mark.parametrize(
+    "bad_url",
+    [
+        "http://127.0.0.1:1/v1",  # loopback IPv4
+        "http://[::1]/v1",  # loopback IPv6
+        "http://169.254.169.254/latest/meta-data",  # cloud metadata (link-local)
+        "http://10.0.0.5/v1",  # RFC1918 /8
+        "http://172.16.0.2/v1",  # RFC1918 /12
+        "http://192.168.1.10/v1",  # RFC1918 /16
+    ],
+)
 def test_internal_url_rejected_without_outbound(bad_url):
-    resp = client.post("/api/audit/start", json={
-        "api_key": "sk-test",
-        "base_url": bad_url,
-        "model": "gpt-4o-mini",
-    })
+    resp = client.post(
+        "/api/audit/start",
+        json={
+            "api_key": "sk-test",
+            "base_url": bad_url,
+            "model": "gpt-4o-mini",
+        },
+    )
     assert resp.status_code == 400, resp.text
 
 
 def test_loopback_hostname_rejected():
     # localhost must be blocked via DNS resolution, not just IP literals.
-    resp = client.post("/api/detect/models", json={
-        "api_key": "sk-test",
-        "base_url": "http://localhost:8000/v1",
-    })
+    resp = client.post(
+        "/api/detect/models",
+        json={
+            "api_key": "sk-test",
+            "base_url": "http://localhost:8000/v1",
+        },
+    )
     assert resp.status_code == 400, resp.text
 
 
 def test_non_http_scheme_rejected():
-    resp = client.post("/api/audit/start", json={
-        "api_key": "sk-test",
-        "base_url": "file:///etc/passwd",
-        "model": "gpt-4o-mini",
-    })
+    resp = client.post(
+        "/api/audit/start",
+        json={
+            "api_key": "sk-test",
+            "base_url": "file:///etc/passwd",
+            "model": "gpt-4o-mini",
+        },
+    )
     assert resp.status_code == 400, resp.text
 
 
 def test_balance_check_internal_rejected():
-    resp = client.post("/api/balance/check", json={
-        "api_key": "sk-test",
-        "base_url": "http://127.0.0.1:9/v1",
-    })
+    resp = client.post(
+        "/api/balance/check",
+        json={
+            "api_key": "sk-test",
+            "base_url": "http://127.0.0.1:9/v1",
+        },
+    )
     assert resp.status_code == 400, resp.text
 
 
 # ─── S2: bounded inputs ──────────────────────────────────────────────────
+
 
 def test_audit_limit_has_upper_bound():
     resp = client.get("/api/audit/", params={"limit": 1_000_000})
@@ -101,13 +119,16 @@ def test_ranking_limit_has_upper_bound():
 
 
 def test_batch_balance_max_length():
-    accounts = [{"api_key": "sk", "base_url": "https://example.com/v1"} for _ in range(6)]
+    accounts = [
+        {"api_key": "sk", "base_url": "https://example.com/v1"} for _ in range(6)
+    ]
     resp = client.post("/api/balance/batch", json={"accounts": accounts})
     # 6 accounts > max_length=5 -> 422 before any SSRF/outbound work.
     assert resp.status_code == 422
 
 
 # ─── S1: CORS does not allow credentials ────────────────────────────────
+
 
 def test_cors_credentials_disabled():
     resp = client.get("/api/health", headers={"Origin": "http://evil.example"})
@@ -116,6 +137,7 @@ def test_cors_credentials_disabled():
 
 
 # ─── Helpers: fake relay/official clients (offline) ─────────────────────
+
 
 class _FakeClient:
     """Drop-in for AsyncAPIClient that returns canned 200 responses."""
@@ -174,22 +196,26 @@ def test_official_api_key_audit_completed(monkeypatch):
     `async with` and the audit reaches COMPLETED with expected tokens filled."""
     import app.core.auditor as auditor_mod
     from app.core.token_check import TokenVerifier
+
     _public_dns(monkeypatch)
     monkeypatch.setattr(auditor_mod, "AsyncAPIClient", _FakeClient)
     # Avoid tiktoken downloading its encoding files from the network (offline CI).
     monkeypatch.setattr(TokenVerifier, "_compute_local_tokens", lambda self, text: None)
 
-    resp = client.post("/api/audit/start", json={
-        "api_key": "sk-relay",
-        "base_url": "https://relay.example.com/v1",
-        "model": "gpt-4o-mini",
-        "official_api_key": "sk-official",
-        "mode": "quick",
-        "run_fingerprint": False,
-        "run_latency": False,
-        "run_protocol": False,
-        "run_token_check": True,
-    })
+    resp = client.post(
+        "/api/audit/start",
+        json={
+            "api_key": "sk-relay",
+            "base_url": "https://relay.example.com/v1",
+            "model": "gpt-4o-mini",
+            "official_api_key": "sk-official",
+            "mode": "quick",
+            "run_fingerprint": False,
+            "run_latency": False,
+            "run_protocol": False,
+            "run_token_check": True,
+        },
+    )
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert data["status"] == "completed", data
@@ -201,14 +227,18 @@ def test_official_api_key_audit_completed(monkeypatch):
 def test_upstream_body_not_echoed(monkeypatch):
     """M1: a non-2xx relay response body must not appear in the API result."""
     import app.core.auditor as auditor_mod
+
     _public_dns(monkeypatch)
     monkeypatch.setattr(auditor_mod, "AsyncAPIClient", _FakeFailingClient)
 
-    resp = client.post("/api/audit/start", json={
-        "api_key": "sk-relay",
-        "base_url": "https://relay.example.com/v1",
-        "model": "gpt-4o-mini",
-    })
+    resp = client.post(
+        "/api/audit/start",
+        json={
+            "api_key": "sk-relay",
+            "base_url": "https://relay.example.com/v1",
+            "model": "gpt-4o-mini",
+        },
+    )
     # The audit itself reports failure, but the upstream body must NOT leak.
     body = resp.text
     assert "INTERNAL_SECRET_SSRF_BODY_DO_NOT_LEAK" not in body
@@ -217,14 +247,17 @@ def test_upstream_body_not_echoed(monkeypatch):
 
 def test_contribution_uses_uuid_id():
     """S4: contributions get a uuid-based id and persist."""
-    resp = client.post("/api/contribute/audit", json={
-        "audit_result": {
-            "model": "gpt-4o-mini",
-            "base_url": "https://relay.example.com/v1",
-            "overall_score": 90,
+    resp = client.post(
+        "/api/contribute/audit",
+        json={
+            "audit_result": {
+                "model": "gpt-4o-mini",
+                "base_url": "https://relay.example.com/v1",
+                "overall_score": 90,
+            },
+            "relay_name": "test-relay",
         },
-        "relay_name": "test-relay",
-    })
+    )
     assert resp.status_code == 200, resp.text
     data = resp.json()
     assert data["contribution_id"].startswith("contrib_")

@@ -1,4 +1,5 @@
 """Test that real baseline JSON files load correctly from the repo root."""
+
 from app.core.statistical_analyzer import StatisticalAnalyzer
 
 
@@ -8,9 +9,9 @@ class TestRealBaselines:
         an.load_real_baselines()
         # The loader adds an explicit "gpt-4o-mini" alias when the file name
         # contains "gpt-4o-mini".
-        assert "gpt-4o-mini" in an.baseline_db, (
-            f"Expected gpt-4o-mini baseline, got keys: {list(an.baseline_db.keys())}"
-        )
+        assert (
+            "gpt-4o-mini" in an.baseline_db
+        ), f"Expected gpt-4o-mini baseline, got keys: {list(an.baseline_db.keys())}"
         bl = an.baseline_db["gpt-4o-mini"]
         assert bl.sample_size > 0
         assert len(bl.behavioral_distributions) > 0

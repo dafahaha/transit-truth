@@ -1,20 +1,24 @@
 """Audit API endpoints."""
+
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from starlette.concurrency import run_in_threadpool
-from ..models import AuditRequest, AuditResult
+
 from ..core.auditor import AuditEngine
-from ..database import save_audit, get_audit, list_audits
-from ..utils.ssrf_guard import require_public_url_async
+from ..database import get_audit, list_audits, save_audit
+from ..models import AuditRequest, AuditResult
 from ..utils.rate_limit import enforce_rate_limit
+from ..utils.ssrf_guard import require_public_url_async
 
 router = APIRouter(prefix="/api/audit", tags=["audit"])
 
 _engine = AuditEngine()
 
 
-@router.post("/start", response_model=AuditResult, dependencies=[Depends(enforce_rate_limit)])
+@router.post(
+    "/start", response_model=AuditResult, dependencies=[Depends(enforce_rate_limit)]
+)
 async def start_audit(request: AuditRequest):
     """Start a new audit (synchronous for MVP)."""
     # SSRF guard: refuse internal/non-http targets before any outbound call.

@@ -1,7 +1,8 @@
 """Tests for HTML report generator."""
+
 import sys
-from pathlib import Path
 from datetime import datetime
+from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
@@ -10,10 +11,10 @@ from app.models import (
     AuditStatus,
     CheckResult,
     CheckType,
-    TokenComparison,
     FingerprintResult,
+    TokenComparison,
 )
-from app.utils.report_generator import generate_html_report, _trust_color, _trust_label
+from app.utils.report_generator import _trust_color, _trust_label, generate_html_report
 
 
 class TestReportGenerator:

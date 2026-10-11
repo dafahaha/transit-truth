@@ -12,6 +12,7 @@ Usage (run from ``backend/``):
     python -m app.moderation approve <contribution_id>
     python -m app.moderation reject <contribution_id>
 """
+
 import argparse
 import logging
 import sys
@@ -139,11 +140,16 @@ def build_parser() -> argparse.ArgumentParser:
     sub = p.add_subparsers(dest="cmd", required=True)
 
     pl = sub.add_parser("list", help="list contributions (default: pending)")
-    pl.add_argument("--status", default=None,
-                    help="filter by status: pending|approved|rejected (default: all pending when omitted? see note)")
+    pl.add_argument(
+        "--status",
+        default=None,
+        help="filter by status: pending|approved|rejected (default: all pending when omitted? see note)",
+    )
     pl.set_defaults(func=cmd_list)
 
-    pa = sub.add_parser("approve", help="approve a contribution and write it to the public ranking")
+    pa = sub.add_parser(
+        "approve", help="approve a contribution and write it to the public ranking"
+    )
     pa.add_argument("id")
     pa.set_defaults(func=cmd_approve)
 

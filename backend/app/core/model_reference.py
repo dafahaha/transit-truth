@@ -12,15 +12,16 @@ Model Reference Data - 集成公开的权威模型数据
 3. 价格对比：官方价格 vs 中转站价格
 """
 
-from dataclasses import dataclass, field
-from typing import Optional
 import json
 import os
+from dataclasses import dataclass, field
+from typing import Optional
 
 
 @dataclass
 class ModelReference:
     """模型参考数据"""
+
     model_id: str  # 标准模型ID（如 gpt-4o）
     display_name: str  # 显示名称
     provider: str  # 提供商（OpenAI, Anthropic, Google等）
@@ -137,7 +138,6 @@ MODEL_REFERENCES: dict[str, ModelReference] = {
         description="经典轻量级模型，成本极低",
         aliases=["gpt-3.5-turbo-0125", "gpt-3.5-turbo-1106"],
     ),
-
     # ─── Anthropic Claude系列 ───
     "claude-3-5-sonnet": ModelReference(
         model_id="claude-3-5-sonnet",
@@ -201,7 +201,6 @@ MODEL_REFERENCES: dict[str, ModelReference] = {
         description="轻量级模型，极快速度，低成本",
         aliases=["claude-3-haiku-20240307"],
     ),
-
     # ─── Google Gemini系列 ───
     "gemini-1.5-pro": ModelReference(
         model_id="gemini-1.5-pro",
@@ -244,7 +243,6 @@ MODEL_REFERENCES: dict[str, ModelReference] = {
         description="轻量级模型，极快速度，超长上下文",
         aliases=["gemini-1.5-flash-001", "gemini-1.5-flash-002"],
     ),
-
     # ─── Meta Llama系列 ───
     "llama-3.1-70b": ModelReference(
         model_id="llama-3.1-70b",
@@ -280,7 +278,6 @@ MODEL_REFERENCES: dict[str, ModelReference] = {
         description="轻量级开源模型，可本地部署",
         aliases=["llama-3.1-8b-instruct", "meta-llama-3.1-8b-instruct"],
     ),
-
     # ─── Alibaba Qwen系列 ───
     "qwen2.5-72b": ModelReference(
         model_id="qwen2.5-72b",
@@ -316,7 +313,6 @@ MODEL_REFERENCES: dict[str, ModelReference] = {
         description="轻量级开源模型，中文能力强",
         aliases=["qwen2.5-14b-instruct", "qwen2.5-14b"],
     ),
-
     # ─── Mistral系列 ───
     "mistral-large": ModelReference(
         model_id="mistral-large",
@@ -367,7 +363,10 @@ def get_model_reference(model_name: str) -> Optional[ModelReference]:
 
     # 模糊匹配（包含关系）
     for ref in MODEL_REFERENCES.values():
-        if ref.model_id.lower() in model_name_lower or model_name_lower in ref.model_id.lower():
+        if (
+            ref.model_id.lower() in model_name_lower
+            or model_name_lower in ref.model_id.lower()
+        ):
             return ref
         for alias in ref.aliases:
             if alias.lower() in model_name_lower or model_name_lower in alias.lower():
@@ -383,7 +382,9 @@ def get_all_models() -> list[ModelReference]:
 
 def get_models_by_provider(provider: str) -> list[ModelReference]:
     """按提供商筛选模型"""
-    return [m for m in MODEL_REFERENCES.values() if m.provider.lower() == provider.lower()]
+    return [
+        m for m in MODEL_REFERENCES.values() if m.provider.lower() == provider.lower()
+    ]
 
 
 def get_models_by_tier(tier: str) -> list[ModelReference]:
@@ -419,15 +420,21 @@ def compare_models(model1: str, model2: str) -> dict:
     if ref1.input_price and ref2.input_price:
         differences["input_price_ratio"] = round(ref2.input_price / ref1.input_price, 2)
     if ref1.output_price and ref2.output_price:
-        differences["output_price_ratio"] = round(ref2.output_price / ref1.output_price, 2)
+        differences["output_price_ratio"] = round(
+            ref2.output_price / ref1.output_price, 2
+        )
 
     # 智能指数对比
     if ref1.intelligence_index and ref2.intelligence_index:
-        differences["intelligence_diff"] = round(ref2.intelligence_index - ref1.intelligence_index, 1)
+        differences["intelligence_diff"] = round(
+            ref2.intelligence_index - ref1.intelligence_index, 1
+        )
 
     # 速度对比
     if ref1.output_tokens_per_second and ref2.output_tokens_per_second:
-        differences["speed_ratio"] = round(ref2.output_tokens_per_second / ref1.output_tokens_per_second, 2)
+        differences["speed_ratio"] = round(
+            ref2.output_tokens_per_second / ref1.output_tokens_per_second, 2
+        )
 
     # ELO对比
     if ref1.arena_elo and ref2.arena_elo:
@@ -474,12 +481,23 @@ def get_price_comparison(model_name: str, relay_price_per_1m: float = None) -> d
 
     if relay_price_per_1m:
         # 假设中转站价格是统一的（input和output相同）
-        markup_input = round(relay_price_per_1m / ref.input_price, 2) if ref.input_price else None
-        markup_output = round(relay_price_per_1m / ref.output_price, 2) if ref.output_price else None
+        markup_input = (
+            round(relay_price_per_1m / ref.input_price, 2) if ref.input_price else None
+        )
+        markup_output = (
+            round(relay_price_per_1m / ref.output_price, 2)
+            if ref.output_price
+            else None
+        )
 
-        result["relay_price"] = {"input": relay_price_per_1m, "output": relay_price_per_1m}
+        result["relay_price"] = {
+            "input": relay_price_per_1m,
+            "output": relay_price_per_1m,
+        }
         result["markup"] = {"input": markup_input, "output": markup_output}
-        result["is_overpriced"] = (markup_input and markup_input > 1.5) or (markup_output and markup_output > 1.5)
+        result["is_overpriced"] = (markup_input and markup_input > 1.5) or (
+            markup_output and markup_output > 1.5
+        )
 
     return result
 

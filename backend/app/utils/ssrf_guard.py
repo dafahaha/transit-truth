@@ -22,6 +22,7 @@ Defense in depth, two layers:
 Error messages are intentionally generic: they never leak the resolved
 internal address back to the caller.
 """
+
 import asyncio
 import ipaddress
 import logging
@@ -64,9 +65,9 @@ def _is_blocked_ip(ip_str: str) -> bool:
     except ValueError:
         return True  # unparseable -> fail closed
     if (
-        ip.is_loopback        # 127.0.0.0/8, ::1
-        or ip.is_private      # 10/8, 172.16/12, 192.168/16, fc00::/7, TEST-NET, ...
-        or ip.is_link_local   # 169.254.0.0/16, fe80::/10
+        ip.is_loopback  # 127.0.0.0/8, ::1
+        or ip.is_private  # 10/8, 172.16/12, 192.168/16, fc00::/7, TEST-NET, ...
+        or ip.is_link_local  # 169.254.0.0/16, fe80::/10
         or ip.is_multicast
         or ip.is_reserved
         or ip.is_unspecified  # 0.0.0.0, ::
@@ -122,7 +123,9 @@ def validate_public_url(url: str) -> httpx.URL:
     for info in addr_infos:
         ip_str = info[4][0]
         if _is_blocked_ip(ip_str):
-            logger.warning("Blocked outbound request to host=%s (resolves to %s)", host, ip_str)
+            logger.warning(
+                "Blocked outbound request to host=%s (resolves to %s)", host, ip_str
+            )
             raise ValueError("Target is not a public internet address")
 
     return parsed
@@ -151,6 +154,7 @@ async def require_public_url_async(url: str) -> httpx.URL:
 
 # ─── Connect-time SSRF re-validation (DNS rebinding TOCTOU, N1) ──────────
 
+
 class GuardedAsyncNetworkBackend:
     """Wrap httpcore's default async network backend.
 
@@ -168,10 +172,12 @@ class GuardedAsyncNetworkBackend:
     def __init__(self, inner):
         self._inner = inner
 
-    async def connect_tcp(self, host, port, timeout=None, local_address=None,
-                          socket_options=None):
+    async def connect_tcp(
+        self, host, port, timeout=None, local_address=None, socket_options=None
+    ):
         stream = await self._inner.connect_tcp(
-            host, port,
+            host,
+            port,
             timeout=timeout,
             local_address=local_address,
             socket_options=socket_options,
@@ -184,6 +190,7 @@ class GuardedAsyncNetworkBackend:
         ip_str = _peer_ip(peer)
         # Import lazily to avoid a hard import-time dependency at module load.
         import httpcore
+
         if ip_str is None:
             # Fail CLOSED (R3-4): we could not read the actual peer address
             # (httpcore version drift / unexpected backend). Refusing is safer
@@ -192,20 +199,30 @@ class GuardedAsyncNetworkBackend:
                 await stream.aclose()
             except Exception:
                 pass
-            logger.warning("Blocked connect to host=%s: unable to determine peer address", host)
+            logger.warning(
+                "Blocked connect to host=%s: unable to determine peer address", host
+            )
             raise httpcore.ConnectError("Refused: unable to verify target peer address")
         if _is_blocked_ip(ip_str):
             try:
                 await stream.aclose()
             except Exception:
                 pass
-            logger.warning("Blocked connect to host=%s (actual peer %s is non-public)", host, ip_str)
-            raise httpcore.ConnectError("Refused: target resolves to a non-public address")
+            logger.warning(
+                "Blocked connect to host=%s (actual peer %s is non-public)",
+                host,
+                ip_str,
+            )
+            raise httpcore.ConnectError(
+                "Refused: target resolves to a non-public address"
+            )
         return stream
 
     async def connect_unix_socket(self, path, timeout=None, socket_options=None):
         return await self._inner.connect_unix_socket(
-            path, timeout=timeout, socket_options=socket_options,
+            path,
+            timeout=timeout,
+            socket_options=socket_options,
         )
 
     async def sleep(self, seconds):

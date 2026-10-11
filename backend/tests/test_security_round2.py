@@ -10,6 +10,7 @@ Covers:
 
 Everything runs offline against an isolated SQLite DB.
 """
+
 import asyncio
 import os
 import socket
@@ -41,6 +42,7 @@ def _isolated_db():
 
 
 # ─── N1: connect-time SSRF re-validation (DNS rebinding) ─────────────────
+
 
 class _FakeStream:
     """Minimal stand-in for httpcore's AsyncNetworkStream."""
@@ -85,6 +87,7 @@ class _FakeInner:
 
 def test_guarded_backend_blocks_loopback_peer():
     import httpcore
+
     from app.utils.ssrf_guard import GuardedAsyncNetworkBackend
 
     inner = _FakeInner(("127.0.0.1", 12345))
@@ -97,6 +100,7 @@ def test_guarded_backend_blocks_loopback_peer():
 
 def test_guarded_backend_blocks_metadata_peer():
     import httpcore
+
     from app.utils.ssrf_guard import GuardedAsyncNetworkBackend
 
     inner = _FakeInner(("169.254.169.254", 80))
@@ -121,6 +125,7 @@ def test_guarded_backend_fails_closed_when_peer_unknown():
     # drift / unexpected backend), the guard must refuse the connection rather
     # than silently proxying to an address we haven't proven public.
     import httpcore
+
     from app.utils.ssrf_guard import GuardedAsyncNetworkBackend
 
     inner = _FakeInner(None)  # get_extra_info("server_addr") -> None
@@ -134,6 +139,7 @@ def test_dns_rebinding_second_resolution_is_blocked(monkeypatch):
     """First getaddrinfo (URL guard) returns public -> passes; second
     getaddrinfo (connect time) returns internal -> connect is refused."""
     import httpcore
+
     from app.utils import ssrf_guard
 
     calls = {"n": 0}
@@ -171,6 +177,7 @@ def test_dns_rebinding_second_resolution_is_blocked(monkeypatch):
 
 
 # ─── N2: anonymous contribution -> pending queue, not public ranking ──────
+
 
 def test_anonymous_contribute_does_not_write_ranking():
     from app.core.contributor_reputation import ContributorReputationSystem
@@ -228,8 +235,9 @@ def test_approve_leaves_pending_when_ranking_write_fails(monkeypatch):
     # rolls back — the contribution must NOT be left "approved" (and no partial
     # ranking row / audit_count increment survives).
     from types import SimpleNamespace
-    from app import moderation
+
     import app.database as db_module
+    from app import moderation
     from app.core.contributor_reputation import ContributorReputationSystem
     from app.database import get_rankings
 
@@ -263,8 +271,9 @@ def test_approve_rolls_back_when_status_flip_fails(monkeypatch):
     # incremented and the contribution stays pending (an operator retry then
     # upserts exactly once, instead of double-counting).
     from types import SimpleNamespace
-    from app import moderation
+
     import app.database as db_module
+    from app import moderation
     from app.core.contributor_reputation import ContributorReputationSystem
     from app.database import get_rankings
 
@@ -332,6 +341,7 @@ def test_contribute_body_too_large_is_413():
 
 
 # ─── R3-1: streaming body cap covers chunked (no Content-Length) ──────────
+
 
 def _drive_asgi(chunks, headers):
     """Drive the app directly as ASGI, feeding *chunks* as http.request events.
@@ -415,9 +425,16 @@ def test_exactly_one_mib_body_is_not_413():
 def test_small_request_still_200():
     # The streaming wrapper must not break normal small requests.
     import json
-    payload = json.dumps({
-        "audit_result": {"model": "m", "base_url": "https://e.com/v1", "overall_score": 90}
-    }).encode()
+
+    payload = json.dumps(
+        {
+            "audit_result": {
+                "model": "m",
+                "base_url": "https://e.com/v1",
+                "overall_score": 90,
+            }
+        }
+    ).encode()
     status, body = _drive_asgi(
         [payload],
         [("content-type", "application/json"), ("content-length", str(len(payload)))],
@@ -427,8 +444,10 @@ def test_small_request_still_200():
 
 # ─── S2: per-IP rate limiting ────────────────────────────────────────────
 
+
 def test_rate_limit_returns_429():
     from app.utils import rate_limit
+
     rate_limit.configure(2, 60)  # only 2 requests per minute per IP
     try:
         statuses = []
@@ -448,8 +467,10 @@ def test_rate_limit_returns_429():
 
 # ─── R3-2: trusted-proxy X-Forwarded-For resolution ───────────────────────
 
+
 def _make_request(client_host, xff=None):
     from starlette.requests import Request
+
     headers = []
     if xff is not None:
         headers.append((b"x-forwarded-for", xff.encode()))
@@ -461,6 +482,7 @@ def test_direct_client_ignores_x_forwarded_for():
     # Default: no trusted proxies configured -> XFF must never be the identity,
     # otherwise a caller could forge it to borrow/steal another bucket.
     from app.utils import rate_limit
+
     rate_limit.configure_trusted_proxies("")
     req = _make_request("203.0.113.9", xff="1.2.3.4")
     assert rate_limit._client_ip(req) == "203.0.113.9"
@@ -470,6 +492,7 @@ def test_trusted_proxy_uses_rightmost_untrusted_xff_hop():
     # Direct peer is a configured trusted proxy; XFF chain client, inner, outer.
     # Walk right-to-left, skip trusted hops, take the first untrusted address.
     from app.utils import rate_limit
+
     rate_limit.configure_trusted_proxies("10.0.0.1,10.0.0.2")
     req = _make_request("10.0.0.1", xff="1.2.3.4, 10.0.0.2, 10.0.0.1")
     assert rate_limit._client_ip(req) == "1.2.3.4"
@@ -478,6 +501,7 @@ def test_trusted_proxy_uses_rightmost_untrusted_xff_hop():
 def test_forged_xff_ignored_when_peer_not_trusted():
     # A caller NOT behind a trusted proxy forges XFF -> ignored, TCP peer wins.
     from app.utils import rate_limit
+
     rate_limit.configure_trusted_proxies("10.0.0.1")
     req = _make_request("198.51.100.7", xff="9.9.9.9")
     assert rate_limit._client_ip(req) == "198.51.100.7"
@@ -485,41 +509,54 @@ def test_forged_xff_ignored_when_peer_not_trusted():
 
 # ─── N7: batch balance accounts are validated elements ──────────────────
 
+
 def test_batch_account_missing_api_key_is_422():
-    resp = client.post("/api/balance/batch", json={
-        "accounts": [{"base_url": "https://example.com/v1"}],  # no api_key
-    })
+    resp = client.post(
+        "/api/balance/batch",
+        json={
+            "accounts": [{"base_url": "https://example.com/v1"}],  # no api_key
+        },
+    )
     assert resp.status_code == 422, resp.text
 
 
 def test_batch_account_missing_base_url_is_422():
-    resp = client.post("/api/balance/batch", json={
-        "accounts": [{"api_key": "sk-test"}],  # no base_url
-    })
+    resp = client.post(
+        "/api/balance/batch",
+        json={
+            "accounts": [{"api_key": "sk-test"}],  # no base_url
+        },
+    )
     assert resp.status_code == 422, resp.text
 
 
 # ─── R6-2: custom_endpoint is path-only (URL-layer SSRF defense in depth) ─
 
-@pytest.mark.parametrize("bad_endpoint", [
-    "/@169.254.169.254/latest/meta-data",   # userinfo injection -> rewrites host
-    "/@127.0.0.1:8080/admin",               # userinfo to loopback
-    "//evil.example.com/v1/balance",       # scheme-relative authority
-    "/v1//balance",                         # embedded '//'
-    "/v1/balance#fragment",                 # fragment
-    "/v1\\internal\\path",                  # backslash (httpx normalises to /)
-    "/v1/balance\r\nX-Injected: 1",         # CRLF control chars
-    "https://api.openai.com/v1/balance",    # absolute URL, not a bare path
-    "v1/balance",                           # does not start with '/'
-])
+
+@pytest.mark.parametrize(
+    "bad_endpoint",
+    [
+        "/@169.254.169.254/latest/meta-data",  # userinfo injection -> rewrites host
+        "/@127.0.0.1:8080/admin",  # userinfo to loopback
+        "//evil.example.com/v1/balance",  # scheme-relative authority
+        "/v1//balance",  # embedded '//'
+        "/v1/balance#fragment",  # fragment
+        "/v1\\internal\\path",  # backslash (httpx normalises to /)
+        "/v1/balance\r\nX-Injected: 1",  # CRLF control chars
+        "https://api.openai.com/v1/balance",  # absolute URL, not a bare path
+        "v1/balance",  # does not start with '/'
+    ],
+)
 def test_custom_endpoint_rejects_host_rewrite_attempts(bad_endpoint):
     from app.core.balance_checker import validate_custom_endpoint
+
     with pytest.raises(ValueError):
         validate_custom_endpoint(bad_endpoint)
 
 
 def test_custom_endpoint_accepts_plain_path():
     from app.core.balance_checker import validate_custom_endpoint
+
     # Legitimate shape must still pass (no regression on normal usage).
     validate_custom_endpoint("/v1/dashboard/billing/balance")
     validate_custom_endpoint("/v1/user/balance")
@@ -527,33 +564,42 @@ def test_custom_endpoint_accepts_plain_path():
 
 # ─── R7-3: percent-encoded host-rewrite variants must also be rejected ───
 
-@pytest.mark.parametrize("encoded_bad", [
-    "/%40127.0.0.1/latest",                 # %40 -> '@' (userinfo injection)
-    "/%40169.254.169.254/latest/meta-data",
-    "/v1/%2f%2fevil.example.com/balance",   # %2f%2f -> '//' (scheme-relative)
-    "/%2f%2fevil.example.com/v1/balance",
-    "/v1%5Cevil.example.com/x",              # %5C -> '\\' (backslash)
-    "/v1/path%23fragment",                  # %23 -> '#' (fragment)
-    "/v1/balance%0d%0aX-Injected: 1",      # %0d%0a -> CRLF control chars
-    "/v1/balance%00",                       # %00 -> NUL
-])
+
+@pytest.mark.parametrize(
+    "encoded_bad",
+    [
+        "/%40127.0.0.1/latest",  # %40 -> '@' (userinfo injection)
+        "/%40169.254.169.254/latest/meta-data",
+        "/v1/%2f%2fevil.example.com/balance",  # %2f%2f -> '//' (scheme-relative)
+        "/%2f%2fevil.example.com/v1/balance",
+        "/v1%5Cevil.example.com/x",  # %5C -> '\\' (backslash)
+        "/v1/path%23fragment",  # %23 -> '#' (fragment)
+        "/v1/balance%0d%0aX-Injected: 1",  # %0d%0a -> CRLF control chars
+        "/v1/balance%00",  # %00 -> NUL
+    ],
+)
 def test_custom_endpoint_rejects_encoded_host_rewrite(encoded_bad):
     from app.core.balance_checker import validate_custom_endpoint
+
     with pytest.raises(ValueError):
         validate_custom_endpoint(encoded_bad)
 
 
-@pytest.mark.parametrize("legit", [
-    "/v1/dashboard/billing/credit_grants",
-    "/v1/user/balance",
-    "/v1/balance%20with%20space",          # %20 -> ' ' (legal encoded space)
-    "/v1/foo%25bar",                        # %25 -> '%' (legal literal %)
-    "/v1/%2540",                            # double-encoded %: decodes to '%40'
-    "/v1/foo%2Fbar",                        # single encoded slash in path segment
-    "/v1/%E4%B8%AD%E6%96%87",              # percent-encoded UTF-8 path
-])
+@pytest.mark.parametrize(
+    "legit",
+    [
+        "/v1/dashboard/billing/credit_grants",
+        "/v1/user/balance",
+        "/v1/balance%20with%20space",  # %20 -> ' ' (legal encoded space)
+        "/v1/foo%25bar",  # %25 -> '%' (legal literal %)
+        "/v1/%2540",  # double-encoded %: decodes to '%40'
+        "/v1/foo%2Fbar",  # single encoded slash in path segment
+        "/v1/%E4%B8%AD%E6%96%87",  # percent-encoded UTF-8 path
+    ],
+)
 def test_custom_endpoint_accepts_legit_encoded_paths(legit):
     from app.core.balance_checker import validate_custom_endpoint
+
     # Must not raise.
     validate_custom_endpoint(legit)
 
@@ -561,25 +607,33 @@ def test_custom_endpoint_accepts_legit_encoded_paths(legit):
 def test_checker_rejects_bad_custom_endpoint_before_outbound():
     """The checker must raise ValueError (no outbound) for a hostile endpoint."""
     from app.core.balance_checker import BalanceChecker
+
     checker = BalanceChecker()
     with pytest.raises(ValueError):
-        asyncio.run(checker.check_balance(
-            api_key="sk-test",
-            base_url="https://api.example.com/v1",
-            custom_endpoint="/@127.0.0.1/latest",
-        ))
+        asyncio.run(
+            checker.check_balance(
+                api_key="sk-test",
+                base_url="https://api.example.com/v1",
+                custom_endpoint="/@127.0.0.1/latest",
+            )
+        )
 
 
 def test_balance_api_returns_400_for_bad_custom_endpoint(monkeypatch):
     """API layer maps the ValueError to HTTP 400 (like require_public_url)."""
+
     # Bypass the base_url DNS check so we only exercise the endpoint validation;
     # the base_url SSRF guard is already covered by other tests.
     async def _noop(url):
         return None
+
     monkeypatch.setattr("app.api.balance.require_public_url_async", _noop)
-    resp = client.post("/api/balance/check", json={
-        "api_key": "sk-test",
-        "base_url": "https://api.example.com/v1",
-        "custom_endpoint": "/@127.0.0.1/latest",
-    })
+    resp = client.post(
+        "/api/balance/check",
+        json={
+            "api_key": "sk-test",
+            "base_url": "https://api.example.com/v1",
+            "custom_endpoint": "/@127.0.0.1/latest",
+        },
+    )
     assert resp.status_code == 400, resp.text

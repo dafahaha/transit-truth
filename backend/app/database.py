@@ -1,8 +1,9 @@
 """Database initialization and operations."""
+
 import sqlite3
 from typing import Optional
 
-from .config import DB_PATH, DATA_DIR
+from .config import DATA_DIR, DB_PATH
 from .models import AuditResult, RankingEntry
 
 
@@ -141,22 +142,25 @@ def _load_initial_rankings(cursor):
             if entry.get("notes"):
                 notes_parts.append(entry["notes"])
 
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT OR IGNORE INTO rankings
                 (relay_name, base_url, model, avg_trust_score, audit_count,
                  last_audited, token_inflation_avg, avg_latency_ms, notes)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, (
-                entry.get("relay", ""),
-                entry.get("base_url", ""),
-                entry.get("model", ""),
-                entry.get("overall_score", 0),
-                1,
-                entry.get("timestamp", ""),
-                entry.get("token_inflation_pct", 0),
-                entry.get("avg_latency_ms", 0),
-                " | ".join(notes_parts)[:500],
-            ))
+            """,
+                (
+                    entry.get("relay", ""),
+                    entry.get("base_url", ""),
+                    entry.get("model", ""),
+                    entry.get("overall_score", 0),
+                    1,
+                    entry.get("timestamp", ""),
+                    entry.get("token_inflation_pct", 0),
+                    entry.get("avg_latency_ms", 0),
+                    " | ".join(notes_parts)[:500],
+                ),
+            )
     except Exception as e:
         print(f"Warning: Failed to load initial rankings: {e}")
 
@@ -166,23 +170,26 @@ def save_audit(result: AuditResult):
     conn = get_db()
     cursor = conn.cursor()
 
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT OR REPLACE INTO audits
         (audit_id, status, model, base_url, started_at, completed_at,
          overall_score, trust_level, result_json, error)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (
-        result.audit_id,
-        result.status.value,
-        result.model,
-        result.base_url,
-        result.started_at.isoformat(),
-        result.completed_at.isoformat() if result.completed_at else None,
-        result.overall_score,
-        result.trust_level,
-        result.model_dump_json(),
-        result.error,
-    ))
+    """,
+        (
+            result.audit_id,
+            result.status.value,
+            result.model,
+            result.base_url,
+            result.started_at.isoformat(),
+            result.completed_at.isoformat() if result.completed_at else None,
+            result.overall_score,
+            result.trust_level,
+            result.model_dump_json(),
+            result.error,
+        ),
+    )
 
     conn.commit()
     conn.close()
@@ -229,7 +236,8 @@ def _upsert_ranking_row(cursor, entry: RankingEntry):
     Shared by ``upsert_ranking`` (own connection) and the atomic approve path
     (one transaction with the contribution status flip, R4-2).
     """
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO rankings
         (relay_name, base_url, model, avg_trust_score, audit_count, last_audited,
          token_inflation_avg, model_authenticity_rate, avg_latency_ms, uptime_rate, notes)
@@ -243,19 +251,21 @@ def _upsert_ranking_row(cursor, entry: RankingEntry):
             avg_latency_ms = excluded.avg_latency_ms,
             uptime_rate = excluded.uptime_rate,
             notes = excluded.notes
-    """, (
-        entry.relay_name,
-        entry.base_url,
-        entry.model,
-        entry.avg_trust_score,
-        entry.audit_count,
-        entry.last_audited.isoformat(),
-        entry.token_inflation_avg,
-        entry.model_authenticity_rate,
-        entry.avg_latency_ms,
-        entry.uptime_rate,
-        entry.notes,
-    ))
+    """,
+        (
+            entry.relay_name,
+            entry.base_url,
+            entry.model,
+            entry.avg_trust_score,
+            entry.audit_count,
+            entry.last_audited.isoformat(),
+            entry.token_inflation_avg,
+            entry.model_authenticity_rate,
+            entry.avg_latency_ms,
+            entry.uptime_rate,
+            entry.notes,
+        ),
+    )
 
 
 def _set_contribution_approved(cursor, contribution_id: str):
@@ -282,7 +292,9 @@ def upsert_ranking(entry: RankingEntry):
         conn.close()
 
 
-def approve_contribution_atomically(entry: RankingEntry, contribution_id: str, reviewer: str = "cli"):
+def approve_contribution_atomically(
+    entry: RankingEntry, contribution_id: str, reviewer: str = "cli"
+):
     """Approve a contribution in ONE SQLite transaction (R4-2).
 
     The public ranking upsert and the contribution status flip used to run on

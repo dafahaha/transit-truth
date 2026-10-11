@@ -1,15 +1,16 @@
 """Tests for randomized probe generation."""
+
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+from app.core.probes import BEHAVIORAL_PROBES, CAPABILITY_PROBES, TOKENIZER_PROBES
 from app.core.randomized_probes import (
     ProbeRandomizer,
-    generate_randomized_probes,
     RandomizedProbe,
+    generate_randomized_probes,
 )
-from app.core.probes import TOKENIZER_PROBES, BEHAVIORAL_PROBES, CAPABILITY_PROBES
 
 
 class TestProbeRandomizer:
@@ -18,7 +19,9 @@ class TestProbeRandomizer:
     def test_generate_with_seed(self):
         probes, seed = generate_randomized_probes(seed=42)
         assert seed == 42
-        assert len(probes) == len(TOKENIZER_PROBES) + len(BEHAVIORAL_PROBES) + len(CAPABILITY_PROBES)
+        assert len(probes) == len(TOKENIZER_PROBES) + len(BEHAVIORAL_PROBES) + len(
+            CAPABILITY_PROBES
+        )
 
     def test_generate_without_seed(self):
         probes, seed = generate_randomized_probes()
@@ -36,7 +39,9 @@ class TestProbeRandomizer:
         probes1, _ = generate_randomized_probes(seed=42)
         probes2, _ = generate_randomized_probes(seed=123)
         # At least some probes should be different
-        differences = sum(1 for p1, p2 in zip(probes1, probes2) if p1.prompt != p2.prompt)
+        differences = sum(
+            1 for p1, p2 in zip(probes1, probes2) if p1.prompt != p2.prompt
+        )
         assert differences > 0, "Different seeds should produce different probes"
 
     def test_randomized_probes_preserve_category(self):
@@ -63,7 +68,9 @@ class TestProbeRandomizer:
         # Should contain mostly digits
         digit_part = randomized.split("exactly: ")[-1]
         digit_count = sum(1 for c in digit_part if c.isdigit())
-        assert digit_count > len(digit_part) * 0.8, "Digit probe should contain mostly digits"
+        assert (
+            digit_count > len(digit_part) * 0.8
+        ), "Digit probe should contain mostly digits"
 
     def test_behavioral_probes_preserve_question_type(self):
         """Behavioral probes should preserve the type of question."""

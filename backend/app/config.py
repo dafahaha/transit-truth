@@ -18,8 +18,9 @@ Application configuration - 应用配置
 - CIRCUIT_BREAKER_TIMEOUT: 断路器恢复超时（秒，默认30）
 - DATABASE_PATH: 数据库路径（默认data/transit_truth.db）
 """
-import os
+
 import logging
+import os
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
@@ -66,15 +67,47 @@ OFFICIAL_APIS = {
 MODEL_FAMILIES = {
     "gpt-4": {"family": "openai-gpt4", "tokenizer": "cl100k_base", "tier": "high"},
     "gpt-4o": {"family": "openai-gpt4o", "tokenizer": "o200k_base", "tier": "high"},
-    "gpt-4-turbo": {"family": "openai-gpt4", "tokenizer": "cl100k_base", "tier": "high"},
+    "gpt-4-turbo": {
+        "family": "openai-gpt4",
+        "tokenizer": "cl100k_base",
+        "tier": "high",
+    },
     "gpt-3.5": {"family": "openai-gpt35", "tokenizer": "cl100k_base", "tier": "mid"},
-    "gpt-3.5-turbo": {"family": "openai-gpt35", "tokenizer": "cl100k_base", "tier": "mid"},
-    "claude-3-opus": {"family": "anthropic-claude3", "tokenizer": "claude", "tier": "high"},
-    "claude-3-sonnet": {"family": "anthropic-claude3", "tokenizer": "claude", "tier": "mid"},
-    "claude-3-haiku": {"family": "anthropic-claude3", "tokenizer": "claude", "tier": "low"},
-    "claude-3.5": {"family": "anthropic-claude35", "tokenizer": "claude", "tier": "high"},
-    "gemini-1.5-pro": {"family": "google-gemini", "tokenizer": "gemini", "tier": "high"},
-    "gemini-1.5-flash": {"family": "google-gemini", "tokenizer": "gemini", "tier": "mid"},
+    "gpt-3.5-turbo": {
+        "family": "openai-gpt35",
+        "tokenizer": "cl100k_base",
+        "tier": "mid",
+    },
+    "claude-3-opus": {
+        "family": "anthropic-claude3",
+        "tokenizer": "claude",
+        "tier": "high",
+    },
+    "claude-3-sonnet": {
+        "family": "anthropic-claude3",
+        "tokenizer": "claude",
+        "tier": "mid",
+    },
+    "claude-3-haiku": {
+        "family": "anthropic-claude3",
+        "tokenizer": "claude",
+        "tier": "low",
+    },
+    "claude-3.5": {
+        "family": "anthropic-claude35",
+        "tokenizer": "claude",
+        "tier": "high",
+    },
+    "gemini-1.5-pro": {
+        "family": "google-gemini",
+        "tokenizer": "gemini",
+        "tier": "high",
+    },
+    "gemini-1.5-flash": {
+        "family": "google-gemini",
+        "tokenizer": "gemini",
+        "tier": "mid",
+    },
 }
 
 

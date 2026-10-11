@@ -1,4 +1,5 @@
 """Analyze baseline data and verify statistical method."""
+
 import json
 import sys
 from pathlib import Path
@@ -21,7 +22,9 @@ meta = baseline_data["metadata"]
 print(f"模型: {meta['model']}")
 print(f"采集时间: {meta['collected_at']}")
 print(f"总请求数: {meta['total_requests']}")
-print(f"失败请求: {meta['failed_requests']} ({meta['failed_requests']/max(meta['total_requests'],1)*100:.1f}%)")
+print(
+    f"失败请求: {meta['failed_requests']} ({meta['failed_requests']/max(meta['total_requests'],1)*100:.1f}%)"
+)
 print(f"耗时: {meta['elapsed_seconds']:.1f}s")
 print()
 
@@ -30,8 +33,10 @@ print("--- Tokenizer 探针数据 ---")
 for probe_id, data in baseline_data["tokenizer"].items():
     if "prompt_tokens" in data:
         pt = data["prompt_tokens"]
-        print(f"  {probe_id}: mean={pt['mean']:.1f}, std={pt['std']:.1f}, "
-              f"min={pt['min']}, max={pt['max']}, n={pt['sample_count']}")
+        print(
+            f"  {probe_id}: mean={pt['mean']:.1f}, std={pt['std']:.1f}, "
+            f"min={pt['min']}, max={pt['max']}, n={pt['sample_count']}"
+        )
 
 print()
 print("--- 行为探针数据（模型指纹核心） ---")
@@ -64,14 +69,18 @@ for probe_id, data in baseline_data["behavioral"].items():
     else:
         random_pct = 10.0
     deviation = pct / max(random_pct, 0.1)
-    print(f"  {probe_id:<23} {top[0]:<15} {pct:.0f}%{'':<5} {random_pct:.1f}%{'':<4} {deviation:.1f}x")
+    print(
+        f"  {probe_id:<23} {top[0]:<15} {pct:.0f}%{'':<5} {random_pct:.1f}%{'':<4} {deviation:.1f}x"
+    )
 
 print()
 print("--- 能力探针数据 ---")
 for probe_id, data in baseline_data["capability"].items():
     responses = data.get("responses", [])
     if responses:
-        print(f"  {probe_id}: n={data['sample_count']}, sample='{responses[0][:50]}...'")
+        print(
+            f"  {probe_id}: n={data['sample_count']}, sample='{responses[0][:50]}...'"
+        )
 
 print()
 print("--- 延迟数据 ---")

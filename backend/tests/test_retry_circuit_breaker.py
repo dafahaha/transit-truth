@@ -1,12 +1,15 @@
 """Tests for CircuitBreaker half-open rate limiting."""
+
 import time
+
 from app.core.retry import CircuitBreaker
 
 
 class TestCircuitBreakerHalfOpen:
     def test_half_open_limits_concurrent_probes(self):
-        cb = CircuitBreaker(failure_threshold=2, recovery_timeout=0.05,
-                            half_open_max_requests=2)
+        cb = CircuitBreaker(
+            failure_threshold=2, recovery_timeout=0.05, half_open_max_requests=2
+        )
         # Trip it.
         cb.record_failure("e1")
         cb.record_failure("e2")
@@ -21,8 +24,9 @@ class TestCircuitBreakerHalfOpen:
         assert cb.can_execute() is False
 
     def test_half_open_success_closes(self):
-        cb = CircuitBreaker(failure_threshold=2, recovery_timeout=0.05,
-                            half_open_max_requests=2)
+        cb = CircuitBreaker(
+            failure_threshold=2, recovery_timeout=0.05, half_open_max_requests=2
+        )
         cb.record_failure("e1")
         cb.record_failure("e2")
         time.sleep(0.06)
@@ -31,8 +35,9 @@ class TestCircuitBreakerHalfOpen:
         assert cb.state == "CLOSED"
 
     def test_half_open_failure_trips_back(self):
-        cb = CircuitBreaker(failure_threshold=2, recovery_timeout=0.05,
-                            half_open_max_requests=2)
+        cb = CircuitBreaker(
+            failure_threshold=2, recovery_timeout=0.05, half_open_max_requests=2
+        )
         cb.record_failure("e1")
         cb.record_failure("e2")
         time.sleep(0.06)
@@ -41,9 +46,10 @@ class TestCircuitBreakerHalfOpen:
         assert cb.state == "OPEN"
 
 
+from datetime import datetime, timedelta, timezone
+
 # ─── Round-2 fix: P2-1 HTTP-date Retry-After ─────────────────────────
 from app.core.retry import parse_retry_after
-from datetime import datetime, timedelta, timezone
 
 
 class TestRetryAfterHeader:
@@ -55,7 +61,9 @@ class TestRetryAfterHeader:
         future = datetime.now(timezone.utc) + timedelta(seconds=60)
         rfc = future.strftime("%a, %d %b %Y %H:%M:%S GMT")
         v = parse_retry_after({"retry-after": rfc})
-        assert v is not None, "HTTP-date Retry-After returned None (datetime NameError?)"
+        assert (
+            v is not None
+        ), "HTTP-date Retry-After returned None (datetime NameError?)"
         assert 0 < v <= 300.0
 
     def test_garbage_retry_after_returns_none(self):

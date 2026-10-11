@@ -3,10 +3,13 @@
 Badges can be embedded in GitHub Profile READMEs to show
 TransitTruth contribution status.
 """
+
 from __future__ import annotations
 
 
-def generate_contributor_badge(username: str, audit_count: int, verified_count: int = 0) -> str:
+def generate_contributor_badge(
+    username: str, audit_count: int, verified_count: int = 0
+) -> str:
     """Generate a contributor badge SVG.
 
     Args:
@@ -39,7 +42,7 @@ def generate_contributor_badge(username: str, audit_count: int, verified_count: 
         color = "#94a3b8"
         bg_color = "#1e293b"
 
-    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="320" height="80" viewBox="0 0 320 80">
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="320" height="80" viewBox="0 0 320 80">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
       <stop offset="0%" style="stop-color:{bg_color};stop-opacity:1" />
@@ -52,7 +55,7 @@ def generate_contributor_badge(username: str, audit_count: int, verified_count: 
   <text x="72" y="32" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#f1f5f9">TransitTruth {level}</text>
   <text x="72" y="52" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8">@{username}</text>
   <text x="72" y="68" font-family="Arial, sans-serif" font-size="11" fill="#64748b">{audit_count} audits · {verified_count} verified</text>
-</svg>'''
+</svg>"""
     return svg
 
 
@@ -67,18 +70,22 @@ def generate_stat_badge(label: str, value: str, color: str = "#2563eb") -> str:
     Returns:
         SVG string
     """
-    svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="160" height="40" viewBox="0 0 160 40">
+    svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="160" height="40" viewBox="0 0 160 40">
   <rect width="160" height="40" rx="6" fill="#1e293b"/>
   <rect width="4" height="40" rx="2" fill="{color}"/>
   <text x="16" y="18" font-family="Arial, sans-serif" font-size="10" fill="#94a3b8">{label}</text>
   <text x="16" y="34" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#f1f5f9">{value}</text>
-</svg>'''
+</svg>"""
     return svg
 
 
-def generate_profile_readme_section(username: str, audit_count: int,
-                                     verified_count: int, relays_audited: int,
-                                     avg_score: float) -> str:
+def generate_profile_readme_section(
+    username: str,
+    audit_count: int,
+    verified_count: int,
+    relays_audited: int,
+    avg_score: float,
+) -> str:
     """Generate a complete Profile README section for TransitTruth contributions.
 
     Args:

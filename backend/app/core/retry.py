@@ -41,6 +41,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RetryStats:
     """重试统计信息"""
+
     attempts: int = 0
     successes: int = 0
     failures: int = 0
@@ -63,6 +64,7 @@ class CircuitBreaker:
     - OPEN：熔断状态，拒绝请求
     - HALF_OPEN：半开状态，允许少量请求尝试
     """
+
     failure_threshold: int = 5  # 连续失败多少次后熔断
     recovery_timeout: float = 60.0  # 熔断后多长时间恢复（秒）
     half_open_max_requests: int = 3  # 半开状态允许的最大请求数
@@ -83,7 +85,9 @@ class CircuitBreaker:
             if time.time() - self._last_failure_time >= self.recovery_timeout:
                 self._state = "HALF_OPEN"
                 self._half_open_requests = 0
-                logger.info(f"Circuit breaker transitioning to HALF_OPEN after {self.recovery_timeout}s recovery")
+                logger.info(
+                    f"Circuit breaker transitioning to HALF_OPEN after {self.recovery_timeout}s recovery"
+                )
                 # Fall through to HALF_OPEN accounting below so that this
                 # transition call itself consumes one probe slot.
             else:
@@ -103,7 +107,9 @@ class CircuitBreaker:
         if self._state == "HALF_OPEN":
             self._state = "CLOSED"
             self._half_open_requests = 0
-            logger.info("Circuit breaker transitioning to CLOSED after success in HALF_OPEN")
+            logger.info(
+                "Circuit breaker transitioning to CLOSED after success in HALF_OPEN"
+            )
 
     def record_failure(self, error: Optional[str] = None):
         """记录失败"""
@@ -113,10 +119,14 @@ class CircuitBreaker:
         if self._state == "HALF_OPEN":
             self._state = "OPEN"
             self._half_open_requests = 0
-            logger.warning(f"Circuit breaker transitioning to OPEN after failure in HALF_OPEN: {error}")
+            logger.warning(
+                f"Circuit breaker transitioning to OPEN after failure in HALF_OPEN: {error}"
+            )
         elif self._consecutive_failures >= self.failure_threshold:
             self._state = "OPEN"
-            logger.warning(f"Circuit breaker OPEN after {self._consecutive_failures} consecutive failures: {error}")
+            logger.warning(
+                f"Circuit breaker OPEN after {self._consecutive_failures} consecutive failures: {error}"
+            )
 
     @property
     def state(self) -> str:
@@ -152,11 +162,16 @@ def is_rate_limit_error(status_code: int, response_body: str = "") -> bool:
 
     body_lower = response_body.lower() if response_body else ""
     rate_limit_keywords = [
-        "rate limit", "rate-limit", "ratelimit",
-        "too many requests", "too many",
-        "quota exceeded", "quota",
+        "rate limit",
+        "rate-limit",
+        "ratelimit",
+        "too many requests",
+        "too many",
+        "quota exceeded",
+        "quota",
         "insufficient quota",
-        "billing", "payment required",
+        "billing",
+        "payment required",
         "429",
     ]
     return any(kw in body_lower for kw in rate_limit_keywords)
@@ -170,7 +185,9 @@ def parse_retry_after(response_headers: dict) -> Optional[float]:
     - 秒数（如 "120"）
     - HTTP日期（如 "Wed, 21 Oct 2015 07:28:00 GMT"）
     """
-    retry_after = response_headers.get("retry-after") or response_headers.get("Retry-After")
+    retry_after = response_headers.get("retry-after") or response_headers.get(
+        "Retry-After"
+    )
     if not retry_after:
         return None
 
@@ -184,6 +201,7 @@ def parse_retry_after(response_headers: dict) -> Optional[float]:
     try:
         # 尝试解析为HTTP日期
         from email.utils import parsedate_to_datetime
+
         dt = parsedate_to_datetime(retry_after)
         now = datetime.now(dt.tzinfo)
         seconds = (dt - now).total_seconds()
@@ -231,8 +249,12 @@ async def retry_with_backoff(
 
         # 检查断路器
         if circuit_breaker and not circuit_breaker.can_execute():
-            logger.warning(f"Circuit breaker is {circuit_breaker.state}, skipping attempt {attempt + 1}")
-            raise RuntimeError(f"Circuit breaker is {circuit_breaker.state}, request blocked")
+            logger.warning(
+                f"Circuit breaker is {circuit_breaker.state}, skipping attempt {attempt + 1}"
+            )
+            raise RuntimeError(
+                f"Circuit breaker is {circuit_breaker.state}, request blocked"
+            )
 
         try:
             result = await func(*args, **kwargs)
@@ -242,7 +264,9 @@ async def retry_with_backoff(
                 circuit_breaker.record_success()
 
             if attempt > 0:
-                logger.info(f"Success on attempt {attempt + 1} after {stats.total_delay_seconds:.1f}s total delay")
+                logger.info(
+                    f"Success on attempt {attempt + 1} after {stats.total_delay_seconds:.1f}s total delay"
+                )
 
             return result
 
@@ -270,10 +294,16 @@ async def retry_with_backoff(
                 retry_after = parse_retry_after(response_headers)
                 if retry_after:
                     delay = retry_after
-                    logger.info(f"Rate limited (429), waiting {delay:.1f}s per Retry-After header")
+                    logger.info(
+                        f"Rate limited (429), waiting {delay:.1f}s per Retry-After header"
+                    )
                 else:
-                    delay = min(delay * backoff_factor * 2, max_delay * 2)  # 限流时加倍延迟
-                    logger.info(f"Rate limited (429), waiting {delay:.1f}s (exponential backoff)")
+                    delay = min(
+                        delay * backoff_factor * 2, max_delay * 2
+                    )  # 限流时加倍延迟
+                    logger.info(
+                        f"Rate limited (429), waiting {delay:.1f}s (exponential backoff)"
+                    )
             else:
                 # 普通错误，指数退避
                 delay = min(delay * backoff_factor, max_delay)
@@ -281,6 +311,7 @@ async def retry_with_backoff(
             # 添加随机抖动（避免惊群效应）
             if jitter:
                 import random
+
                 delay = delay * (0.5 + random.random() * 0.5)
 
             stats.total_delay_seconds += delay
@@ -312,8 +343,8 @@ def sync_retry_with_backoff(
 
     用于不支持async的场景。
     """
-    import time as _time
     import random as _random
+    import time as _time
 
     delay = initial_delay
 
@@ -329,7 +360,9 @@ def sync_retry_with_backoff(
             if jitter:
                 delay = delay * (0.5 + _random.random() * 0.5)
 
-            logger.warning(f"Attempt {attempt + 1}/{max_retries + 1} failed: {e}. Retrying in {delay:.1f}s...")
+            logger.warning(
+                f"Attempt {attempt + 1}/{max_retries + 1} failed: {e}. Retrying in {delay:.1f}s..."
+            )
             _time.sleep(delay)
 
     raise RuntimeError("Unexpected end of retry loop")

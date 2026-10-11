@@ -1,4 +1,5 @@
 """Async HTTP client for API calls."""
+
 import asyncio
 import logging
 import time
@@ -6,7 +7,7 @@ from typing import Optional
 
 import httpx
 
-from ..config import REQUEST_TIMEOUT, MAX_RETRIES
+from ..config import MAX_RETRIES, REQUEST_TIMEOUT
 from .ssrf_guard import guarded_async_client
 
 logger = logging.getLogger(__name__)
@@ -61,10 +62,17 @@ class AsyncAPIClient:
         if status_code == 402:
             return True
         body_lower = body.lower() if body else ""
-        return any(kw in body_lower for kw in [
-            "rate limit", "too many requests", "quota",
-            "insufficient quota", "billing", "429",
-        ])
+        return any(
+            kw in body_lower
+            for kw in [
+                "rate limit",
+                "too many requests",
+                "quota",
+                "insufficient quota",
+                "billing",
+                "429",
+            ]
+        )
 
     def _parse_retry_after(self, headers: dict) -> Optional[float]:
         """解析Retry-After头"""
@@ -77,7 +85,9 @@ class AsyncAPIClient:
         except ValueError:
             return None
 
-    async def _calculate_delay(self, attempt: int, status_code: int, headers: dict) -> float:
+    async def _calculate_delay(
+        self, attempt: int, status_code: int, headers: dict
+    ) -> float:
         """
         计算重试延迟（指数退避 + 限流检测 + 随机抖动）
 
@@ -87,16 +97,20 @@ class AsyncAPIClient:
         """
         import random
 
-        base_delay = min(1.0 * (2 ** attempt), 30.0)  # 指数退避，最大30秒
+        base_delay = min(1.0 * (2**attempt), 30.0)  # 指数退避，最大30秒
 
         if self._is_rate_limit(status_code):
             self._stats["rate_limited"] += 1
             retry_after = self._parse_retry_after(headers)
             if retry_after:
-                logger.info(f"Rate limited (429), waiting {retry_after:.1f}s per Retry-After header")
+                logger.info(
+                    f"Rate limited (429), waiting {retry_after:.1f}s per Retry-After header"
+                )
                 return retry_after
             base_delay = min(base_delay * 2, 60.0)  # 限流时加倍延迟
-            logger.info(f"Rate limited (429), waiting {base_delay:.1f}s (exponential backoff)")
+            logger.info(
+                f"Rate limited (429), waiting {base_delay:.1f}s (exponential backoff)"
+            )
 
         # 添加随机抖动（0.5-1.0倍）
         jitter = 0.5 + random.random() * 0.5
@@ -138,7 +152,9 @@ class AsyncAPIClient:
                     self._stats["successful"] += 1
                     if attempt > 0:
                         self._stats["retries"] += attempt
-                        logger.info(f"Success on attempt {attempt + 1} for model={model}")
+                        logger.info(
+                            f"Success on attempt {attempt + 1} for model={model}"
+                        )
                     return data
                 else:
                     # Do NOT echo the upstream response body back to the caller:
@@ -151,7 +167,9 @@ class AsyncAPIClient:
 
                     # 不可重试的错误（401、400、404等）
                     if not self._is_retryable_status(response.status_code):
-                        logger.warning(f"Non-retryable error {response.status_code} for model={model}: {response.text[:100]}")
+                        logger.warning(
+                            f"Non-retryable error {response.status_code} for model={model}: {response.text[:100]}"
+                        )
                         self._stats["failed"] += 1
                         return {
                             "error": last_error,
@@ -163,7 +181,9 @@ class AsyncAPIClient:
 
                     # 可重试的错误
                     if attempt < MAX_RETRIES:
-                        delay = await self._calculate_delay(attempt, response.status_code, dict(response.headers))
+                        delay = await self._calculate_delay(
+                            attempt, response.status_code, dict(response.headers)
+                        )
                         logger.warning(
                             f"Attempt {attempt + 1}/{MAX_RETRIES + 1} failed for model={model}: "
                             f"status={response.status_code}, retrying in {delay:.1f}s..."
@@ -171,16 +191,22 @@ class AsyncAPIClient:
                         await asyncio.sleep(delay)
                         continue
                     else:
-                        logger.error(f"All {MAX_RETRIES + 1} attempts failed for model={model}: {response.status_code}")
+                        logger.error(
+                            f"All {MAX_RETRIES + 1} attempts failed for model={model}: {response.status_code}"
+                        )
                         self._stats["failed"] += 1
-                        return {"error": last_error or {"error": "max_retries_exceeded"}}
+                        return {
+                            "error": last_error or {"error": "max_retries_exceeded"}
+                        }
 
             except httpx.TimeoutException as e:
                 self._stats["timeouts"] += 1
                 last_error = {"error": "timeout", "message": str(e)}
                 if attempt < MAX_RETRIES:
-                    delay = min(1.0 * (2 ** attempt), 10.0)
-                    logger.warning(f"Timeout on attempt {attempt + 1} for model={model}, retrying in {delay:.1f}s...")
+                    delay = min(1.0 * (2**attempt), 10.0)
+                    logger.warning(
+                        f"Timeout on attempt {attempt + 1} for model={model}, retrying in {delay:.1f}s..."
+                    )
                     await asyncio.sleep(delay)
                 else:
                     logger.error(f"All attempts timed out for model={model}")
@@ -189,11 +215,15 @@ class AsyncAPIClient:
             except httpx.RequestError as e:
                 last_error = {"error": "request_error", "message": str(e)}
                 if attempt < MAX_RETRIES:
-                    delay = min(1.0 * (2 ** attempt), 10.0)
-                    logger.warning(f"Request error on attempt {attempt + 1} for model={model}: {e}, retrying in {delay:.1f}s...")
+                    delay = min(1.0 * (2**attempt), 10.0)
+                    logger.warning(
+                        f"Request error on attempt {attempt + 1} for model={model}: {e}, retrying in {delay:.1f}s..."
+                    )
                     await asyncio.sleep(delay)
                 else:
-                    logger.error(f"All attempts failed with request error for model={model}: {e}")
+                    logger.error(
+                        f"All attempts failed with request error for model={model}: {e}"
+                    )
                     self._stats["failed"] += 1
 
         return {"error": last_error or {"error": "unknown"}}

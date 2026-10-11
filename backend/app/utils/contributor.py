@@ -12,13 +12,13 @@ Security:
 - Server-side mode requires explicit configuration and is opt-in
 - All contributions are publicly visible as GitHub Issues
 """
+
 import json
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Optional
 
 import httpx
-
 
 GITHUB_API_BASE = "https://api.github.com"
 DEFAULT_REPO = "dafahaha/transit-truth"
@@ -27,6 +27,7 @@ DEFAULT_REPO = "dafahaha/transit-truth"
 @dataclass
 class ContributionResult:
     """Result of a contribution attempt."""
+
     success: bool
     issue_url: Optional[str] = None
     issue_number: Optional[int] = None
@@ -45,10 +46,13 @@ class GitHubContributor:
             "Content-Type": "application/json",
         }
 
-    async def contribute_audit(self, audit_result: dict,
-                                 contributor_name: Optional[str] = None,
-                                 anonymous: bool = False,
-                                 labels: Optional[list[str]] = None) -> ContributionResult:
+    async def contribute_audit(
+        self,
+        audit_result: dict,
+        contributor_name: Optional[str] = None,
+        anonymous: bool = False,
+        labels: Optional[list[str]] = None,
+    ) -> ContributionResult:
         """Contribute an audit result by creating a GitHub Issue.
 
         Args:
@@ -124,9 +128,9 @@ class GitHubContributor:
                 error=f"创建 Issue 失败: {str(e)}",
             )
 
-    def _build_issue_body(self, audit_result: dict,
-                            contributor_name: Optional[str],
-                            anonymous: bool) -> str:
+    def _build_issue_body(
+        self, audit_result: dict, contributor_name: Optional[str], anonymous: bool
+    ) -> str:
         """Build GitHub Issue body from audit result template."""
         tc = audit_result.get("token_comparison", {}) or {}
         fp = audit_result.get("fingerprint", {}) or {}
@@ -194,11 +198,14 @@ class GitHubContributor:
 
 # ─── Convenience functions ────────────────────────────────────
 
-async def contribute_audit_result(audit_result: dict,
-                                    github_token: str,
-                                    contributor_name: Optional[str] = None,
-                                    anonymous: bool = False,
-                                    repo: str = DEFAULT_REPO) -> ContributionResult:
+
+async def contribute_audit_result(
+    audit_result: dict,
+    github_token: str,
+    contributor_name: Optional[str] = None,
+    anonymous: bool = False,
+    repo: str = DEFAULT_REPO,
+) -> ContributionResult:
     """One-click contribute an audit result to the public ranking.
 
     Usage:

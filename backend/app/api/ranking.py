@@ -1,7 +1,9 @@
 """Ranking API endpoints."""
+
 from typing import Optional
 
 from fastapi import APIRouter, Query
+
 from ..database import get_rankings
 
 router = APIRouter(prefix="/api/ranking", tags=["ranking"])

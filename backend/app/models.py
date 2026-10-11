@@ -1,7 +1,9 @@
 """Data models for audit results."""
+
 from datetime import datetime
 from enum import Enum
 from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -22,6 +24,7 @@ class CheckType(str, Enum):
 
 class CheckResult(BaseModel):
     """Result of a single check."""
+
     check_type: CheckType
     name: str
     passed: bool
@@ -38,6 +41,7 @@ class TokenComparison(BaseModel):
     represent "discrepancy" — the difference may include legitimate chat
     template overhead. See discrepancy_note for details.
     """
+
     prompt_tokens_reported: int
     prompt_tokens_expected: Optional[int] = None
     completion_tokens_reported: int
@@ -52,6 +56,7 @@ class TokenComparison(BaseModel):
 
 class FingerprintResult(BaseModel):
     """Model fingerprint result."""
+
     claimed_model: str
     detected_family: Optional[str] = None
     family_match: bool
@@ -68,12 +73,23 @@ class AuditMode(str, Enum):
 
 class AuditRequest(BaseModel):
     """Request to start an audit."""
+
     api_key: str = Field(..., description="API key for the relay service")
     base_url: str = Field(..., description="Base URL of the relay API")
     model: str = Field(..., description="Model name to audit")
-    official_api_key: Optional[str] = Field(None, description="Official API key for comparison (optional)")
-    mode: AuditMode = Field(default=AuditMode.DEEP, description="Audit mode: quick (3 probes, ~10s) or deep (10 probes, ~60s)")
-    probe_count: Optional[int] = Field(None, ge=1, le=50, description="Override probe count (optional, uses mode default if not set)")
+    official_api_key: Optional[str] = Field(
+        None, description="Official API key for comparison (optional)"
+    )
+    mode: AuditMode = Field(
+        default=AuditMode.DEEP,
+        description="Audit mode: quick (3 probes, ~10s) or deep (10 probes, ~60s)",
+    )
+    probe_count: Optional[int] = Field(
+        None,
+        ge=1,
+        le=50,
+        description="Override probe count (optional, uses mode default if not set)",
+    )
     run_token_check: bool = True
     run_fingerprint: bool = True
     run_latency: bool = True
@@ -82,6 +98,7 @@ class AuditRequest(BaseModel):
 
 class AuditResult(BaseModel):
     """Complete audit result."""
+
     audit_id: str
     status: AuditStatus
     model: str
@@ -101,6 +118,7 @@ class AuditResult(BaseModel):
 
 class RankingEntry(BaseModel):
     """Entry in the public ranking."""
+
     relay_name: str
     base_url: str
     model: str

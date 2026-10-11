@@ -1,4 +1,5 @@
 """Main audit engine - orchestrates all checks."""
+
 import logging
 import uuid
 from datetime import datetime
@@ -14,8 +15,8 @@ from ..models import (
 from ..utils.http_client import AsyncAPIClient
 from .fingerprint import ModelFingerprinter
 from .latency_protocol import LatencyChecker, ProtocolChecker
-from .token_check import TokenVerifier
 from .randomized_probes import generate_randomized_probes
+from .token_check import TokenVerifier
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,11 @@ class AuditEngine:
                     # Never echo the upstream response body back to the caller
                     # (SSRF read-back); only report the status code.
                     err = avail.get("error", {})
-                    status_code = err.get("status_code", "unknown") if isinstance(err, dict) else "unknown"
+                    status_code = (
+                        err.get("status_code", "unknown")
+                        if isinstance(err, dict)
+                        else "unknown"
+                    )
                     result.error = f"API unavailable (HTTP {status_code})"
                     result.completed_at = datetime.now()
                     return result
@@ -77,17 +82,28 @@ class AuditEngine:
                     # with `async with` so its httpx session is opened/closed.
                     official_base = (
                         self._get_official_base(request.model)
-                        if request.official_api_key else None
+                        if request.official_api_key
+                        else None
                     )
                     if official_base:
-                        async with AsyncAPIClient(request.official_api_key, official_base) as official_client:
-                            token_result = await verifier.verify(official_client=official_client)
+                        async with AsyncAPIClient(
+                            request.official_api_key, official_base
+                        ) as official_client:
+                            token_result = await verifier.verify(
+                                official_client=official_client
+                            )
                     else:
                         token_result = await verifier.verify(official_client=None)
                     result.token_comparison = token_result
 
                     token_check.passed = not token_result.suspicious
-                    token_check.score = 100 if not token_result.suspicious else max(0, 100 - abs(token_result.prompt_inflation_pct or 0) * 2)
+                    token_check.score = (
+                        100
+                        if not token_result.suspicious
+                        else max(
+                            0, 100 - abs(token_result.prompt_inflation_pct or 0) * 2
+                        )
+                    )
                     token_check.details = self._token_summary(token_result)
                     token_check.evidence = token_result.model_dump()
 
@@ -104,21 +120,30 @@ class AuditEngine:
 
                     # Generate randomized probes to prevent relay defense
                     randomized_probes, probe_seed = generate_randomized_probes()
-                    fingerprinter = ModelFingerprinter(client, request.model, custom_probes=randomized_probes)
-                    await fingerprinter.run_tokenizer_probes(count=min(8, request.probe_count))
+                    fingerprinter = ModelFingerprinter(
+                        client, request.model, custom_probes=randomized_probes
+                    )
+                    await fingerprinter.run_tokenizer_probes(
+                        count=min(8, request.probe_count)
+                    )
                     # Behavioral probes need more samples to detect fingerprints
                     # (e.g., gpt-4o-mini returns "7" 100% for 1-10 selection)
                     behavioral_samples = 10 if request.mode == "deep" else 5
                     await fingerprinter.run_behavioral_probes(
-                        count=min(6, request.probe_count),
-                        samples=behavioral_samples
+                        count=min(6, request.probe_count), samples=behavioral_samples
                     )
-                    await fingerprinter.run_capability_probes(count=min(6, request.probe_count))
+                    await fingerprinter.run_capability_probes(
+                        count=min(6, request.probe_count)
+                    )
                     fp_result = fingerprinter.analyze()
                     result.fingerprint = fp_result
 
                     fp_check.passed = not fp_result.suspicious
-                    fp_check.score = 100 if not fp_result.suspicious else max(0, 100 - fp_result.confidence * 50)
+                    fp_check.score = (
+                        100
+                        if not fp_result.suspicious
+                        else max(0, 100 - fp_result.confidence * 50)
+                    )
                     fp_check.details = self._fingerprint_summary(fp_result)
                     fp_check.evidence = {
                         "claimed_model": fp_result.claimed_model,
@@ -126,7 +151,13 @@ class AuditEngine:
                         "family_match": fp_result.family_match,
                         "confidence": fp_result.confidence,
                         "suspicious": fp_result.suspicious,
-                        "capability_tier": fp_result.tokenizer_signature.get("capability_tier", "unknown") if hasattr(fp_result, 'tokenizer_signature') else "unknown",
+                        "capability_tier": (
+                            fp_result.tokenizer_signature.get(
+                                "capability_tier", "unknown"
+                            )
+                            if hasattr(fp_result, "tokenizer_signature")
+                            else "unknown"
+                        ),
                     }
 
                 # 3. Latency check
@@ -145,10 +176,15 @@ class AuditEngine:
 
                     # Score: lower latency and lower error rate = better
                     error_penalty = lat_result["error_rate"] * 50
-                    latency_penalty = min(lat_result["avg_latency_ms"] / 100, 30)  # Cap at 30
+                    latency_penalty = min(
+                        lat_result["avg_latency_ms"] / 100, 30
+                    )  # Cap at 30
                     lat_score = max(0, 100 - error_penalty - latency_penalty)
 
-                    lat_check.passed = lat_result["error_rate"] < 0.2 and lat_result["avg_latency_ms"] < 10000
+                    lat_check.passed = (
+                        lat_result["error_rate"] < 0.2
+                        and lat_result["avg_latency_ms"] < 10000
+                    )
                     lat_check.score = round(lat_score, 1)
                     lat_check.details = (
                         f"Avg: {lat_result['avg_latency_ms']}ms, "
@@ -176,12 +212,16 @@ class AuditEngine:
                     proto_check.passed = summary.get("score", 0) >= 70
                     proto_check.score = summary.get("score", 0)
                     proto_check.details = f"{summary.get('passed', 0)}/{summary.get('total', 0)} checks passed"
-                    proto_check.evidence = {k: v for k, v in proto_result.items() if k != "_summary"}
+                    proto_check.evidence = {
+                        k: v for k, v in proto_result.items() if k != "_summary"
+                    }
 
                 # Calculate overall score
                 result.checks = checks
                 if checks:
-                    result.overall_score = round(sum(c.score for c in checks) / len(checks), 1)
+                    result.overall_score = round(
+                        sum(c.score for c in checks) / len(checks), 1
+                    )
                 result.trust_level = self._trust_level(result.overall_score, checks)
                 result.summary = self._generate_summary(result)
                 result.recommendations = self._generate_recommendations(result)
@@ -189,6 +229,7 @@ class AuditEngine:
                 # Add model reference data (公开权威数据对比)
                 try:
                     from app.core.model_reference import get_model_reference
+
                     ref = get_model_reference(result.model)
                     if ref:
                         result.model_reference = {
@@ -210,7 +251,9 @@ class AuditEngine:
                 except Exception:
                     # Reference data is optional; never let it fail the audit,
                     # but record the failure instead of silently swallowing it.
-                    logger.exception("Failed to attach model reference data for %s", result.model)
+                    logger.exception(
+                        "Failed to attach model reference data for %s", result.model
+                    )
 
                 result.status = AuditStatus.COMPLETED
                 result.completed_at = datetime.now()
@@ -236,11 +279,17 @@ class AuditEngine:
     def _token_summary(self, token_result) -> str:
         parts = [f"Reported: {token_result.total_tokens_reported} tokens"]
         if token_result.prompt_inflation_pct is not None:
-            parts.append(f"Prompt discrepancy: {token_result.prompt_inflation_pct:+.1f}%")
+            parts.append(
+                f"Prompt discrepancy: {token_result.prompt_inflation_pct:+.1f}%"
+            )
         if token_result.completion_inflation_pct is not None:
-            parts.append(f"Completion discrepancy: {token_result.completion_inflation_pct:+.1f}%")
+            parts.append(
+                f"Completion discrepancy: {token_result.completion_inflation_pct:+.1f}%"
+            )
         if token_result.chat_template_overhead > 0:
-            parts.append(f"Chat template est.: {token_result.chat_template_overhead} tokens")
+            parts.append(
+                f"Chat template est.: {token_result.chat_template_overhead} tokens"
+            )
         if token_result.suspicious:
             parts.append("⚠ SUSPICIOUS (adjusted for chat template)")
         return " | ".join(parts)
@@ -275,11 +324,15 @@ class AuditEngine:
     def _generate_summary(self, result: AuditResult) -> str:
         """Generate human-readable summary."""
         parts = [f"Audit of {result.model} at {result.base_url}"]
-        parts.append(f"Overall score: {result.overall_score}/100 ({result.trust_level} trust)")
+        parts.append(
+            f"Overall score: {result.overall_score}/100 ({result.trust_level} trust)"
+        )
 
         for check in result.checks:
             status = "✓" if check.passed else "✗"
-            parts.append(f"  {status} {check.name}: {check.score}/100 - {check.details}")
+            parts.append(
+                f"  {status} {check.name}: {check.score}/100 - {check.details}"
+            )
 
         if result.token_comparison and result.token_comparison.suspicious:
             parts.append("⚠ Token count inflation detected!")
@@ -315,7 +368,9 @@ class AuditEngine:
             )
 
         # High latency - specific thresholds
-        latency_checks = [c for c in result.checks if c.check_type == CheckType.RESPONSE_LATENCY]
+        latency_checks = [
+            c for c in result.checks if c.check_type == CheckType.RESPONSE_LATENCY
+        ]
         if latency_checks and not latency_checks[0].passed:
             recs.append(
                 "⚠ 延迟过高或错误率高 - 不适合生产环境。"
@@ -325,7 +380,9 @@ class AuditEngine:
             )
 
         # Protocol non-compliance
-        proto_checks = [c for c in result.checks if c.check_type == CheckType.PROTOCOL_COMPLIANCE]
+        proto_checks = [
+            c for c in result.checks if c.check_type == CheckType.PROTOCOL_COMPLIANCE
+        ]
         if proto_checks and proto_checks[0].score < 70:
             recs.append(
                 "⚠ API 协议不兼容 - 可能缺少 usage 字段或 model 回显。"
@@ -335,7 +392,9 @@ class AuditEngine:
             )
 
         # Capability test failure
-        cap_checks = [c for c in result.checks if c.check_type == CheckType.CAPABILITY_TEST]
+        cap_checks = [
+            c for c in result.checks if c.check_type == CheckType.CAPABILITY_TEST
+        ]
         if cap_checks and cap_checks[0].score < 60:
             recs.append(
                 "⚠ 能力测试失败率高 - 模型可能被降级。"

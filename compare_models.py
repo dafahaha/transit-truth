@@ -3,6 +3,7 @@
 This script analyzes the differences between two models' behavioral fingerprints
 to determine whether they can be distinguished.
 """
+
 import json
 import sys
 from collections import Counter
@@ -93,7 +94,9 @@ def main():
         lat = data["latency_overall"]
         print(f"  {name}:")
         print(f"    Total requests: {meta['total_requests']}")
-        print(f"    Failed: {meta['failed_requests']} ({meta['failed_requests']/max(meta['total_requests'],1)*100:.1f}%)")
+        print(
+            f"    Failed: {meta['failed_requests']} ({meta['failed_requests']/max(meta['total_requests'],1)*100:.1f}%)"
+        )
         print(f"    Avg latency: {lat['mean']:.0f}ms")
         print(f"    P95 latency: {lat['p95']:.0f}ms")
         print(f"    Collection time: {meta['elapsed_seconds']:.0f}s")
@@ -119,7 +122,9 @@ def main():
             tok_same += 1
         tok_total += 1
         print(f"  {probe_id:<23} {m1:<15.1f} {m2:<15.1f} {same}")
-    print(f"\n  Tokenizer match rate: {tok_same}/{tok_total} ({tok_same/max(tok_total,1)*100:.0f}%)")
+    print(
+        f"\n  Tokenizer match rate: {tok_same}/{tok_total} ({tok_same/max(tok_total,1)*100:.0f}%)"
+    )
     print("  → Expected: same tokenizer (o200k), so all should match")
     print()
 
@@ -128,7 +133,9 @@ def main():
     print("BEHAVIORAL FINGERPRINT COMPARISON (CORE FINDING)")
     print("=" * 80)
     print()
-    print(f"{'Probe':<22} {'gpt-4o-mini Top':<18} {'gpt-4o Top':<18} {'Same?':<7} {'χ²':<8} {'p-value':<10} {'Disc.':<7}")
+    print(
+        f"{'Probe':<22} {'gpt-4o-mini Top':<18} {'gpt-4o Top':<18} {'Same?':<7} {'χ²':<8} {'p-value':<10} {'Disc.':<7}"
+    )
     print("-" * 95)
 
     discriminative_probes = []
@@ -161,11 +168,17 @@ def main():
 
         p_str = f"{p_value:.4f}" if p_value > 0.0001 else "<0.0001"
         sig_mark = " *" if significant else ""
-        print(f"  {probe_id:<20} {top1[0]:<18} {top2[0]:<18} {same:<7} {chi2:<8.1f} {p_str:<10} {disc_power:<7.3f}{sig_mark}")
+        print(
+            f"  {probe_id:<20} {top1[0]:<18} {top2[0]:<18} {same:<7} {chi2:<8.1f} {p_str:<10} {disc_power:<7.3f}{sig_mark}"
+        )
 
     print()
-    print(f"  Same top preference: {same_preference}/{total_probes} ({same_preference/max(total_probes,1)*100:.0f}%)")
-    print(f"  Statistically significant differences: {len(discriminative_probes)}/{total_probes}")
+    print(
+        f"  Same top preference: {same_preference}/{total_probes} ({same_preference/max(total_probes,1)*100:.0f}%)"
+    )
+    print(
+        f"  Statistically significant differences: {len(discriminative_probes)}/{total_probes}"
+    )
     print()
 
     # ─── Most Discriminative Probes ────────────────────────────
@@ -204,21 +217,29 @@ def main():
     print("1. TOKENIZER: gpt-4o and gpt-4o-mini share the same tokenizer (o200k).")
     print("   → Tokenizer fingerprinting CANNOT distinguish them.")
     print()
-    print(f"2. BEHAVIORAL: {len(discriminative_probes)}/{total_probes} probes show statistically")
+    print(
+        f"2. BEHAVIORAL: {len(discriminative_probes)}/{total_probes} probes show statistically"
+    )
     print("   significant differences between gpt-4o and gpt-4o-mini.")
     print(f"   → Behavioral fingerprinting CAN distinguish them!")
     if discriminative_probes:
         best = discriminative_probes[0]
         print(f"   → Best discriminator: {best[0]} (TVD={best[1]:.3f})")
     print()
-    print("3. LATENCY: gpt-4o is faster than gpt-4o-mini on this relay (1595ms vs 2185ms).")
+    print(
+        "3. LATENCY: gpt-4o is faster than gpt-4o-mini on this relay (1595ms vs 2185ms)."
+    )
     print("   → This may be due to relay routing, not inherent model speed.")
     print()
-    print("4. CAPABILITY: Both models pass easy/medium probes, but differ on hard probes.")
+    print(
+        "4. CAPABILITY: Both models pass easy/medium probes, but differ on hard probes."
+    )
     print("   → gpt-4o-mini: reasoning-chain correct (5), gpt-4o: incorrect (10)")
     print("   → This is surprising and worth further investigation.")
     print()
-    print("CONCLUSION: Behavioral fingerprinting is the ONLY method that can distinguish")
+    print(
+        "CONCLUSION: Behavioral fingerprinting is the ONLY method that can distinguish"
+    )
     print("gpt-4o from gpt-4o-mini without access to official APIs. This validates our")
     print("approach and provides a strong foundation for API relay verification.")
     print()

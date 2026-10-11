@@ -3,18 +3,19 @@
 Converted from the old print-script `backend/test_new_features.py` into
 real pytest cases so they are collected and run in CI.
 """
-from app.core.detect import detect_base_url, suggest_relays, KNOWN_RELAYS
+
+from app.core.detect import KNOWN_RELAYS, detect_base_url, suggest_relays
+from app.utils.badge_generator import (
+    generate_contributor_badge,
+    generate_profile_readme_section,
+    generate_stat_badge,
+)
 from app.utils.ranking_aggregator import (
     AuditEntry,
     aggregate_audits,
     detect_anomalies,
     generate_ranking_json,
     get_top_contributors,
-)
-from app.utils.badge_generator import (
-    generate_contributor_badge,
-    generate_stat_badge,
-    generate_profile_readme_section,
 )
 
 
@@ -37,12 +38,24 @@ class TestDetect:
 class TestRankingAggregator:
     def test_aggregate_and_ranking_json(self):
         entries = [
-            AuditEntry(relay="r1", model="gpt-4o-mini", base_url="https://r1/v1",
-                       overall_score=55.7, trust_level="critical",
-                       token_inflation_pct=76.1, contributor="alice"),
-            AuditEntry(relay="r1", model="gpt-4o", base_url="https://r1/v1",
-                       overall_score=57.5, trust_level="critical",
-                       token_inflation_pct=76.1, contributor="alice"),
+            AuditEntry(
+                relay="r1",
+                model="gpt-4o-mini",
+                base_url="https://r1/v1",
+                overall_score=55.7,
+                trust_level="critical",
+                token_inflation_pct=76.1,
+                contributor="alice",
+            ),
+            AuditEntry(
+                relay="r1",
+                model="gpt-4o",
+                base_url="https://r1/v1",
+                overall_score=57.5,
+                trust_level="critical",
+                token_inflation_pct=76.1,
+                contributor="alice",
+            ),
         ]
         aggregated = aggregate_audits(entries)
         ranking = generate_ranking_json(aggregated)
@@ -51,12 +64,24 @@ class TestRankingAggregator:
 
     def test_top_contributors(self):
         entries = [
-            AuditEntry(relay="r1", model="m1", base_url="https://r1/v1",
-                       overall_score=80.0, trust_level="high",
-                       token_inflation_pct=0.0, contributor="alice"),
-            AuditEntry(relay="r2", model="m1", base_url="https://r2/v1",
-                       overall_score=70.0, trust_level="medium",
-                       token_inflation_pct=5.0, contributor="bob"),
+            AuditEntry(
+                relay="r1",
+                model="m1",
+                base_url="https://r1/v1",
+                overall_score=80.0,
+                trust_level="high",
+                token_inflation_pct=0.0,
+                contributor="alice",
+            ),
+            AuditEntry(
+                relay="r2",
+                model="m1",
+                base_url="https://r2/v1",
+                overall_score=70.0,
+                trust_level="medium",
+                token_inflation_pct=5.0,
+                contributor="bob",
+            ),
         ]
         top = get_top_contributors(entries)
         assert len(top) >= 1
@@ -66,10 +91,20 @@ class TestRankingAggregator:
         # Regression: Counter was used at ranking_aggregator.py:121 but never
         # imported, so any group with >=2 entries crashed with NameError.
         entries = [
-            AuditEntry(relay="r1", model="m1", base_url="https://r1/v1",
-                       overall_score=50.0, trust_level="medium"),
-            AuditEntry(relay="r1", model="m1", base_url="https://r1/v1",
-                       overall_score=55.0, trust_level="medium"),
+            AuditEntry(
+                relay="r1",
+                model="m1",
+                base_url="https://r1/v1",
+                overall_score=50.0,
+                trust_level="medium",
+            ),
+            AuditEntry(
+                relay="r1",
+                model="m1",
+                base_url="https://r1/v1",
+                overall_score=55.0,
+                trust_level="medium",
+            ),
         ]
         anomalies = detect_anomalies(entries)
         assert isinstance(anomalies, list)

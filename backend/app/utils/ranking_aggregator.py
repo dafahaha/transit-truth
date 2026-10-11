@@ -3,6 +3,7 @@
 Processes audit results from GitHub Issues, calculates medians,
 detects anomalies, and determines verified/preliminary status.
 """
+
 from __future__ import annotations
 
 import json
@@ -15,6 +16,7 @@ from typing import Optional
 @dataclass
 class AuditEntry:
     """A single audit result."""
+
     relay: str
     model: str
     base_url: str
@@ -31,6 +33,7 @@ class AuditEntry:
 @dataclass
 class AggregatedEntry:
     """Aggregated result for a relay+model combination."""
+
     relay: str
     model: str
     base_url: str
@@ -179,10 +182,20 @@ def aggregate_audits(entries: list[AuditEntry]) -> list[AggregatedEntry]:
     aggregated = []
     for (relay, model), group_entries in groups.items():
         scores = [e.overall_score for e in group_entries]
-        token_inflations = [e.token_inflation_pct for e in group_entries if e.token_inflation_pct is not None]
-        latencies = [e.avg_latency_ms for e in group_entries if e.avg_latency_ms is not None]
+        token_inflations = [
+            e.token_inflation_pct
+            for e in group_entries
+            if e.token_inflation_pct is not None
+        ]
+        latencies = [
+            e.avg_latency_ms for e in group_entries if e.avg_latency_ms is not None
+        ]
         contributors = list(set(e.contributor for e in group_entries if e.contributor))
-        last_audited = max(e.tested_at for e in group_entries if e.tested_at) if any(e.tested_at for e in group_entries) else ""
+        last_audited = (
+            max(e.tested_at for e in group_entries if e.tested_at)
+            if any(e.tested_at for e in group_entries)
+            else ""
+        )
 
         agg = AggregatedEntry(
             relay=relay,
@@ -190,7 +203,9 @@ def aggregate_audits(entries: list[AuditEntry]) -> list[AggregatedEntry]:
             base_url=group_entries[0].base_url,
             audit_count=len(group_entries),
             median_score=statistics.median(scores),
-            median_token_inflation=statistics.median(token_inflations) if token_inflations else None,
+            median_token_inflation=(
+                statistics.median(token_inflations) if token_inflations else None
+            ),
             median_latency=statistics.median(latencies) if latencies else None,
             verified=len(group_entries) >= 3,
             contributors=contributors,
@@ -219,8 +234,14 @@ def generate_ranking_json(aggregated: list[AggregatedEntry]) -> dict:
                 "base_url": a.base_url,
                 "audit_count": a.audit_count,
                 "median_score": round(a.median_score, 1),
-                "median_token_inflation": round(a.median_token_inflation, 1) if a.median_token_inflation is not None else None,
-                "median_latency_ms": round(a.median_latency, 1) if a.median_latency is not None else None,
+                "median_token_inflation": (
+                    round(a.median_token_inflation, 1)
+                    if a.median_token_inflation is not None
+                    else None
+                ),
+                "median_latency_ms": (
+                    round(a.median_latency, 1) if a.median_latency is not None else None
+                ),
                 "verified": a.verified,
                 "contributors": a.contributors,
                 "last_audited": a.last_audited,
@@ -259,26 +280,31 @@ def get_top_contributors(entries: list[AuditEntry], top_n: int = 10) -> list[dic
             verified_count=data["verified_count"],
             unique_relays=len(data["relays"]),
         )
-        contributors.append({
-            "contributor": name,
-            "audit_count": data["audit_count"],
-            "verified_count": data["verified_count"],
-            "unique_relays": len(data["relays"]),
-            "reputation_score": reputation,
-            "reputation_level": get_reputation_level(reputation),
-        })
+        contributors.append(
+            {
+                "contributor": name,
+                "audit_count": data["audit_count"],
+                "verified_count": data["verified_count"],
+                "unique_relays": len(data["relays"]),
+                "reputation_score": reputation,
+                "reputation_level": get_reputation_level(reputation),
+            }
+        )
 
     # Sort by reputation score (then by audit count)
-    contributors.sort(key=lambda x: (x["reputation_score"], x["audit_count"]), reverse=True)
+    contributors.sort(
+        key=lambda x: (x["reputation_score"], x["audit_count"]), reverse=True
+    )
 
-    return [
-        {"rank": i + 1, **c}
-        for i, c in enumerate(contributors[:top_n])
-    ]
+    return [{"rank": i + 1, **c} for i, c in enumerate(contributors[:top_n])]
 
 
-def calculate_reputation(audit_count: int, verified_count: int = 0,
-                         unique_relays: int = 0, anomaly_count: int = 0) -> float:
+def calculate_reputation(
+    audit_count: int,
+    verified_count: int = 0,
+    unique_relays: int = 0,
+    anomaly_count: int = 0,
+) -> float:
     """Calculate contributor reputation score (0-100).
 
     Reputation factors:
@@ -317,8 +343,9 @@ def get_reputation_level(reputation: float) -> str:
         return "Unknown"
 
 
-def aggregate_with_reputation(entries: list[AuditEntry],
-                               contributor_reputations: dict[str, float] | None = None) -> list[AggregatedEntry]:
+def aggregate_with_reputation(
+    entries: list[AuditEntry], contributor_reputations: dict[str, float] | None = None
+) -> list[AggregatedEntry]:
     """Aggregate audits with contributor reputation weighting.
 
     Entries from higher-reputation contributors get higher weight
@@ -346,12 +373,28 @@ def aggregate_with_reputation(entries: list[AuditEntry],
 if __name__ == "__main__":
     # Example usage with mock data
     mock_entries = [
-        AuditEntry(relay="wolfai.top", model="gpt-4o-mini", base_url="https://wolfai.top/v1",
-                   overall_score=55.7, trust_level="critical", token_inflation_pct=76.1,
-                   avg_latency_ms=1856, contributor="@dafahaha", tested_at="2026-09-14"),
-        AuditEntry(relay="wolfai.top", model="gpt-4o", base_url="https://wolfai.top/v1",
-                   overall_score=57.5, trust_level="critical", token_inflation_pct=76.1,
-                   avg_latency_ms=1161, contributor="@dafahaha", tested_at="2026-09-14"),
+        AuditEntry(
+            relay="wolfai.top",
+            model="gpt-4o-mini",
+            base_url="https://wolfai.top/v1",
+            overall_score=55.7,
+            trust_level="critical",
+            token_inflation_pct=76.1,
+            avg_latency_ms=1856,
+            contributor="@dafahaha",
+            tested_at="2026-09-14",
+        ),
+        AuditEntry(
+            relay="wolfai.top",
+            model="gpt-4o",
+            base_url="https://wolfai.top/v1",
+            overall_score=57.5,
+            trust_level="critical",
+            token_inflation_pct=76.1,
+            avg_latency_ms=1161,
+            contributor="@dafahaha",
+            tested_at="2026-09-14",
+        ),
     ]
 
     aggregated = aggregate_audits(mock_entries)

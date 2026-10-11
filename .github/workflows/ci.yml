@@ -48,10 +48,23 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install flake8
-        run: pip install flake8
+      # Pinned to the versions the repo was formatted with so CI can never
+      # drift on formatting rules.
+      - name: Install linters
+        run: pip install black==26.10.1 isort==9.0.2 flake8
 
-      - name: Run flake8
+      # Hard gates: the whole repo must stay formatted.
+      - name: black --check
+        run: black --check .
+
+      - name: isort --check-only
+        run: isort --check-only .
+
+      # flake8 is intentionally non-blocking: the pre-existing baseline of
+      # violations (mostly long strings/comments) has not yet been cleared.
+      # The count is recorded in docs; do not let it grow.
+      - name: flake8 (baseline, non-blocking)
         run: |
           cd backend
-          flake8 app/ --max-line-length=120 --extend-ignore=E203,W503 || true
+          flake8 app/ --max-line-length=120 --extend-ignore=E203,W503 \
+            || echo "::warning::flake8 still above the pre-existing baseline (see fixes_transit_round1.md); not yet a hard gate"

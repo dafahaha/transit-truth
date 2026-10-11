@@ -14,6 +14,7 @@ Closes the three "silent defense degradation" findings plus the CGNAT gap:
 
 Everything runs offline on localhost.
 """
+
 import asyncio
 import json
 import threading
@@ -28,8 +29,8 @@ from app.utils.ssrf_guard import (
     _is_blocked_ip,
 )
 
-
 # ─── S-1: guarded backend installation is proven, not assumed ──────────────
+
 
 def test_guarded_backend_installed_on_pool():
     # Mutation M11 (deleting the whole backend swap) used to pass the suite:
@@ -115,6 +116,7 @@ def test_guarded_backend_is_on_live_connection_path(monkeypatch):
 
 # ─── S-2: real-path upstream body non-disclosure ──────────────────────────
 
+
 def _scrubbed_values(obj):
     """Yield every leaf string / every dict key in *obj* (recursively)."""
     if isinstance(obj, dict):
@@ -186,42 +188,49 @@ def test_real_upstream_error_body_never_reaches_caller(monkeypatch):
 
 # ─── S-4: RFC6598 CGNAT and special-range coverage ─────────────────────────
 
-@pytest.mark.parametrize("address", [
-    # CGNAT boundaries (must be blocked)
-    "100.64.0.0",          # network address
-    "100.64.0.1",          # the originally-reported gap
-    "100.127.255.255",    # broadcast edge of 100.64.0.0/10
-    "::ffff:100.64.0.1",  # IPv4-mapped IPv6 form of the same gap
-    # regression: previously-covered non-public ranges stay blocked
-    "127.0.0.1",
-    "::1",
-    "169.254.169.254",
-    "::ffff:169.254.169.254",
-    "0.0.0.0",
-    "0.1.2.3",            # 0.0.0.0/8 host
-    "10.0.0.1",
-    "172.16.0.2",
-    "192.168.1.10",
-    "192.0.2.1",          # TEST-NET-1
-    "198.51.100.1",       # TEST-NET-2
-    "203.0.113.1",        # TEST-NET-3
-    "fe80::1",            # IPv6 link-local
-    "fc00::1",            # IPv6 ULA
-    "fd12::dead:beef",
-    # encoding forms the URL layer may hand to the guard (fail closed)
-    "2130706433",         # decimal 127.0.0.1
-    "0x7f000001",         # hex 127.0.0.1
-    "0177.0.0.1",         # octal 127.0.0.1
-])
+
+@pytest.mark.parametrize(
+    "address",
+    [
+        # CGNAT boundaries (must be blocked)
+        "100.64.0.0",  # network address
+        "100.64.0.1",  # the originally-reported gap
+        "100.127.255.255",  # broadcast edge of 100.64.0.0/10
+        "::ffff:100.64.0.1",  # IPv4-mapped IPv6 form of the same gap
+        # regression: previously-covered non-public ranges stay blocked
+        "127.0.0.1",
+        "::1",
+        "169.254.169.254",
+        "::ffff:169.254.169.254",
+        "0.0.0.0",
+        "0.1.2.3",  # 0.0.0.0/8 host
+        "10.0.0.1",
+        "172.16.0.2",
+        "192.168.1.10",
+        "192.0.2.1",  # TEST-NET-1
+        "198.51.100.1",  # TEST-NET-2
+        "203.0.113.1",  # TEST-NET-3
+        "fe80::1",  # IPv6 link-local
+        "fc00::1",  # IPv6 ULA
+        "fd12::dead:beef",
+        # encoding forms the URL layer may hand to the guard (fail closed)
+        "2130706433",  # decimal 127.0.0.1
+        "0x7f000001",  # hex 127.0.0.1
+        "0177.0.0.1",  # octal 127.0.0.1
+    ],
+)
 def test_non_public_addresses_blocked(address):
     assert _is_blocked_ip(address) is True, address
 
 
-@pytest.mark.parametrize("address", [
-    "100.128.0.1",        # just OUTSIDE CGNAT /10 -> legitimately public
-    "93.184.216.34",      # example.com
-    "8.8.8.8",
-])
+@pytest.mark.parametrize(
+    "address",
+    [
+        "100.128.0.1",  # just OUTSIDE CGNAT /10 -> legitimately public
+        "93.184.216.34",  # example.com
+        "8.8.8.8",
+    ],
+)
 def test_public_addresses_allowed(address):
     assert _is_blocked_ip(address) is False, address
 
