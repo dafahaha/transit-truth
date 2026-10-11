@@ -1,8 +1,6 @@
 """Latency and protocol compliance checks."""
-import asyncio
+
 import statistics
-import time
-from typing import Optional
 
 from ..utils.http_client import AsyncAPIClient
 
@@ -52,7 +50,14 @@ class LatencyChecker:
             "error_rate": round(errors / samples, 2),
             "avg_latency_ms": round(statistics.mean(latencies), 1),
             "p50_latency_ms": round(statistics.median(latencies), 1),
-            "p95_latency_ms": round(sorted(latencies)[int(len(latencies) * 0.95) - 1] if len(latencies) >= 2 else latencies[0], 1),
+            "p95_latency_ms": round(
+                (
+                    sorted(latencies)[int(len(latencies) * 0.95) - 1]
+                    if len(latencies) >= 2
+                    else latencies[0]
+                ),
+                1,
+            ),
             "min_latency_ms": round(min(latencies), 1),
             "max_latency_ms": round(max(latencies), 1),
             "status_codes": status_codes,
@@ -96,7 +101,11 @@ class ProtocolChecker:
             checks["response_structure"] = {
                 "passed": len(missing) == 0,
                 "missing_fields": missing,
-                "details": f"All required fields present" if not missing else f"Missing: {missing}",
+                "details": (
+                    "All required fields present"
+                    if not missing
+                    else f"Missing: {missing}"
+                ),
             }
 
             # Check choices structure
@@ -119,7 +128,10 @@ class ProtocolChecker:
                     "missing_fields": missing_msg,
                 }
             else:
-                checks["choice_structure"] = {"passed": False, "details": "No choices returned"}
+                checks["choice_structure"] = {
+                    "passed": False,
+                    "details": "No choices returned",
+                }
 
             # Check usage structure
             usage = result.get("usage", {})
@@ -133,16 +145,21 @@ class ProtocolChecker:
             # Check model field matches requested
             returned_model = result.get("model", "")
             checks["model_field"] = {
-                "passed": self.model.lower() in returned_model.lower() or returned_model.lower() in self.model.lower(),
+                "passed": self.model.lower() in returned_model.lower()
+                or returned_model.lower() in self.model.lower(),
                 "returned_model": returned_model,
                 "requested_model": self.model,
             }
 
         # 2. Headers check
-        headers = result.get("_response_headers", {}) if "_response_headers" in result else {}
+        headers = (
+            result.get("_response_headers", {}) if "_response_headers" in result else {}
+        )
         checks["headers"] = {
-            "content_type_json": "application/json" in headers.get("content-type", "").lower(),
-            "has_request_id": bool(headers.get("x-request-id")) or bool(headers.get("x-ratelimit-remaining-requests")),
+            "content_type_json": "application/json"
+            in headers.get("content-type", "").lower(),
+            "has_request_id": bool(headers.get("x-request-id"))
+            or bool(headers.get("x-ratelimit-remaining-requests")),
             "details": "Standard headers present" if headers else "No headers captured",
         }
 
@@ -155,7 +172,8 @@ class ProtocolChecker:
         if "error" in error_result:
             err = error_result.get("error", {})
             checks["error_format"] = {
-                "passed": isinstance(err, dict) and ("message" in err or "type" in err or "code" in err),
+                "passed": isinstance(err, dict)
+                and ("message" in err or "type" in err or "code" in err),
                 "error_sample": str(err)[:200],
             }
         else:
@@ -165,7 +183,9 @@ class ProtocolChecker:
             }
 
         # Summary
-        passed_count = sum(1 for v in checks.values() if isinstance(v, dict) and v.get("passed"))
+        passed_count = sum(
+            1 for v in checks.values() if isinstance(v, dict) and v.get("passed")
+        )
         total_count = len(checks)
         checks["_summary"] = {
             "passed": passed_count,

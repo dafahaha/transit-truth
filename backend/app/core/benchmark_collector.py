@@ -6,14 +6,14 @@ This data can be used for:
 2. Academic research (publishable dataset)
 3. Continuously updating the model fingerprint database
 """
+
 import asyncio
 import statistics
 from collections import Counter
 from datetime import datetime
-from typing import Optional
 
-from .probes import TOKENIZER_PROBES, BEHAVIORAL_PROBES, CAPABILITY_PROBES, Probe
 from ..utils.http_client import AsyncAPIClient
+from .probes import BEHAVIORAL_PROBES, CAPABILITY_PROBES, TOKENIZER_PROBES, Probe
 
 
 async def collect_benchmark(
@@ -48,32 +48,42 @@ async def collect_benchmark(
     async with AsyncAPIClient(api_key, base_url, timeout=timeout) as client:
         # 1. Tokenizer probes
         print(f"  Collecting {len(TOKENIZER_PROBES)} tokenizer probes...")
-        tokenizer_tasks = [_run_tokenizer_probe(client, model, p) for p in TOKENIZER_PROBES]
+        tokenizer_tasks = [
+            _run_tokenizer_probe(client, model, p) for p in TOKENIZER_PROBES
+        ]
         tokenizer_results = await asyncio.gather(*tokenizer_tasks)
         for probe_id, data in tokenizer_results:
             result["tokenizer"][probe_id] = data
 
         # 2. Behavioral probes (multiple samples each)
-        print(f"  Collecting {len(BEHAVIORAL_PROBES)} behavioral probes x {samples} samples...")
-        behavioral_tasks = [_run_behavioral_probe(client, model, p, samples) for p in BEHAVIORAL_PROBES]
+        print(
+            f"  Collecting {len(BEHAVIORAL_PROBES)} behavioral probes x {samples} samples..."
+        )
+        behavioral_tasks = [
+            _run_behavioral_probe(client, model, p, samples) for p in BEHAVIORAL_PROBES
+        ]
         behavioral_results = await asyncio.gather(*behavioral_tasks)
         for probe_id, data in behavioral_results:
             result["behavioral"][probe_id] = data
 
         # 3. Capability probes
         print(f"  Collecting {len(CAPABILITY_PROBES)} capability probes...")
-        capability_tasks = [_run_capability_probe(client, model, p) for p in CAPABILITY_PROBES]
+        capability_tasks = [
+            _run_capability_probe(client, model, p) for p in CAPABILITY_PROBES
+        ]
         capability_results = await asyncio.gather(*capability_tasks)
         for probe_id, data in capability_results:
             result["capability"][probe_id] = data
 
     # Compute summary statistics
     result["summary"] = _compute_summary(result)
-    print(f"  ✅ Benchmark collection complete")
+    print("  ✅ Benchmark collection complete")
     return result
 
 
-async def _run_tokenizer_probe(client: AsyncAPIClient, model: str, probe: Probe) -> tuple[str, dict]:
+async def _run_tokenizer_probe(
+    client: AsyncAPIClient, model: str, probe: Probe
+) -> tuple[str, dict]:
     """Run a single tokenizer probe."""
     response = await client.chat_completion(
         model=model,
@@ -100,7 +110,9 @@ async def _run_tokenizer_probe(client: AsyncAPIClient, model: str, probe: Probe)
         "total_tokens": usage.get("total_tokens", 0),
         "latency_ms": round(response.get("_latency_ms", 0), 1),
         "response_preview": content[:80],
-        "expected_tokens_range": list(probe.expected_tokens_range) if probe.expected_tokens_range else None,
+        "expected_tokens_range": (
+            list(probe.expected_tokens_range) if probe.expected_tokens_range else None
+        ),
     }
 
 
@@ -144,7 +156,9 @@ async def _run_behavioral_probe(
     }
 
 
-async def _run_capability_probe(client: AsyncAPIClient, model: str, probe: Probe) -> tuple[str, dict]:
+async def _run_capability_probe(
+    client: AsyncAPIClient, model: str, probe: Probe
+) -> tuple[str, dict]:
     """Run a capability probe."""
     response = await client.chat_completion(
         model=model,
@@ -185,11 +199,13 @@ def _compute_summary(data: dict) -> dict:
     valid_tokenizer = {k: v for k, v in tokenizer_data.items() if "error" not in v}
     avg_prompt_tokens = (
         statistics.mean([v["prompt_tokens"] for v in valid_tokenizer.values()])
-        if valid_tokenizer else 0
+        if valid_tokenizer
+        else 0
     )
     avg_latency_tokenizer = (
         statistics.mean([v["latency_ms"] for v in valid_tokenizer.values()])
-        if valid_tokenizer else 0
+        if valid_tokenizer
+        else 0
     )
 
     # Behavioral summary
@@ -197,15 +213,18 @@ def _compute_summary(data: dict) -> dict:
     valid_behavioral = {k: v for k, v in behavioral_data.items() if "error" not in v}
     avg_diversity = (
         statistics.mean([v["diversity_score"] for v in valid_behavioral.values()])
-        if valid_behavioral else 0
+        if valid_behavioral
+        else 0
     )
 
     # Capability summary
     capability_data = data.get("capability", {})
     valid_capability = {k: v for k, v in capability_data.items() if "error" not in v}
     pass_rate = (
-        sum(1 for v in valid_capability.values() if v.get("passed")) / max(len(valid_capability), 1)
-        if valid_capability else 0
+        sum(1 for v in valid_capability.values() if v.get("passed"))
+        / max(len(valid_capability), 1)
+        if valid_capability
+        else 0
     )
 
     return {

@@ -10,6 +10,7 @@ Contribution API endpoints - 贡献API端点
 - 匿名贡献可接受，但信誉权重低
 - 自动检测恶意数据和异常值
 """
+
 import logging
 import uuid
 from datetime import datetime
@@ -19,9 +20,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 
 from ..core.contributor_reputation import (
-    ContributorReputationSystem,
-    ContributionType,
     ContributionChannel,
+    ContributionType,
+    ContributorReputationSystem,
 )
 from ..utils.rate_limit import enforce_rate_limit
 
@@ -64,27 +65,32 @@ def _sanitize_audit_payload(value: Any, depth: int = 0) -> Any:
     if isinstance(value, dict):
         if len(value) > _AUDIT_MAX_DICT_KEYS:
             raise ValueError(f"object field exceeds {_AUDIT_MAX_DICT_KEYS} keys")
-        return {
-            str(k): _sanitize_audit_payload(v, depth + 1)
-            for k, v in value.items()
-        }
+        return {str(k): _sanitize_audit_payload(v, depth + 1) for k, v in value.items()}
     raise ValueError("unsupported type in audit_result")
 
 
 # ─── 请求/响应模型 ────────────────────────────────────
 
+
 class AuditContributionRequest(BaseModel):
     """审计结果贡献请求"""
+
     # 审计结果数据 (validated for shape/size by _sanitize_audit_payload).
     audit_result: dict = Field(..., description="完整的审计结果JSON")
 
     # 贡献者信息（可选，不填则为匿名）
-    contributor_name: Optional[str] = Field(None, max_length=100, description="贡献者名称（显示用）")
-    contributor_email: Optional[str] = Field(None, max_length=200, description="贡献者邮箱（用于联系，不公开）")
+    contributor_name: Optional[str] = Field(
+        None, max_length=100, description="贡献者名称（显示用）"
+    )
+    contributor_email: Optional[str] = Field(
+        None, max_length=200, description="贡献者邮箱（用于联系，不公开）"
+    )
     is_anonymous: bool = Field(False, description="是否匿名贡献")
 
     # 元数据
-    relay_name: Optional[str] = Field(None, max_length=100, description="中转站名称（可选，用于排行榜展示）")
+    relay_name: Optional[str] = Field(
+        None, max_length=100, description="中转站名称（可选，用于排行榜展示）"
+    )
     notes: Optional[str] = Field(None, max_length=1000, description="备注信息")
 
     @field_validator("audit_result")
@@ -95,6 +101,7 @@ class AuditContributionRequest(BaseModel):
 
 class ContributionResponse(BaseModel):
     """贡献响应"""
+
     success: bool
     contribution_id: Optional[str] = None
     contributor_id: Optional[str] = None
@@ -111,6 +118,7 @@ class ContributionResponse(BaseModel):
 
 class ContributorStatsResponse(BaseModel):
     """贡献者统计响应"""
+
     contributor_id: str
     contributor_name: str
     contribution_type: str
@@ -124,7 +132,12 @@ class ContributorStatsResponse(BaseModel):
 
 # ─── API 端点 ────────────────────────────────────
 
-@router.post("/audit", response_model=ContributionResponse, dependencies=[Depends(enforce_rate_limit)])
+
+@router.post(
+    "/audit",
+    response_model=ContributionResponse,
+    dependencies=[Depends(enforce_rate_limit)],
+)
 async def contribute_audit_result(request: AuditContributionRequest):
     """
     提交审计结果贡献
@@ -160,13 +173,16 @@ async def contribute_audit_result(request: AuditContributionRequest):
         else:
             # 用邮箱的hash作为贡献者ID（保护隐私）
             import hashlib
-            email_hash = hashlib.sha256(request.contributor_email.encode()).hexdigest()[:12]
+
+            email_hash = hashlib.sha256(request.contributor_email.encode()).hexdigest()[
+                :12
+            ]
             contributor_id = f"user_{email_hash}"
             contributor_name = request.contributor_name or request.contributor_email
             is_anonymous = False
 
         # 3. 注册贡献者（如果不存在）
-        contributor = _reputation_system.register_contributor(
+        _reputation_system.register_contributor(
             id=contributor_id,
             name=contributor_name,
             contribution_type=ContributionType.AUDIT,

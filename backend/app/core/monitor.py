@@ -13,10 +13,10 @@ Alert channels:
 - Telegram bot
 - Webhook (Slack, Discord, etc.)
 """
+
 import asyncio
 import json
 import smtplib
-import time
 from dataclasses import dataclass, field
 from datetime import datetime
 from email.mime.text import MIMEText
@@ -25,13 +25,14 @@ from typing import Optional
 
 import httpx
 
+from ..models import AuditMode, AuditRequest
 from .auditor import AuditEngine
-from ..models import AuditRequest, AuditMode
 
 
 @dataclass
 class MonitorConfig:
     """Configuration for a monitoring task."""
+
     name: str
     api_key: str
     base_url: str
@@ -60,6 +61,7 @@ class MonitorConfig:
 @dataclass
 class MonitorRecord:
     """A single monitoring record."""
+
     timestamp: str
     score: float
     trust_level: str
@@ -79,7 +81,9 @@ class RelayMonitor:
 
     async def run_once(self) -> MonitorRecord:
         """Run a single audit and check for alerts."""
-        print(f"[{datetime.now().isoformat()}] Auditing {self.config.name} ({self.config.model})...")
+        print(
+            f"[{datetime.now().isoformat()}] Auditing {self.config.name} ({self.config.model})..."
+        )
 
         request = AuditRequest(
             api_key=self.config.api_key,
@@ -124,10 +128,15 @@ class RelayMonitor:
 
         # Check 3: Token discrepancy spike
         token_disc = None
-        if result.token_comparison and result.token_comparison.prompt_inflation_pct is not None:
+        if (
+            result.token_comparison
+            and result.token_comparison.prompt_inflation_pct is not None
+        ):
             token_disc = result.token_comparison.prompt_inflation_pct
             if abs(token_disc) > 50:
-                alerts.append(f"🔢 Token discrepancy {token_disc:+.1f}% exceeds 50% threshold")
+                alerts.append(
+                    f"🔢 Token discrepancy {token_disc:+.1f}% exceeds 50% threshold"
+                )
 
         # Check 4: High latency
         latency = None
@@ -153,8 +162,12 @@ class RelayMonitor:
 
         # Print summary
         status_icon = "✅" if not alerts else "🚨"
-        print(f"  {status_icon} Score: {score}/100 ({result.trust_level})"
-              f" | Token: {token_disc:+.1f}%" if token_disc is not None else "")
+        print(
+            f"  {status_icon} Score: {score}/100 ({result.trust_level})"
+            f" | Token: {token_disc:+.1f}%"
+            if token_disc is not None
+            else ""
+        )
         if alerts:
             for alert in alerts:
                 print(f"  {alert}")
@@ -168,9 +181,11 @@ class RelayMonitor:
     async def run_continuous(self):
         """Run continuous monitoring loop."""
         print(f"Starting continuous monitoring for '{self.config.name}'")
-        print(f"  Interval: {self.config.interval_seconds}s ({self.config.interval_seconds/3600:.1f}h)")
+        print(
+            f"  Interval: {self.config.interval_seconds}s ({self.config.interval_seconds/3600:.1f}h)"
+        )
         print(f"  Alert threshold: {self.config.alert_threshold}")
-        print(f"  Press Ctrl+C to stop")
+        print("  Press Ctrl+C to stop")
         print("=" * 60)
 
         try:
@@ -206,7 +221,7 @@ class RelayMonitor:
         """Format alert message."""
         lines = [
             f"🚨 TransitTruth Alert: {self.config.name}",
-            f"",
+            "",
             f"Time: {record.timestamp}",
             f"Model: {self.config.model}",
             f"Trust Score: {record.score}/100 ({record.trust_level})",
@@ -245,12 +260,17 @@ class RelayMonitor:
 
     async def _alert_telegram(self, message: str):
         """Send alert via Telegram bot."""
-        url = f"https://api.telegram.org/bot{self.config.telegram_bot_token}/sendMessage"
+        url = (
+            f"https://api.telegram.org/bot{self.config.telegram_bot_token}/sendMessage"
+        )
         async with httpx.AsyncClient() as client:
-            await client.post(url, json={
-                "chat_id": self.config.telegram_chat_id,
-                "text": message,
-            })
+            await client.post(
+                url,
+                json={
+                    "chat_id": self.config.telegram_chat_id,
+                    "text": message,
+                },
+            )
 
     async def _alert_webhook(self, message: str, record: MonitorRecord):
         """Send alert via webhook (Slack/Discord compatible)."""
@@ -301,6 +321,7 @@ class RelayMonitor:
 
 
 # ─── Convenience functions ────────────────────────────────────
+
 
 def load_monitor_config(config_path: str) -> MonitorConfig:
     """Load monitor configuration from JSON file."""

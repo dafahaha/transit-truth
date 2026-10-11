@@ -1,10 +1,9 @@
 """HTML report generator for audit results."""
+
 import html
-from datetime import datetime
-from typing import Optional
 
 from ..config import APP_VERSION
-from ..models import AuditResult, CheckResult, CheckType
+from ..models import AuditResult, CheckType
 
 
 def _trust_color(level: str) -> str:
@@ -44,9 +43,9 @@ def _check_type_label(check_type: CheckType) -> str:
 def _score_bar(score: float, passed: bool) -> str:
     color = "#16a34a" if passed else "#dc2626"
     width = min(max(score, 0), 100)
-    return f'''<div style="background:#e2e8f0;border-radius:4px;height:8px;width:100%;margin:4px 0;">
+    return f"""<div style="background:#e2e8f0;border-radius:4px;height:8px;width:100%;margin:4px 0;">
         <div style="background:{color};height:100%;width:{width}%;border-radius:4px;"></div>
-    </div>'''
+    </div>"""
 
 
 def _evidence_table(evidence: dict) -> str:
@@ -60,8 +59,10 @@ def _evidence_table(evidence: dict) -> str:
             value = html.escape(str(value)[:200])
         else:
             value = html.escape(str(value)[:200])
-        rows.append(f"<tr><td style='padding:4px 8px;font-weight:600;'>{html.escape(str(key))}</td>"
-                    f"<td style='padding:4px 8px;'>{value}</td></tr>")
+        rows.append(
+            f"<tr><td style='padding:4px 8px;font-weight:600;'>{html.escape(str(key))}</td>"
+            f"<td style='padding:4px 8px;'>{value}</td></tr>"
+        )
     return f"<table style='width:100%;font-size:0.8rem;border-collapse:collapse;'>{''.join(rows)}</table>"
 
 
@@ -76,7 +77,7 @@ def generate_html_report(result: AuditResult) -> str:
     # Checks HTML
     checks_html = ""
     for check in result.checks:
-        checks_html += f'''
+        checks_html += f"""
         <div style="background:#f8fafc;border-radius:8px;padding:16px;margin-bottom:12px;border-left:4px solid {'#16a34a' if check.passed else '#dc2626'};">
             <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                 <span style="font-weight:600;font-size:1rem;">{_check_icon(check.passed)} {html.escape(check.name)}</span>
@@ -88,13 +89,13 @@ def generate_html_report(result: AuditResult) -> str:
                 <summary style="cursor:pointer;font-size:0.8rem;color:#64748b;">查看证据</summary>
                 <div style="margin-top:8px;">{_evidence_table(check.evidence)}</div>
             </details>
-        </div>'''
+        </div>"""
 
     # Token comparison
     token_html = ""
     if result.token_comparison:
         tc = result.token_comparison
-        token_html = f'''
+        token_html = f"""
         <div style="background:#f8fafc;border-radius:8px;padding:16px;margin-bottom:12px;">
             <h3 style="margin:0 0 12px;font-size:1rem;">📊 Token 计数对比</h3>
             <table style="width:100%;font-size:0.85rem;border-collapse:collapse;">
@@ -109,13 +110,13 @@ def generate_html_report(result: AuditResult) -> str:
                 <tr><td style="padding:6px 8px;font-weight:600;">可疑</td><td style="padding:6px 8px;font-weight:700;color:{'#dc2626' if tc.suspicious else '#16a34a'};">{'⚠ 是（已扣除chat template）' if tc.suspicious else '否'}</td></tr>
             </table>
             {'<p style="margin-top:8px;font-size:0.75rem;color:#64748b;">💡 ' + html.escape(tc.discrepancy_note) + '</p>' if tc.discrepancy_note else ''}
-        </div>'''
+        </div>"""
 
     # Fingerprint
     fp_html = ""
     if result.fingerprint:
         fp = result.fingerprint
-        fp_html = f'''
+        fp_html = f"""
         <div style="background:#f8fafc;border-radius:8px;padding:16px;margin-bottom:12px;">
             <h3 style="margin:0 0 12px;font-size:1rem;">🔍 模型指纹分析</h3>
             <table style="width:100%;font-size:0.85rem;border-collapse:collapse;">
@@ -125,19 +126,22 @@ def generate_html_report(result: AuditResult) -> str:
                 <tr><td style="padding:6px 8px;font-weight:600;">置信度</td><td style="padding:6px 8px;">{fp.confidence:.0%}</td></tr>
                 <tr><td style="padding:6px 8px;font-weight:600;">可疑</td><td style="padding:6px 8px;font-weight:700;color:{'#dc2626' if fp.suspicious else '#16a34a'};">{'⚠ 是' if fp.suspicious else '否'}</td></tr>
             </table>
-        </div>'''
+        </div>"""
 
     # Recommendations
     recs_html = ""
     if result.recommendations:
-        recs_items = "".join(f"<li style='margin-bottom:6px;'>{html.escape(rec)}</li>" for rec in result.recommendations)
-        recs_html = f'''
+        recs_items = "".join(
+            f"<li style='margin-bottom:6px;'>{html.escape(rec)}</li>"
+            for rec in result.recommendations
+        )
+        recs_html = f"""
         <div style="background:#fef3c7;border-radius:8px;padding:16px;margin-bottom:12px;">
             <h3 style="margin:0 0 12px;font-size:1rem;color:#92400e;">💡 建议</h3>
             <ul style="margin:0;padding-left:20px;font-size:0.9rem;color:#78350f;">{recs_items}</ul>
-        </div>'''
+        </div>"""
 
-    return f'''<!DOCTYPE html>
+    return f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -161,10 +165,10 @@ def generate_html_report(result: AuditResult) -> str:
         <div class="header">
             <h1>🛡️ TransitTruth 审计报告</h1>
             <div class="meta">
-                审计 ID: {html.escape(result.audit_id)} | 
-                模型: {html.escape(result.model)} | 
+                审计 ID: {html.escape(result.audit_id)} |
+                模型: {html.escape(result.model)} |
                 URL: {html.escape(result.base_url)}<br>
-                时间: {result.started_at.strftime("%Y-%m-%d %H:%M:%S")} | 
+                时间: {result.started_at.strftime("%Y-%m-%d %H:%M:%S")} |
                 耗时: {duration}
             </div>
         </div>
@@ -188,4 +192,4 @@ def generate_html_report(result: AuditResult) -> str:
         </div>
     </div>
 </body>
-</html>'''
+</html>"""

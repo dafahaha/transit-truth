@@ -18,20 +18,20 @@ Statistical methods (v0.3+):
 - Bayesian updating for posterior probability of model match
 - Real baseline data collected from official APIs (data/baselines/)
 """
+
 import asyncio
 import random
-import statistics
 from collections import Counter
 from pathlib import Path
 from typing import Optional
 
-from ..config import MODEL_FAMILIES, CONCURRENT_REQUESTS
+from ..config import CONCURRENT_REQUESTS, MODEL_FAMILIES
 from ..models import FingerprintResult
 from ..utils.http_client import AsyncAPIClient
 from .probes import (
-    TOKENIZER_PROBES,
     BEHAVIORAL_PROBES,
     CAPABILITY_PROBES,
+    TOKENIZER_PROBES,
     Probe,
 )
 from .statistical_analyzer import StatisticalAnalyzer
@@ -40,7 +40,9 @@ from .statistical_analyzer import StatisticalAnalyzer
 class ModelFingerprinter:
     """Run fingerprint probes and analyze results."""
 
-    def __init__(self, client: AsyncAPIClient, model: str, custom_probes: Optional[list] = None):
+    def __init__(
+        self, client: AsyncAPIClient, model: str, custom_probes: Optional[list] = None
+    ):
         self.client = client
         self.model = model
         self.tokenizer_results: dict[str, dict] = {}
@@ -49,9 +51,15 @@ class ModelFingerprinter:
         # Use randomized probes if provided, otherwise use default fixed probes
         self._custom_probes = custom_probes
         if custom_probes:
-            self._tokenizer_probes = [p for p in custom_probes if p.category == "tokenizer"]
-            self._behavioral_probes = [p for p in custom_probes if p.category == "behavioral"]
-            self._capability_probes = [p for p in custom_probes if p.category == "capability"]
+            self._tokenizer_probes = [
+                p for p in custom_probes if p.category == "tokenizer"
+            ]
+            self._behavioral_probes = [
+                p for p in custom_probes if p.category == "behavioral"
+            ]
+            self._capability_probes = [
+                p for p in custom_probes if p.category == "capability"
+            ]
         else:
             self._tokenizer_probes = TOKENIZER_PROBES
             self._behavioral_probes = BEHAVIORAL_PROBES
@@ -137,9 +145,9 @@ class ModelFingerprinter:
                     result = await self.client.chat_completion(
                         model=self.model,
                         messages=[
-                        {"role": "system", "content": probe.system_prompt},
-                        {"role": "user", "content": probe.prompt},
-                    ],
+                            {"role": "system", "content": probe.system_prompt},
+                            {"role": "user", "content": probe.prompt},
+                        ],
                         temperature=probe.temperature,
                         max_tokens=probe.max_tokens,
                     )
@@ -218,15 +226,23 @@ class ModelFingerprinter:
         # Behavioral fingerprint statistical detection (NEW)
         stat_match = behavioral_sig.get("statistical_match")
         if stat_match:
-            if stat_match.get("chi2_significant") and stat_match.get("fingerprint_match_rate", 1.0) < 0.5:
+            if (
+                stat_match.get("chi2_significant")
+                and stat_match.get("fingerprint_match_rate", 1.0) < 0.5
+            ):
                 # Behavioral fingerprint significantly different from baseline
                 suspicious = True
                 confidence = max(confidence, 0.85)
-            elif stat_match.get("chi2_significant") and stat_match.get("fingerprint_match_rate", 1.0) < 0.7:
+            elif (
+                stat_match.get("chi2_significant")
+                and stat_match.get("fingerprint_match_rate", 1.0) < 0.7
+            ):
                 suspicious = True
                 confidence = max(confidence, 0.7)
-            elif (not stat_match.get("chi2_significant") and
-                  stat_match.get("fingerprint_match_rate", 0) > 0.8):
+            elif (
+                not stat_match.get("chi2_significant")
+                and stat_match.get("fingerprint_match_rate", 0) > 0.8
+            ):
                 # Strong behavioral fingerprint match - increases confidence in honesty
                 confidence = max(confidence, 0.6)
 
@@ -309,6 +325,7 @@ class ModelFingerprinter:
             most_common = counter.most_common(3)
             total = len(responses)
             import math as _math
+
             entropy = 0.0
             for count in counter.values():
                 p = count / total
@@ -370,7 +387,9 @@ class ModelFingerprinter:
                     "fingerprint_match_rate": round(fingerprint_match_rate, 2),
                     "fingerprint_matches": fingerprint_matches,
                     "fingerprint_total": fingerprint_total,
-                    "interpretation": self._interpret_behavioral_match(chi2_pvalue, fingerprint_match_rate),
+                    "interpretation": self._interpret_behavioral_match(
+                        chi2_pvalue, fingerprint_match_rate
+                    ),
                 }
 
         return {
@@ -380,7 +399,9 @@ class ModelFingerprinter:
             "baseline_info": baseline_info,
         }
 
-    def _interpret_behavioral_match(self, chi2_pvalue: float, fingerprint_match_rate: float) -> str:
+    def _interpret_behavioral_match(
+        self, chi2_pvalue: float, fingerprint_match_rate: float
+    ) -> str:
         """Interpret behavioral fingerprint match results in plain language."""
         if chi2_pvalue is None:
             return "无基准数据，无法进行统计比较"
@@ -412,16 +433,32 @@ class ModelFingerprinter:
         expected = {
             "cap-simple-math": {"391"},
             "cap-logic": {"no", "No", "NO"},
-            "cap-following-instructions": {"1,2,4,5", "1, 2, 4, 5", "1 2 4 5", "1,2,4,5."},
+            "cap-following-instructions": {
+                "1,2,4,5",
+                "1, 2, 4, 5",
+                "1 2 4 5",
+                "1,2,4,5.",
+            },
             "cap-reasoning-chain": {"5", "5 cents", "5 cents.", "5¢"},
             "cap-knowledge-cutoff": {"trump", "Trump", "Donald Trump", "donald trump"},
-            "cap-context-length": {"alpha-bravo-charlie-delta-echo-foxtrot-golf-hotel-india-juliet"},
+            "cap-context-length": {
+                "alpha-bravo-charlie-delta-echo-foxtrot-golf-hotel-india-juliet"
+            },
         }
 
         # Probe difficulty tiers (for model tier estimation)
         easy_probes = {"cap-simple-math", "cap-logic", "cap-following-instructions"}
-        medium_probes = {"cap-code-syntax", "cap-code-bug-fix", "cap-context-length", "cap-multilingual"}
-        hard_probes = {"cap-reasoning-chain", "cap-knowledge-cutoff", "cap-math-word-problem"}
+        medium_probes = {
+            "cap-code-syntax",
+            "cap-code-bug-fix",
+            "cap-context-length",
+            "cap-multilingual",
+        }
+        hard_probes = {
+            "cap-reasoning-chain",
+            "cap-knowledge-cutoff",
+            "cap-math-word-problem",
+        }
 
         passed = 0
         total = 0
@@ -440,9 +477,16 @@ class ModelFingerprinter:
             if probe_id in expected:
                 is_correct = response in expected[probe_id]
             elif probe_id == "cap-code-syntax":
-                is_correct = "sum" in response.lower() and ("%" in response or "for" in response or "[" in response)
+                is_correct = "sum" in response.lower() and (
+                    "%" in response or "for" in response or "[" in response
+                )
             elif probe_id == "cap-code-bug-fix":
-                is_correct = "if" in response.lower() and ("n ==" in response or "n<=" in response or "n <==" in response or "1" in response)
+                is_correct = "if" in response.lower() and (
+                    "n ==" in response
+                    or "n<=" in response
+                    or "n <==" in response
+                    or "1" in response
+                )
             elif probe_id == "cap-math-word-problem":
                 # Average speed = total distance / total time
                 # Distance1 = 60*2.5 = 150, Distance2 = 80*1.5 = 120, Total = 270
@@ -450,9 +494,12 @@ class ModelFingerprinter:
                 is_correct = "67.5" in response or "68" in response or "67" in response
             elif probe_id == "cap-multilingual":
                 # Just check if response contains Japanese/Korean/Arabic characters
-                has_japanese = any('\u3040' <= c <= '\u30ff' or '\u4e00' <= c <= '\u9fff' for c in response)
-                has_korean = any('\uac00' <= c <= '\ud7af' for c in response)
-                has_arabic = any('\u0600' <= c <= '\u06ff' for c in response)
+                has_japanese = any(
+                    "\u3040" <= c <= "\u30ff" or "\u4e00" <= c <= "\u9fff"
+                    for c in response
+                )
+                has_korean = any("\uac00" <= c <= "\ud7af" for c in response)
+                has_arabic = any("\u0600" <= c <= "\u06ff" for c in response)
                 is_correct = has_japanese and has_korean and has_arabic
 
             if is_correct:
@@ -467,15 +514,25 @@ class ModelFingerprinter:
             details[probe_id] = {
                 "response": response[:80],
                 "passed": is_correct,
-                "difficulty": "easy" if probe_id in easy_probes else "medium" if probe_id in medium_probes else "hard",
+                "difficulty": (
+                    "easy"
+                    if probe_id in easy_probes
+                    else "medium" if probe_id in medium_probes else "hard"
+                ),
             }
 
         # Estimate model tier based on pass rates by difficulty
         tier_estimate = "unknown"
         if total > 0:
-            easy_rate = easy_passed / max(len(easy_probes & set(self.capability_results.keys())), 1)
-            medium_rate = medium_passed / max(len(medium_probes & set(self.capability_results.keys())), 1)
-            hard_rate = hard_passed / max(len(hard_probes & set(self.capability_results.keys())), 1)
+            easy_rate = easy_passed / max(
+                len(easy_probes & set(self.capability_results.keys())), 1
+            )
+            medium_rate = medium_passed / max(
+                len(medium_probes & set(self.capability_results.keys())), 1
+            )
+            hard_rate = hard_passed / max(
+                len(hard_probes & set(self.capability_results.keys())), 1
+            )
 
             if easy_rate >= 0.8 and medium_rate >= 0.6 and hard_rate >= 0.4:
                 tier_estimate = "high"

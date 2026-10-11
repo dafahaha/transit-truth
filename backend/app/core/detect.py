@@ -3,9 +3,9 @@
 Auto-detect base URL from API key format and known relay list,
 and fetch supported models from the relay's /models endpoint.
 """
+
 from __future__ import annotations
 
-import re
 from dataclasses import dataclass
 from typing import Optional
 
@@ -15,6 +15,7 @@ from ..utils.ssrf_guard import guarded_async_client
 @dataclass
 class KnownRelay:
     """A known AI API relay service."""
+
     name: str
     base_url: str
     key_prefix: str  # API key prefix pattern
@@ -170,12 +171,14 @@ def suggest_relays(api_key: str) -> list[dict]:
             confidence = 0.1
 
         if confidence > 0:
-            suggestions.append({
-                "name": relay.name,
-                "base_url": relay.base_url,
-                "confidence": confidence,
-                "notes": relay.notes,
-            })
+            suggestions.append(
+                {
+                    "name": relay.name,
+                    "base_url": relay.base_url,
+                    "confidence": confidence,
+                    "notes": relay.notes,
+                }
+            )
 
     # Sort by confidence descending
     suggestions.sort(key=lambda x: x["confidence"], reverse=True)

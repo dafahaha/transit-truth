@@ -15,13 +15,13 @@ References:
 - CoIn (arXiv 2505.13778): "Can You Trust Your LLM API?"
 - SILENT-BENCH: benchmark for silent model degradation
 """
+
 import math
 import re
 import statistics
 from dataclasses import dataclass, field
 from typing import Optional
 
-import numpy as np
 from scipy import stats
 
 
@@ -31,6 +31,7 @@ class BaselineDistribution:
 
     Collected by running probes against official APIs.
     """
+
     model_family: str
     model_name: str
     # Tokenizer probe results: {probe_id: [prompt_token_counts]}
@@ -48,6 +49,7 @@ class BaselineDistribution:
 @dataclass
 class StatisticalVerdict:
     """Statistically grounded verdict for model verification."""
+
     claimed_model: str
     detected_family: Optional[str]
     # Test results
@@ -98,8 +100,30 @@ class StatisticalAnalyzer:
                 "tok-code": [18, 19, 18, 20, 19, 18, 19, 18, 20, 19],
             },
             behavioral_distributions={
-                "beh-random-100": ["42", "17", "73", "89", "55", "28", "64", "91", "37", "12"],
-                "beh-coin-flip": ["heads", "tails", "heads", "heads", "tails", "tails", "heads", "tails", "heads", "tails"],
+                "beh-random-100": [
+                    "42",
+                    "17",
+                    "73",
+                    "89",
+                    "55",
+                    "28",
+                    "64",
+                    "91",
+                    "37",
+                    "12",
+                ],
+                "beh-coin-flip": [
+                    "heads",
+                    "tails",
+                    "heads",
+                    "heads",
+                    "tails",
+                    "tails",
+                    "heads",
+                    "tails",
+                    "heads",
+                    "tails",
+                ],
             },
             latency_distribution=[800, 850, 900, 780, 820, 880, 790, 840, 870, 810],
             sample_size=10,
@@ -111,7 +135,18 @@ class StatisticalAnalyzer:
             model_family="openai-gpt",
             model_name="gpt-3.5-turbo",
             tokenizer_distributions={
-                "tok-digits": [22, 23, 22, 24, 23, 22, 23, 22, 24, 23],  # same tokenizer
+                "tok-digits": [
+                    22,
+                    23,
+                    22,
+                    24,
+                    23,
+                    22,
+                    23,
+                    22,
+                    24,
+                    23,
+                ],  # same tokenizer
                 "tok-cjk": [24, 25, 24, 26, 25, 24, 25, 24, 26, 25],
                 "tok-emoji": [30, 32, 31, 33, 32, 30, 31, 32, 33, 31],
                 "tok-code": [18, 19, 18, 20, 19, 18, 19, 18, 20, 19],
@@ -126,12 +161,45 @@ class StatisticalAnalyzer:
             model_family="anthropic-claude",
             model_name="claude-3-5-sonnet",
             tokenizer_distributions={
-                "tok-digits": [30, 31, 30, 32, 31, 30, 31, 30, 32, 31],  # different tokenizer
-                "tok-cjk": [16, 17, 16, 18, 17, 16, 17, 16, 18, 17],  # Claude tokenizes CJK as 1 char/token
+                "tok-digits": [
+                    30,
+                    31,
+                    30,
+                    32,
+                    31,
+                    30,
+                    31,
+                    30,
+                    32,
+                    31,
+                ],  # different tokenizer
+                "tok-cjk": [
+                    16,
+                    17,
+                    16,
+                    18,
+                    17,
+                    16,
+                    17,
+                    16,
+                    18,
+                    17,
+                ],  # Claude tokenizes CJK as 1 char/token
                 "tok-emoji": [40, 42, 41, 43, 42, 40, 41, 42, 43, 41],
                 "tok-code": [22, 23, 22, 24, 23, 22, 23, 22, 24, 23],
             },
-            latency_distribution=[1100, 1150, 1200, 1080, 1120, 1180, 1090, 1140, 1170, 1110],
+            latency_distribution=[
+                1100,
+                1150,
+                1200,
+                1080,
+                1120,
+                1180,
+                1090,
+                1140,
+                1170,
+                1110,
+            ],
             sample_size=10,
             collected_at="2026-09-10",
         )
@@ -169,7 +237,9 @@ class StatisticalAnalyzer:
         else:
             baseline_path = Path(data_dir)
         if not baseline_path.exists():
-            print(f"Warning: baseline directory {baseline_path} not found, keeping synthetic baselines")
+            print(
+                f"Warning: baseline directory {baseline_path} not found, keeping synthetic baselines"
+            )
             return
 
         loaded = 0
@@ -191,7 +261,10 @@ class StatisticalAnalyzer:
                 # Build tokenizer distributions from raw samples
                 tokenizer_dist = {}
                 for probe_id, probe_data in data.get("tokenizer", {}).items():
-                    if "prompt_tokens" in probe_data and "samples" in probe_data["prompt_tokens"]:
+                    if (
+                        "prompt_tokens" in probe_data
+                        and "samples" in probe_data["prompt_tokens"]
+                    ):
                         samples = probe_data["prompt_tokens"]["samples"]
                         if samples:
                             tokenizer_dist[probe_id] = [float(s) for s in samples]
@@ -228,7 +301,9 @@ class StatisticalAnalyzer:
                 loaded += 1
                 n_tok = len(tokenizer_dist)
                 n_beh = len(behavioral_dist)
-                print(f"  Loaded real baseline: {model_name} (n={baseline.sample_size}, {n_tok} tokenizer, {n_beh} behavioral probes)")
+                print(
+                    f"  Loaded real baseline: {model_name} (n={baseline.sample_size}, {n_tok} tokenizer, {n_beh} behavioral probes)"
+                )
 
             except Exception as e:
                 print(f"  Error loading {json_file.name}: {e}")
@@ -263,8 +338,9 @@ class StatisticalAnalyzer:
         else:
             return "unknown"
 
-    def ks_test_tokenizer(self, observed: dict[str, float],
-                           baseline: BaselineDistribution) -> tuple[float, float]:
+    def ks_test_tokenizer(
+        self, observed: dict[str, float], baseline: BaselineDistribution
+    ) -> tuple[float, float]:
         """Kolmogorov-Smirnov test for tokenizer distributions.
 
         Compares observed prompt token counts against baseline distribution.
@@ -304,8 +380,9 @@ class StatisticalAnalyzer:
         ks_stat, p_value = stats.ks_2samp(observed_z, baseline_z)
         return float(ks_stat), float(p_value)
 
-    def chi2_test_behavioral(self, observed: dict[str, list[str]],
-                              baseline: BaselineDistribution) -> tuple[float, float]:
+    def chi2_test_behavioral(
+        self, observed: dict[str, list[str]], baseline: BaselineDistribution
+    ) -> tuple[float, float]:
         """Chi-square test for behavioral distributions.
 
         Compares observed response distributions against baseline.
@@ -393,9 +470,13 @@ class StatisticalAnalyzer:
         n = re.sub(r"-\d{8}$", "", n)
         return n.strip()
 
-    def bayesian_update(self, prior: float, likelihood_ratio: float,
-                        observed_size: int = 0, baseline_size: int = 0
-                        ) -> tuple[float, float, float]:
+    def bayesian_update(
+        self,
+        prior: float,
+        likelihood_ratio: float,
+        observed_size: int = 0,
+        baseline_size: int = 0,
+    ) -> tuple[float, float, float]:
         """Bayesian update for model verification.
 
         Args:
@@ -453,9 +534,9 @@ class StatisticalAnalyzer:
 
         return posterior, ci_lower, ci_upper
 
-    def calculate_likelihood_ratio(self, ks_pvalue: float,
-                                     chi2_pvalue: float,
-                                     capability_failure_rate: float) -> float:
+    def calculate_likelihood_ratio(
+        self, ks_pvalue: float, chi2_pvalue: float, capability_failure_rate: float
+    ) -> float:
         """Calculate likelihood ratio from test results.
 
         P(evidence|honest) / P(evidence|dishonest)
@@ -494,7 +575,7 @@ class StatisticalAnalyzer:
         elif chi2_pvalue < 0.1:
             lr *= 0.7
         elif chi2_pvalue > 0.5:
-            lr *= 3.0   # strong behavioral fingerprint match -> honest
+            lr *= 3.0  # strong behavioral fingerprint match -> honest
         elif chi2_pvalue > 0.2:
             lr *= 1.3
 
@@ -521,13 +602,18 @@ class StatisticalAnalyzer:
         """
         norm = self._normalize_model_name(claimed_model)
         # Build normalized lookup once.
-        norm_db = {self._normalize_model_name(k): v for k, v in self.baseline_db.items()}
+        norm_db = {
+            self._normalize_model_name(k): v for k, v in self.baseline_db.items()
+        }
         return norm_db.get(norm)
 
-    def analyze(self, claimed_model: str,
-                observed_tokenizer: dict[str, float],
-                observed_behavioral: dict[str, list[str]],
-                capability_failure_rate: float = 0.0) -> StatisticalVerdict:
+    def analyze(
+        self,
+        claimed_model: str,
+        observed_tokenizer: dict[str, float],
+        observed_behavioral: dict[str, list[str]],
+        capability_failure_rate: float = 0.0,
+    ) -> StatisticalVerdict:
         """Full statistical analysis for model verification.
 
         Args:
@@ -555,15 +641,22 @@ class StatisticalAnalyzer:
 
         # Run statistical tests
         ks_stat, ks_pvalue = self.ks_test_tokenizer(observed_tokenizer, baseline)
-        chi2_stat, chi2_pvalue = self.chi2_test_behavioral(observed_behavioral, baseline)
+        chi2_stat, chi2_pvalue = self.chi2_test_behavioral(
+            observed_behavioral, baseline
+        )
 
         # Calculate likelihood ratio
-        lr = self.calculate_likelihood_ratio(ks_pvalue, chi2_pvalue, capability_failure_rate)
+        lr = self.calculate_likelihood_ratio(
+            ks_pvalue, chi2_pvalue, capability_failure_rate
+        )
 
         # Bayesian update
-        observed_size = sum(len(responses) for responses in observed_behavioral.values())
+        observed_size = sum(
+            len(responses) for responses in observed_behavioral.values()
+        )
         posterior, ci_lower, ci_upper = self.bayesian_update(
-            self.prior_honest, lr,
+            self.prior_honest,
+            lr,
             observed_size=observed_size,
             baseline_size=baseline.sample_size,
         )
@@ -642,8 +735,9 @@ class StatisticalAnalyzer:
         else:
             return "无显著差异"
 
-    def estimate_false_positive_rate(self, alpha: float = 0.05,
-                                       n_tests: int = 2) -> float:
+    def estimate_false_positive_rate(
+        self, alpha: float = 0.05, n_tests: int = 2
+    ) -> float:
         """Estimate false positive rate for the test battery.
 
         Probability of flagging an honest relay as suspicious,
@@ -657,9 +751,9 @@ class StatisticalAnalyzer:
         fpr = 1 - (1 - alpha) ** n_tests
         return fpr
 
-    def estimate_false_negative_rate(self, effect_size: float = 0.5,
-                                       n_probes: int = 10,
-                                       alpha: float = 0.05) -> float:
+    def estimate_false_negative_rate(
+        self, effect_size: float = 0.5, n_probes: int = 10, alpha: float = 0.05
+    ) -> float:
         """Estimate false negative rate (power analysis).
 
         Probability of failing to detect a real downgrade.
@@ -677,17 +771,20 @@ class StatisticalAnalyzer:
         else:
             # Approximate power calculation
             lambda_val = (effect_size - critical_value) * math.sqrt(n_effective)
-            power = 1 - math.exp(-2 * lambda_val ** 2)
+            power = 1 - math.exp(-2 * lambda_val**2)
 
         return 1 - power
 
 
 # ─── Convenience functions ────────────────────────────────────
 
-def quick_statistical_analysis(claimed_model: str,
-                                 tokenizer_results: dict,
-                                 behavioral_results: dict,
-                                 capability_failure_rate: float = 0.0) -> StatisticalVerdict:
+
+def quick_statistical_analysis(
+    claimed_model: str,
+    tokenizer_results: dict,
+    behavioral_results: dict,
+    capability_failure_rate: float = 0.0,
+) -> StatisticalVerdict:
     """Quick statistical analysis with default baselines.
 
     Usage:
@@ -710,7 +807,9 @@ def quick_statistical_analysis(claimed_model: str,
 
 
 # ─── Wilson Score Interval (比例置信区间) ───────────────────────────
-def wilson_score_interval(successes: int, n: int, confidence: float = 0.95) -> tuple[float, float]:
+def wilson_score_interval(
+    successes: int, n: int, confidence: float = 0.95
+) -> tuple[float, float]:
     """
     Wilson Score Interval - 计算比例的置信区间
 
@@ -772,13 +871,19 @@ def assess_sample_adequacy(
         baseline_status = "good"
     elif baseline_size >= 100:
         baseline_status = "moderate"
-        warnings.append(f"基准样本量({baseline_size})偏少，建议增加到200+以提高统计准确性")
+        warnings.append(
+            f"基准样本量({baseline_size})偏少，建议增加到200+以提高统计准确性"
+        )
     elif baseline_size >= 50:
         baseline_status = "low"
-        warnings.append(f"基准样本量({baseline_size})不足，95%置信区间约±14%，结论可能不稳定")
+        warnings.append(
+            f"基准样本量({baseline_size})不足，95%置信区间约±14%，结论可能不稳定"
+        )
     else:
         baseline_status = "insufficient"
-        warnings.append(f"基准样本量({baseline_size})严重不足，结论不可靠，建议至少50样本")
+        warnings.append(
+            f"基准样本量({baseline_size})严重不足，结论不可靠，建议至少50样本"
+        )
 
     # 评估观测样本量
     if observed_size >= 20:
@@ -793,7 +898,10 @@ def assess_sample_adequacy(
     # 综合评估
     if baseline_status == "good" and observed_status == "good":
         adequacy = "sufficient"
-    elif baseline_status in ("good", "moderate") and observed_status in ("good", "moderate"):
+    elif baseline_status in ("good", "moderate") and observed_status in (
+        "good",
+        "moderate",
+    ):
         adequacy = "moderate"
     else:
         adequacy = "insufficient"

@@ -17,6 +17,7 @@ Environment variables:
     TRANSIT_TRUTH_BASE_URL   Default base URL
     TRANSIT_TRUTH_MODEL      Default model
 """
+
 import argparse
 import asyncio
 import json
@@ -25,22 +26,41 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
-from .config import BASE_DIR
 from .core.auditor import AuditEngine
+from .database import get_audit, list_audits
 from .models import AuditRequest, AuditStatus
-from .database import list_audits, get_audit
 from .utils.report_generator import generate_html_report
-
 
 # ─── Known Relay Base URLs for auto-detection ───────────────────────
 KNOWN_RELAYS = [
-    {"name": "OpenAI Official", "base_url": "https://api.openai.com/v1", "pattern": "api.openai.com"},
+    {
+        "name": "OpenAI Official",
+        "base_url": "https://api.openai.com/v1",
+        "pattern": "api.openai.com",
+    },
     {"name": "WolfAI", "base_url": "https://wolfai.top/v1", "pattern": "wolfai.top"},
-    {"name": "API2D", "base_url": "https://openai.api2d.net/v1", "pattern": "api2d.net"},
-    {"name": "OhMyGPT", "base_url": "https://api.ohmygpt.com/v1", "pattern": "ohmygpt.com"},
-    {"name": "AIHubMix", "base_url": "https://aihubmix.com/v1", "pattern": "aihubmix.com"},
-    {"name": "CloseAI", "base_url": "https://api.closeai-asia.com/v1", "pattern": "closeai"},
+    {
+        "name": "API2D",
+        "base_url": "https://openai.api2d.net/v1",
+        "pattern": "api2d.net",
+    },
+    {
+        "name": "OhMyGPT",
+        "base_url": "https://api.ohmygpt.com/v1",
+        "pattern": "ohmygpt.com",
+    },
+    {
+        "name": "AIHubMix",
+        "base_url": "https://aihubmix.com/v1",
+        "pattern": "aihubmix.com",
+    },
+    {
+        "name": "CloseAI",
+        "base_url": "https://api.closeai-asia.com/v1",
+        "pattern": "closeai",
+    },
 ]
+
 
 # ─── Color output helpers ────────────────────────────────────────────
 class Colors:
@@ -130,10 +150,12 @@ def cmd_audit(args):
     )
 
     print(f"🔍 Starting audit of {args.model} at {args.base_url}")
-    print(f"   Probes: {args.probes} | Token: {'on' if not args.skip_token else 'off'} | "
-          f"Fingerprint: {'on' if not args.skip_fingerprint else 'off'} | "
-          f"Latency: {'on' if not args.skip_latency else 'off'} | "
-          f"Protocol: {'on' if not args.skip_protocol else 'off'}")
+    print(
+        f"   Probes: {args.probes} | Token: {'on' if not args.skip_token else 'off'} | "
+        f"Fingerprint: {'on' if not args.skip_fingerprint else 'off'} | "
+        f"Latency: {'on' if not args.skip_latency else 'off'} | "
+        f"Protocol: {'on' if not args.skip_protocol else 'off'}"
+    )
     print()
 
     engine = AuditEngine()
@@ -151,7 +173,9 @@ def cmd_audit(args):
     print(f"  Base URL:     {result.base_url}")
     print(f"  Overall:      {result.overall_score}/100")
     print(f"  Trust level:  {result.trust_level.upper()}")
-    print(f"  Duration:     {(result.completed_at - result.started_at).total_seconds():.1f}s")
+    print(
+        f"  Duration:     {(result.completed_at - result.started_at).total_seconds():.1f}s"
+    )
     print()
 
     print("  Checks:")
@@ -191,12 +215,16 @@ def cmd_list(args):
         print("No audit history found.")
         return
 
-    print(f"{'ID':<10} {'Model':<20} {'Score':<8} {'Trust':<10} {'Status':<10} {'Date'}")
+    print(
+        f"{'ID':<10} {'Model':<20} {'Score':<8} {'Trust':<10} {'Status':<10} {'Date'}"
+    )
     print("-" * 80)
     for a in audits:
         date = datetime.fromisoformat(a["started_at"]).strftime("%Y-%m-%d %H:%M")
-        print(f"{a['audit_id']:<10} {a['model']:<20} {a['overall_score']:<8.0f} "
-              f"{a['trust_level']:<10} {a['status']:<10} {date}")
+        print(
+            f"{a['audit_id']:<10} {a['model']:<20} {a['overall_score']:<8.0f} "
+            f"{a['trust_level']:<10} {a['status']:<10} {date}"
+        )
 
 
 def cmd_export(args):
@@ -211,6 +239,7 @@ def cmd_export(args):
         sys.exit(1)
 
     from .models import AuditResult
+
     result = AuditResult.model_validate_json(audit["result_json"])
     html = generate_html_report(result)
 
@@ -224,15 +253,19 @@ def cmd_benchmark(args):
     from .core.benchmark_collector import collect_benchmark
 
     print(f"📊 Collecting benchmark data for {args.model}...")
-    data = asyncio.run(collect_benchmark(
-        api_key=args.api_key,
-        base_url=args.base_url,
-        model=args.model,
-        samples=args.samples,
-    ))
+    data = asyncio.run(
+        collect_benchmark(
+            api_key=args.api_key,
+            base_url=args.base_url,
+            model=args.model,
+            samples=args.samples,
+        )
+    )
 
     output = args.output or f"benchmark-{args.model.replace('/', '-')}.json"
-    Path(output).write_text(json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8")
+    Path(output).write_text(
+        json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
     print(f"✅ Benchmark data saved to: {output}")
     print(f"   Tokenizer probes: {len(data.get('tokenizer', {}))}")
     print(f"   Behavioral probes: {len(data.get('behavioral', {}))}")
@@ -248,12 +281,14 @@ def cmd_balance(args):
     # 单账户模式
     if args.api_key:
         print(f"💰 Checking balance for {args.account_name}...")
-        result = asyncio.run(checker.check_balance(
-            api_key=args.api_key,
-            base_url=args.base_url,
-            account_name=args.account_name,
-            custom_endpoint=args.custom_endpoint,
-        ))
+        result = asyncio.run(
+            checker.check_balance(
+                api_key=args.api_key,
+                base_url=args.base_url,
+                account_name=args.account_name,
+                custom_endpoint=args.custom_endpoint,
+            )
+        )
 
         if result.success:
             print(f"✅ Balance: ${result.balance:.2f} {result.currency}")
@@ -287,7 +322,11 @@ def cmd_balance(args):
                 print(f"   - {a.account_name}: ${a.balance:.2f}")
         return
 
-    print(Colors.red("❌ Error: Provide --api-key for single account, or --accounts-file for batch check."))
+    print(
+        Colors.red(
+            "❌ Error: Provide --api-key for single account, or --accounts-file for batch check."
+        )
+    )
 
 
 def main():
@@ -324,46 +363,118 @@ Environment variables:
 
     # Audit command
     audit_parser = subparsers.add_parser("audit", help="Run an audit on a relay API")
-    audit_parser.add_argument("--api-key", default=os.environ.get("TRANSIT_TRUTH_API_KEY"), help="API key (or set TRANSIT_TRUTH_API_KEY env var)")
-    audit_parser.add_argument("--base-url", default=os.environ.get("TRANSIT_TRUTH_BASE_URL"), help="Base URL (or set TRANSIT_TRUTH_BASE_URL env var)")
-    audit_parser.add_argument("--model", default=os.environ.get("TRANSIT_TRUTH_MODEL", "gpt-4o"), help="Model name (default: gpt-4o)")
-    audit_parser.add_argument("--official-key", default=None, help="Official API key for precise token comparison")
-    audit_parser.add_argument("--probes", type=int, default=10, help="Number of probes per category (default: 10)")
-    audit_parser.add_argument("--skip-token", action="store_true", help="Skip token count check")
-    audit_parser.add_argument("--skip-fingerprint", action="store_true", help="Skip model fingerprint check")
-    audit_parser.add_argument("--skip-latency", action="store_true", help="Skip latency check")
-    audit_parser.add_argument("--skip-protocol", action="store_true", help="Skip protocol compliance check")
-    audit_parser.add_argument("--output", "-o", default=None, help="Export HTML report to file")
-    audit_parser.add_argument("--json", action="store_true", help="Output full result as JSON")
+    audit_parser.add_argument(
+        "--api-key",
+        default=os.environ.get("TRANSIT_TRUTH_API_KEY"),
+        help="API key (or set TRANSIT_TRUTH_API_KEY env var)",
+    )
+    audit_parser.add_argument(
+        "--base-url",
+        default=os.environ.get("TRANSIT_TRUTH_BASE_URL"),
+        help="Base URL (or set TRANSIT_TRUTH_BASE_URL env var)",
+    )
+    audit_parser.add_argument(
+        "--model",
+        default=os.environ.get("TRANSIT_TRUTH_MODEL", "gpt-4o"),
+        help="Model name (default: gpt-4o)",
+    )
+    audit_parser.add_argument(
+        "--official-key",
+        default=None,
+        help="Official API key for precise token comparison",
+    )
+    audit_parser.add_argument(
+        "--probes",
+        type=int,
+        default=10,
+        help="Number of probes per category (default: 10)",
+    )
+    audit_parser.add_argument(
+        "--skip-token", action="store_true", help="Skip token count check"
+    )
+    audit_parser.add_argument(
+        "--skip-fingerprint", action="store_true", help="Skip model fingerprint check"
+    )
+    audit_parser.add_argument(
+        "--skip-latency", action="store_true", help="Skip latency check"
+    )
+    audit_parser.add_argument(
+        "--skip-protocol", action="store_true", help="Skip protocol compliance check"
+    )
+    audit_parser.add_argument(
+        "--output", "-o", default=None, help="Export HTML report to file"
+    )
+    audit_parser.add_argument(
+        "--json", action="store_true", help="Output full result as JSON"
+    )
     audit_parser.set_defaults(func=cmd_audit)
 
     # List command
     list_parser = subparsers.add_parser("list", help="List audit history")
-    list_parser.add_argument("--limit", type=int, default=20, help="Number of records (default: 20)")
+    list_parser.add_argument(
+        "--limit", type=int, default=20, help="Number of records (default: 20)"
+    )
     list_parser.set_defaults(func=cmd_list)
 
     # Export command
-    export_parser = subparsers.add_parser("export", help="Export an audit report to HTML")
+    export_parser = subparsers.add_parser(
+        "export", help="Export an audit report to HTML"
+    )
     export_parser.add_argument("--audit-id", required=True, help="Audit ID to export")
     export_parser.add_argument("--output", "-o", default=None, help="Output file path")
     export_parser.set_defaults(func=cmd_export)
 
     # Benchmark command
-    bench_parser = subparsers.add_parser("benchmark", help="Collect model fingerprint benchmark data")
-    bench_parser.add_argument("--api-key", default=os.environ.get("TRANSIT_TRUTH_API_KEY"), help="API key")
-    bench_parser.add_argument("--base-url", default="https://api.openai.com/v1", help="Base URL (default: OpenAI official)")
+    bench_parser = subparsers.add_parser(
+        "benchmark", help="Collect model fingerprint benchmark data"
+    )
+    bench_parser.add_argument(
+        "--api-key", default=os.environ.get("TRANSIT_TRUTH_API_KEY"), help="API key"
+    )
+    bench_parser.add_argument(
+        "--base-url",
+        default="https://api.openai.com/v1",
+        help="Base URL (default: OpenAI official)",
+    )
     bench_parser.add_argument("--model", required=True, help="Model name")
-    bench_parser.add_argument("--samples", type=int, default=5, help="Samples per behavioral probe (default: 5)")
-    bench_parser.add_argument("--output", "-o", default=None, help="Output JSON file path")
+    bench_parser.add_argument(
+        "--samples",
+        type=int,
+        default=5,
+        help="Samples per behavioral probe (default: 5)",
+    )
+    bench_parser.add_argument(
+        "--output", "-o", default=None, help="Output JSON file path"
+    )
     bench_parser.set_defaults(func=cmd_benchmark)
 
     # Balance command
-    balance_parser = subparsers.add_parser("balance", help="Check account balance for relay APIs")
-    balance_parser.add_argument("--api-key", default=os.environ.get("TRANSIT_TRUTH_API_KEY"), help="API key (single account mode)")
-    balance_parser.add_argument("--base-url", default="https://api.openai.com/v1", help="Base URL (default: OpenAI official)")
-    balance_parser.add_argument("--account-name", default="default", help="Account name for display")
-    balance_parser.add_argument("--custom-endpoint", default=None, help="Custom balance query endpoint (e.g., /v1/balance)")
-    balance_parser.add_argument("--accounts-file", default=None, help="JSON file containing account list for batch check")
+    balance_parser = subparsers.add_parser(
+        "balance", help="Check account balance for relay APIs"
+    )
+    balance_parser.add_argument(
+        "--api-key",
+        default=os.environ.get("TRANSIT_TRUTH_API_KEY"),
+        help="API key (single account mode)",
+    )
+    balance_parser.add_argument(
+        "--base-url",
+        default="https://api.openai.com/v1",
+        help="Base URL (default: OpenAI official)",
+    )
+    balance_parser.add_argument(
+        "--account-name", default="default", help="Account name for display"
+    )
+    balance_parser.add_argument(
+        "--custom-endpoint",
+        default=None,
+        help="Custom balance query endpoint (e.g., /v1/balance)",
+    )
+    balance_parser.add_argument(
+        "--accounts-file",
+        default=None,
+        help="JSON file containing account list for batch check",
+    )
     balance_parser.set_defaults(func=cmd_balance)
 
     args = parser.parse_args()
@@ -374,7 +485,11 @@ Environment variables:
 
     # Validate API key for audit/benchmark commands
     if args.command in ("audit", "benchmark") and not args.api_key:
-        print(Colors.red("❌ Error: API key required. Use --api-key or set TRANSIT_TRUTH_API_KEY environment variable."))
+        print(
+            Colors.red(
+                "❌ Error: API key required. Use --api-key or set TRANSIT_TRUTH_API_KEY environment variable."
+            )
+        )
         sys.exit(1)
 
     # Auto-detect base URL for audit command if not specified
@@ -444,18 +559,36 @@ def quick_mode():
     # Print colored summary
     print()
     print(Colors.bold("=" * 60))
-    score_color = Colors.green if result.overall_score >= 80 else Colors.yellow if result.overall_score >= 60 else Colors.red
-    print(f"  {Colors.bold('Overall Score:')} {score_color(str(result.overall_score) + '/100')}")
-    print(f"  {Colors.bold('Trust Level:')}   {score_color(result.trust_level.upper())}")
+    score_color = (
+        Colors.green
+        if result.overall_score >= 80
+        else Colors.yellow if result.overall_score >= 60 else Colors.red
+    )
+    print(
+        f"  {Colors.bold('Overall Score:')} {score_color(str(result.overall_score) + '/100')}"
+    )
+    print(
+        f"  {Colors.bold('Trust Level:')}   {score_color(result.trust_level.upper())}"
+    )
     print(f"  {Colors.bold('Model:')}         {result.model}")
-    print(f"  {Colors.bold('Duration:')}      {(result.completed_at - result.started_at).total_seconds():.1f}s")
+    print(
+        f"  {Colors.bold('Duration:')}      {(result.completed_at - result.started_at).total_seconds():.1f}s"
+    )
     print(Colors.bold("=" * 60))
     print()
 
     print(Colors.bold("  Checks:"))
     for check in result.checks:
         icon = Colors.green("✅") if check.passed else Colors.red("❌")
-        score = Colors.green(f"{check.score:.0f}") if check.score >= 70 else Colors.yellow(f"{check.score:.0f}") if check.score >= 40 else Colors.red(f"{check.score:.0f}")
+        score = (
+            Colors.green(f"{check.score:.0f}")
+            if check.score >= 70
+            else (
+                Colors.yellow(f"{check.score:.0f}")
+                if check.score >= 40
+                else Colors.red(f"{check.score:.0f}")
+            )
+        )
         print(f"    {icon} {check.name}: {score}/100")
         print(f"       {Colors.gray(check.details)}")
     print()
