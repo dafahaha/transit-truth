@@ -35,6 +35,27 @@ logger = logging.getLogger(__name__)
 
 ALLOWED_SCHEMES = {"http", "https"}
 
+# Non-routable ranges that Python's ``ipaddress`` safety flags do NOT already
+# cover (verified empirically). Python flags catch loopback, RFC1918,
+# link-local, multicast, reserved, unspecified, the TEST-NETs and the
+# benchmarking range; RFC6598 CGNAT is the one remaining public-looking block
+# that must never be proxied (it is also Tailscale's default internal range).
+# Default-deny every address in these networks.
+_EXTRA_BLOCKED_V4 = (
+    ipaddress.ip_network("100.64.0.0/10"),  # RFC6598 shared address space / CGNAT
+)
+
+
+def _ip_for_v4_network_check(ip: "ipaddress._BaseAddress"):
+    """Return the IPv4 address to test against ``_EXTRA_BLOCKED_V4``.
+
+    Plain IPv4 addresses test as themselves; IPv4-mapped IPv6 addresses
+    (``::ffff:a.b.c.d``) look through to the embedded v4 address.
+    """
+    if ip.version == 4:
+        return ip
+    return getattr(ip, "ipv4_mapped", None)
+
 
 def _is_blocked_ip(ip_str: str) -> bool:
     """Return True if *ip_str* is an address we must never proxy to."""
@@ -42,14 +63,22 @@ def _is_blocked_ip(ip_str: str) -> bool:
         ip = ipaddress.ip_address(ip_str)
     except ValueError:
         return True  # unparseable -> fail closed
-    return (
+    if (
         ip.is_loopback        # 127.0.0.0/8, ::1
-        or ip.is_private      # 10/8, 172.16/12, 192.168/16, fc00::/7, ...
+        or ip.is_private      # 10/8, 172.16/12, 192.168/16, fc00::/7, TEST-NET, ...
         or ip.is_link_local   # 169.254.0.0/16, fe80::/10
         or ip.is_multicast
         or ip.is_reserved
         or ip.is_unspecified  # 0.0.0.0, ::
-    )
+    ):
+        return True
+    v4 = _ip_for_v4_network_check(ip)
+    if v4 is not None:
+        for net in _EXTRA_BLOCKED_V4:
+            if v4 in net:
+                logger.warning("Blocked non-public address %s (range %s)", ip_str, net)
+                return True
+    return False
 
 
 def _peer_ip(sockaddr) -> Optional[str]:
@@ -190,13 +219,47 @@ class SSRFAsyncTransport(httpx.AsyncHTTPTransport):
     not expose ``network_backend``; after ``super().__init__`` we reach into
     the pool and swap its backend for a :class:`GuardedAsyncNetworkBackend`
     wrapping the one it already created.
+
+    Both ``_pool`` and ``pool._network_backend`` are httpcore/httpx PRIVATE
+    attributes with no compatibility promise. If either disappears (library
+    drift), we **fail closed at construction time** with an explicit error
+    instead of silently running the pool with an unguarded backend — a silent
+    fallback would quietly remove the connect-time (DNS-rebinding) layer with
+    no signal to operators.
     """
+
+    #: httpcore connection-pool attribute holding the async network backend.
+    POOL_BACKEND_ATTR = "_network_backend"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        inner = getattr(self._pool, "_network_backend", None)
-        if inner is not None:
-            self._pool._network_backend = GuardedAsyncNetworkBackend(inner)
+        self._install_guarded_backend()
+
+    def _install_guarded_backend(self):
+        """Swap the pool's network backend for the guarded one. Raise on drift."""
+        pool = getattr(self, "_pool", None)
+        if pool is None:
+            raise RuntimeError(
+                "SSRF guard abort: httpx transport exposes no connection pool "
+                "(expected self._pool); refusing to run without connect-time "
+                "peer validation."
+            )
+        inner = getattr(pool, self.POOL_BACKEND_ATTR, None)
+        if inner is None or not callable(getattr(inner, "connect_tcp", None)):
+            raise RuntimeError(
+                "SSRF guard abort: httpcore pool exposes no callable "
+                f"{self.POOL_BACKEND_ATTR} (private API drift); refusing to "
+                "run without connect-time peer validation."
+            )
+        guarded = GuardedAsyncNetworkBackend(inner)
+        setattr(pool, self.POOL_BACKEND_ATTR, guarded)
+        # Verify the swap actually took effect, then return for tests/inspection.
+        if getattr(pool, self.POOL_BACKEND_ATTR, None) is not guarded:
+            raise RuntimeError(
+                "SSRF guard abort: guarded backend installation could not be "
+                "verified; refusing to run without connect-time peer validation."
+            )
+        return guarded
 
 
 def guarded_async_client(**kwargs) -> httpx.AsyncClient:
