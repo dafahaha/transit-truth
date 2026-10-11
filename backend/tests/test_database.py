@@ -145,3 +145,68 @@ class TestDatabase:
             upsert_ranking(entry)
         gpt_rankings = get_rankings(model="gpt-4o")
         assert len(gpt_rankings) == 2
+
+
+class TestListAuditsInjection:
+    """list_audits filters attacker-controlled ``model``/``base_url`` query
+    params. The shipped query is parameterized; these tests pin that invariant
+    (mutation M7, string concatenation, used to leave the suite green)."""
+
+    def _seed(self):
+        save_audit(AuditResult(
+            audit_id="inj001",
+            status=AuditStatus.COMPLETED,
+            model="gpt-4o",
+            base_url="https://api.example.com/v1",
+            started_at=datetime.now(),
+            overall_score=90.0,
+        ))
+        save_audit(AuditResult(
+            audit_id="inj002",
+            status=AuditStatus.COMPLETED,
+            model="claude-3-opus",
+            base_url="https://relay.example.org/v1",
+            started_at=datetime.now(),
+            overall_score=80.0,
+        ))
+
+    def test_or_payload_treated_as_literal(self, temp_db):
+        import sqlite3
+        import app.database as db_module
+        self._seed()
+        # Classic tautology: if concatenated, this would leak EVERY row.
+        rows = list_audits(model="gpt-4o' OR '1'='1")
+        assert rows == []
+        rows = list_audits(model="x%' OR '1'='1")
+        assert rows == []
+        # The literal-looking value still finds its intended model...
+        rows = list_audits(model="gpt-4o")
+        assert len(rows) == 1
+        # ... and the table is intact afterwards.
+        conn = sqlite3.connect(str(db_module.DB_PATH))
+        n = conn.execute("SELECT COUNT(*) FROM audits").fetchone()[0]
+        conn.close()
+        assert n == 2
+
+    def test_drop_table_payload_treated_as_literal(self, temp_db):
+        import sqlite3
+        import app.database as db_module
+        self._seed()
+        rows = list_audits(base_url="x'; DROP TABLE audits;--")
+        assert rows == []
+        rows = list_audits(base_url="https://relay.example.org/v1' --")
+        assert rows == []
+        # DROP never executed: the table still exists and holds both rows.
+        conn = sqlite3.connect(str(db_module.DB_PATH))
+        n = conn.execute("SELECT COUNT(*) FROM audits").fetchone()[0]
+        conn.close()
+        assert n == 2
+        rows = list_audits(model="claude-3-opus")
+        assert len(rows) == 1
+
+    def test_comment_payload_treated_as_literal(self, temp_db):
+        self._seed()
+        rows = list_audits(model="gpt-4o'--")
+        assert rows == []
+        rows = list_audits(model="gpt-4o")
+        assert len(rows) == 1
