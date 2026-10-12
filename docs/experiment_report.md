@@ -161,9 +161,22 @@ where:
 - $E$ = evidence from statistical tests
 - Prior $P(H) = 0.7$ (base rate assumption: 70% of relays are honest)
 
-The likelihood ratio is derived from test p-values:
-- High p-value (> 0.5): LR = 2.0 (strong evidence of match)
-- Low p-value (< 0.01): LR = 0.1 (strong evidence of mismatch)
+The likelihood ratio starts at LR = 1.0 and multiplies one factor per test, exactly as implemented in `statistical_analyzer.calculate_likelihood_ratio`:
+
+- **Behavioral chi-square p-value** — the primary same-family fingerprint signal, and the only signal that may reward a match (two-sided):
+  - p > 0.5: ×3.0 (strong match → honest)
+  - 0.2 < p ≤ 0.5: ×1.3
+  - 0.1 ≤ p ≤ 0.2: ×1.0 (neutral)
+  - p < 0.1: ×0.7; p < 0.05: ×0.3; p < 0.01: ×0.05 (strong mismatch → downgrade)
+- **Tokenizer KS p-value** — a cross-family signal only, deliberately asymmetric (factor in (0, 1]; a same-family tokenizer is expected and is never rewarded):
+  - p ≥ 0.1: ×1.0 (neutral)
+  - p < 0.1: ×0.8; p < 0.05: ×0.5; p < 0.01: ×0.2
+- **Capability failure rate**:
+  - rate < 0.1: ×1.5 (high capability → honest)
+  - 0.1 ≤ rate ≤ 0.3: ×1.0 (neutral)
+  - rate > 0.3: ×0.6; rate > 0.5: ×0.3; rate > 0.7: ×0.1 (almost certainly downgraded)
+
+For the Section 4.5 self-check (KS p = 1.0000, chi-square p = 1.0000, capability failure rate < 0.1), this product is 1.0 × 3.0 × 1.5 = **LR = 4.5**, matching the result table above.
 
 #### 3.2.4 Confidence Intervals
 
