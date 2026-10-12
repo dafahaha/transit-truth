@@ -316,7 +316,7 @@ class StatisticalAnalyzer:
             for k in list(synthetic_keys):
                 if k not in real_keys:
                     self.baseline_db.pop(k, None)
-            print(f"Loaded {loaded} real baselines from {data_dir}")
+            print(f"Loaded {loaded} real baselines from {baseline_path.resolve()}")
 
     def _infer_family(self, model_name: str) -> str:
         """Infer model family from model name."""

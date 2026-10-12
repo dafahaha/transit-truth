@@ -159,7 +159,7 @@ transit-truth sk-your-key --base-url https://your-relay.com/v1 --model gpt-4o
 - [x] **持续监控+告警**（4种告警检测，4种告警通道）
 - [x] **真实基准数据库**（gpt-4o-mini、gpt-4o，各50样本）
 - [x] **灵活配置管理**（14个环境变量，支持自定义探针数量/超时/重试等）
-- [x] **测试**：实测 **196 collected / 189 passed / 7 skipped**；其中 7 个端到端集成测试需要真实 API key，用 `pytest -m integration` 单独运行
+- [x] **测试**：实测 **204 collected / 197 passed / 7 skipped**；其中 7 个端到端集成测试需要真实 API key，用 `pytest -m integration` 单独运行
 - [x] **CI/CD**（GitHub Actions，Python 3.10/3.11/3.12矩阵）
 
 ### 🚧 开发中
@@ -227,7 +227,7 @@ transit-truth/
 │   │   ├── api/               # REST API
 │   │   ├── utils/             # 工具函数
 │   │   ├── config.py          # 配置管理（14 个环境变量）
-│   │   ├── tests/             # 196 collected / 189 passed / 7 skipped
+│   │   ├── tests/             # 204 collected / 197 passed / 7 skipped
 │   │   └── main.py            # FastAPI 入口
 │   └── requirements.txt
 ├── frontend/                   # Web 前端资源
