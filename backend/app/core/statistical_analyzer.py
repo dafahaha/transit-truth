@@ -12,7 +12,7 @@ Key concepts:
 - False positive/negative rates: measure test reliability
 
 References:
-- CoIn (arXiv 2505.13778): "Can You Trust Your LLM API?"
+- CoIn (arXiv 2505.13778): "Counting the Invisible Reasoning Tokens"
 - SILENT-BENCH: benchmark for silent model degradation
 """
 

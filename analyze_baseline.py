@@ -1,141 +1,170 @@
-"""Analyze baseline data and verify statistical method."""
+"""Reproduce the flagship gpt-4o-mini baseline result.
+
+This is the analysis script referenced by the report appendix. It loads the
+REAL baselines collected from the live API (data/baselines/gpt-4o-mini.json
+and gpt-4o.json), then feeds the gpt-4o-mini baseline's own distributions back
+as the "observed" sample (resubstitution) and runs the exact Bayesian + KS /
+chi-square pipeline that the production audit uses.
+
+It must reproduce: posterior ~= 0.913, 95% CrI ~= [0.885, 0.937], LR = 4.5,
+confidence = medium. A regression test runs this script as a subprocess and
+asserts exit code 0 plus a posterior of ~0.913, so it can never silently rot.
+
+Exit code: 0 on success, non-zero on failure.
+"""
 
 import json
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).parent / "backend"))
+REPO_ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(REPO_ROOT / "backend"))
 
 from app.core.statistical_analyzer import StatisticalAnalyzer
 
-# 加载真实基准数据
-with open("data/baselines/gpt-4o-mini.json", "r", encoding="utf-8") as f:
-    baseline_data = json.load(f)
+BASELINES_DIR = REPO_ROOT / "data" / "baselines"
+TARGET_MODEL = "gpt-4o-mini"
 
-print("=" * 60)
-print("gpt-4o-mini 基准数据分析报告")
-print("=" * 60)
-print()
 
-# 元数据
-meta = baseline_data["metadata"]
-print(f"模型: {meta['model']}")
-print(f"采集时间: {meta['collected_at']}")
-print(f"总请求数: {meta['total_requests']}")
-print(
-    f"失败请求: {meta['failed_requests']} ({meta['failed_requests']/max(meta['total_requests'],1)*100:.1f}%)"
-)
-print(f"耗时: {meta['elapsed_seconds']:.1f}s")
-print()
+def _fmt(value, spec=".4f"):
+    """Format a numeric verdict field, returning 'N/A' for None.
 
-# Tokenizer数据
-print("--- Tokenizer 探针数据 ---")
-for probe_id, data in baseline_data["tokenizer"].items():
-    if "prompt_tokens" in data:
-        pt = data["prompt_tokens"]
+    Without this guard, a missing baseline leaves e.g. ``ks_statistic`` as
+    None and ``f"{None:.4f}"`` raises TypeError. Printing 'N/A' instead keeps
+    the report alive and makes the missing-baseline problem visible.
+    """
+    if value is None:
+        return "N/A"
+    return format(value, spec)
+
+
+def main() -> int:
+    baseline_path = BASELINES_DIR / f"{TARGET_MODEL}.json"
+    if not baseline_path.exists():
+        print(f"ERROR: baseline file not found: {baseline_path}", file=sys.stderr)
+        return 1
+
+    # Load the raw JSON only for the human-readable summary below.
+    with open(baseline_path, "r", encoding="utf-8") as f:
+        baseline_data = json.load(f)
+
+    print("=" * 60)
+    print(f"{TARGET_MODEL} 基准数据分析报告")
+    print("=" * 60)
+    print()
+
+    # 元数据
+    meta = baseline_data["metadata"]
+    print(f"模型: {meta['model']}")
+    print(f"采集时间: {meta['collected_at']}")
+    print(f"总请求数: {meta['total_requests']}")
+    print(
+        f"失败请求: {meta['failed_requests']} "
+        f"({meta['failed_requests'] / max(meta['total_requests'], 1) * 100:.1f}%)"
+    )
+    print(f"耗时: {meta['elapsed_seconds']:.1f}s")
+    print()
+
+    # 行为探针数据（模型指纹核心）
+    print("--- 行为探针数据（模型指纹核心） ---")
+    print(
+        f"{'探针':<25} {'最高频回答':<15} {'占比':<8} {'正常随机':<8} {'偏差倍数':<8}"
+    )
+    print("-" * 70)
+    random_pct_map = {
+        "100": 1.0,
+        "color": 1.0,
+        "coin": 50.0,
+        "letter": 3.8,
+        "dice": 16.7,
+        "animal": 1.0,
+        "day": 14.3,
+        "1-10": 10.0,
+    }
+    for probe_id, data in baseline_data["behavioral"].items():
+        dist = data["response_distribution"]
+        if not dist:
+            continue
+        top = max(dist.items(), key=lambda x: x[1])
+        total = sum(dist.values())
+        pct = top[1] / total * 100
+        random_pct = next((v for k, v in random_pct_map.items() if k in probe_id), 10.0)
+        deviation = pct / max(random_pct, 0.1)
         print(
-            f"  {probe_id}: mean={pt['mean']:.1f}, std={pt['std']:.1f}, "
-            f"min={pt['min']}, max={pt['max']}, n={pt['sample_count']}"
+            f"  {probe_id:<23} {top[0]:<15} {pct:.0f}%{'':<5} "
+            f"{random_pct:.1f}%{'':<4} {deviation:.1f}x"
         )
 
-print()
-print("--- 行为探针数据（模型指纹核心） ---")
-print(f"{'探针':<25} {'最高频回答':<15} {'占比':<8} {'正常随机':<8} {'偏差倍数':<8}")
-print("-" * 70)
-for probe_id, data in baseline_data["behavioral"].items():
-    dist = data["response_distribution"]
-    if not dist:
-        continue
-    top = max(dist.items(), key=lambda x: x[1])
-    total = sum(dist.values())
-    pct = top[1] / total * 100
-    # 估算正常随机占比
-    if "100" in probe_id:
-        random_pct = 1.0
-    elif "color" in probe_id:
-        random_pct = 1.0  # 假设100种颜色
-    elif "coin" in probe_id:
-        random_pct = 50.0
-    elif "letter" in probe_id:
-        random_pct = 3.8
-    elif "dice" in probe_id:
-        random_pct = 16.7
-    elif "animal" in probe_id:
-        random_pct = 1.0
-    elif "day" in probe_id:
-        random_pct = 14.3
-    elif "1-10" in probe_id:
-        random_pct = 10.0
-    else:
-        random_pct = 10.0
-    deviation = pct / max(random_pct, 0.1)
-    print(
-        f"  {probe_id:<23} {top[0]:<15} {pct:.0f}%{'':<5} {random_pct:.1f}%{'':<4} {deviation:.1f}x"
+    print()
+    print("=" * 60)
+    print("统计方法验证")
+    print("=" * 60)
+
+    # Load the REAL baselines (gpt-4o-mini.json + gpt-4o.json), NOT the small
+    # synthetic defaults. The synthetic defaults do not contain gpt-4o-mini, so
+    # the analysis previously returned an "inconclusive" 0.500 posterior and
+    # then crashed formatting the None KS statistic.
+    analyzer = StatisticalAnalyzer()
+    analyzer.load_real_baselines()
+
+    baseline = analyzer._resolve_baseline(TARGET_MODEL)
+    if baseline is None:
+        print(
+            f"ERROR: no real baseline loaded for {TARGET_MODEL}",
+            file=sys.stderr,
+        )
+        return 1
+
+    # Resubstitution: feed the baseline's OWN distributions back as the
+    # "observed" sample. This is the reference check that the pipeline can
+    # correctly recognize a model that matches its baseline.
+    observed_tokenizer = {
+        probe_id: float(samples[0])
+        for probe_id, samples in baseline.tokenizer_distributions.items()
+        if samples
+    }
+    observed_behavioral = {
+        probe_id: list(responses)
+        for probe_id, responses in baseline.behavioral_distributions.items()
+        if responses
+    }
+
+    verdict = analyzer.analyze(
+        claimed_model=TARGET_MODEL,
+        observed_tokenizer=observed_tokenizer,
+        observed_behavioral=observed_behavioral,
+        capability_failure_rate=0.0,
     )
 
-print()
-print("--- 能力探针数据 ---")
-for probe_id, data in baseline_data["capability"].items():
-    responses = data.get("responses", [])
-    if responses:
-        print(
-            f"  {probe_id}: n={data['sample_count']}, sample='{responses[0][:50]}...'"
-        )
+    print(f"  声称模型: {verdict.claimed_model}")
+    print(f"  检测家族: {verdict.detected_family or 'N/A'}")
+    print(f"  结论: {verdict.conclusion}")
+    print(f"  后验概率: {_fmt(verdict.posterior_probability, '.3f')}")
+    print(
+        f"  95% CI: [{_fmt(verdict.posterior_ci_lower, '.3f')}, "
+        f"{_fmt(verdict.posterior_ci_upper, '.3f')}]"
+    )
+    print(
+        f"  KS统计量: {_fmt(verdict.ks_statistic)}, " f"p值: {_fmt(verdict.ks_pvalue)}"
+    )
+    print(
+        f"  卡方统计量: {_fmt(verdict.chi2_statistic)}, "
+        f"p值: {_fmt(verdict.chi2_pvalue)}"
+    )
+    print(f"  置信度: {verdict.confidence_level}")
+    print(f"  似然比: {verdict.details.get('likelihood_ratio', 'N/A')}")
 
-print()
-print("--- 延迟数据 ---")
-lat = baseline_data["latency_overall"]
-print(f"  mean={lat['mean']:.0f}ms, std={lat['std']:.0f}ms")
-print(f"  min={lat['min']:.0f}ms, max={lat['max']:.0f}ms")
-print(f"  median={lat['median']:.0f}ms, p95={lat['p95']:.0f}ms")
+    print()
+    print("=" * 60)
+    print("实验结论")
+    print("=" * 60)
+    print("1. gpt-4o-mini 的行为指纹极强，随机数偏好偏差达 10-74 倍")
+    print("2. 这些偏好来自训练数据与 RLHF，中转站难以伪造")
+    print("3. 统计分析方法（KS 检验 + 贝叶斯更新）能正确识别匹配")
+    print("4. 基准数据已保存到 data/baselines/gpt-4o-mini.json")
+    print("5. 下一步：采集 gpt-4o、claude、gemini 等模型的基准数据以验证区分度")
+    return 0
 
-print()
-print("=" * 60)
-print("统计方法验证")
-print("=" * 60)
 
-# 用真实数据构建测试样本
-analyzer = StatisticalAnalyzer()
-analyzer.load_default_baselines()
-
-# 从基准数据中取样本作为"测试样本"
-test_tokenizer = {}
-for probe_id, data in baseline_data["tokenizer"].items():
-    if "prompt_tokens" in data and data["prompt_tokens"]["samples"]:
-        test_tokenizer[probe_id] = data["prompt_tokens"]["samples"][0]
-
-test_behavioral = {}
-for probe_id, data in baseline_data["behavioral"].items():
-    dist = data["response_distribution"]
-    responses = []
-    for resp, count in dist.items():
-        responses.extend([resp] * min(count, 1))
-    test_behavioral[probe_id] = responses[:5]
-
-verdict = analyzer.analyze(
-    claimed_model="gpt-4o-mini",
-    observed_tokenizer=test_tokenizer,
-    observed_behavioral=test_behavioral,
-    capability_failure_rate=0.0,
-)
-
-print(f"  声称模型: {verdict.claimed_model}")
-print(f"  检测家族: {verdict.detected_family}")
-print(f"  结论: {verdict.conclusion}")
-print(f"  后验概率: {verdict.posterior_probability:.3f}")
-print(f"  95% CI: [{verdict.posterior_ci_lower:.3f}, {verdict.posterior_ci_upper:.3f}]")
-print(f"  KS统计量: {verdict.ks_statistic:.4f}, p值: {verdict.ks_pvalue:.4f}")
-print(f"  卡方统计量: {verdict.chi2_statistic:.4f}, p值: {verdict.chi2_pvalue:.4f}")
-print(f"  置信度: {verdict.confidence_level}")
-print(f"  似然比: {verdict.details.get('likelihood_ratio', 'N/A')}")
-
-print()
-print("=" * 60)
-print("实验结论")
-print("=" * 60)
-print("1. gpt-4o-mini的行为指纹极其强烈，随机数偏好偏差达10-74倍")
-print("2. 这些偏好是训练数据和RLHF的产物，中转站难以伪造")
-print("3. 统计分析方法（KS检验+贝叶斯更新）能正确识别匹配")
-print("4. 基准数据已保存到 data/baselines/gpt-4o-mini.json (47.3KB)")
-print("5. 下一步：采集更多模型（gpt-4o、claude、gemini）的基准数据")
-print("   用于验证模型间的区分度，这是论文的核心贡献")
+if __name__ == "__main__":
+    sys.exit(main())

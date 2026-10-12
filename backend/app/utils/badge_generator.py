@@ -6,6 +6,8 @@ TransitTruth contribution status.
 
 from __future__ import annotations
 
+import html
+
 
 def generate_contributor_badge(
     username: str, audit_count: int, verified_count: int = 0
@@ -42,6 +44,14 @@ def generate_contributor_badge(
         color = "#94a3b8"
         bg_color = "#1e293b"
 
+    # Escape every caller-controlled string before it is interpolated into the
+    # SVG text. ``username`` reaches this function from the public
+    # /api/contribute endpoint (contributor_name), so it must never be spliced
+    # in raw -- otherwise '<script>' or an attribute-breaking '"' would be
+    # served as part of the badge. html.escape also handles the XML specials
+    # (& < > " '), matching what report_generator does for HTML.
+    safe_username = html.escape(str(username))
+
     svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="320" height="80" viewBox="0 0 320 80">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
@@ -53,7 +63,7 @@ def generate_contributor_badge(
   <circle cx="40" cy="40" r="22" fill="{color}" opacity="0.2"/>
   <text x="40" y="47" text-anchor="middle" font-family="Arial, sans-serif" font-size="20" font-weight="bold" fill="{color}">🛡</text>
   <text x="72" y="32" font-family="Arial, sans-serif" font-size="14" font-weight="600" fill="#f1f5f9">TransitTruth {level}</text>
-  <text x="72" y="52" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8">@{username}</text>
+  <text x="72" y="52" font-family="Arial, sans-serif" font-size="12" fill="#94a3b8">@{safe_username}</text>
   <text x="72" y="68" font-family="Arial, sans-serif" font-size="11" fill="#64748b">{audit_count} audits · {verified_count} verified</text>
 </svg>"""
     return svg
@@ -70,11 +80,17 @@ def generate_stat_badge(label: str, value: str, color: str = "#2563eb") -> str:
     Returns:
         SVG string
     """
+    # label/value are free-form strings and color is spliced into an SVG
+    # attribute; escape all of them so neither text injection nor attribute
+    # breakout is possible.
+    safe_label = html.escape(str(label))
+    safe_value = html.escape(str(value))
+    safe_color = html.escape(str(color))
     svg = f"""<svg xmlns="http://www.w3.org/2000/svg" width="160" height="40" viewBox="0 0 160 40">
   <rect width="160" height="40" rx="6" fill="#1e293b"/>
-  <rect width="4" height="40" rx="2" fill="{color}"/>
-  <text x="16" y="18" font-family="Arial, sans-serif" font-size="10" fill="#94a3b8">{label}</text>
-  <text x="16" y="34" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#f1f5f9">{value}</text>
+  <rect width="4" height="40" rx="2" fill="{safe_color}"/>
+  <text x="16" y="18" font-family="Arial, sans-serif" font-size="10" fill="#94a3b8">{safe_label}</text>
+  <text x="16" y="34" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="#f1f5f9">{safe_value}</text>
 </svg>"""
     return svg
 
