@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.5] - 2026-10-14
+
+### Fixed — 收尾热修（v0.4.4 全新审批两片均无 P0/P1，4 P2 + 少量 P3）
+- **P2 版本号漂移**：`backend/pyproject.toml` 仍钉在 `0.4.3`（其余位置已是 0.4.4），全仓统一 **0.4.5**（root `pyproject.toml`、`backend/pyproject.toml`、`config.py APP_VERSION`、`app/__init__.py __version__`、egg-info 构建产物）。新增**版本一致性测试**（tomllib 解析两份 pyproject + `APP_VERSION` + `__version__` 四源断言同值），防再漂移。
+- **P2 tokenizer match 阈值乐观**：重校后 Qwen2.5 与 o200k 在电池 5 探针上 **4/5 相等**（仅 mixed-unicode 差 3 token），旧 0.8 阈值把"声称 gpt-4o-mini、实发 Qwen"判 `match`。修复：满探针覆盖（overlap=5）时 tokenizer 判 `match` 要求 **score=1.0**；0.8 卡线降为 `ambiguous` 并附弱信号 note（tokenizer 仅弱信号、需行为指纹确认）。overlap<3 仍 `insufficient_overlap`、显著分歧仍 `mismatch`；Qwen↔Qwen、gpt↔gpt 自对自仍精确 1.0→match，正常识别不受影响。
+
+### Docs / P3
+- **P2 测试数回填**：README 由过时的 229 回填为本次真值（**0.4.4=233**、**0.4.5=238 passed / 7 skipped**）。
+- **P2 弱信号说明**：README 原理节与 `docs/verify.md` 明确——重校后不同家族 tokenizer 可能高度趋同（Qwen2.5 vs o200k 5 探针 4 项相等），tokenizer 仅**弱信号**、行为指纹是主判据、官方密码学 attestation 才是终局，不留"强判别家族"暗示。
+- **P3**：两个 shipped 指纹 JSON note "Zenodo 176-model" → **165**；知道创宇 34.9% 补口径（849 个"模型×中转站"组合中 296 异常≈34.9%，涉其调查 100 站点中的 75 家），不再粗化为"34.9% 的中转站"；`docs/verify.md` 退出码表补列 insufficient_evidence→0（pass 与 insufficient 均退出 0，suspicious=3，错误=2，以 CLI 实现核实）；删除 `battery.py` 未被消费的死字段 `planned_tokenizer_ids` / `expected_behavioral_repeats`（全仓确认无引用，不留半成品）。
+- 测试：新增 v0.4.5 回归 5 个（版本四源一致；o200k 精确观测 match(1.0)；Qwen 数字声称 gpt → ambiguous 非 match + note；Qwen 自对自 match(1.0)；低 overlap/分歧带不受影响），总数只增不减。
+
 ## [0.4.4] - 2026-10-14
 
 ### Fixed — 覆盖率门 + tokenizer 口径热修（独立审批抓 1 P1 绕过 + 1 P1 引用错误 + 1 P2 口径误报）
@@ -17,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **P1 引用事实错误**：UCSB《Your Agent Is Mine》（arXiv:2604.08407）是 **agent 供应链攻击**研究（428 路由中 9 个注入恶意 tool-call、17 个窃取云凭据；"26"系自行加总），**通篇不测模型替换**。已从中转站偷换模型证据中移除，改置于"agent 供应链风险"语境并显式标注不测模型替换；模型替换主张以 CISPA arXiv:2603.01919（"45.83% 的**指纹测试**身份核验失败"，非"45.83% 的中转站"）、Berkeley arXiv:2504.04715、知道创宇 34.9% 为锚点。
 - **P2 README 无 Key 快速开始跑不通**：快速开始命令块补设 dummy key（`export TRANSIT_TRUTH_API_KEY=...`，附 PowerShell `$env:` 写法），原样可跑。
 - **P3**：`backend/app/__init__.py __version__` 0.1.0 → 0.4.4（全仓版本统一）；删除 CHANGELOG 底部悬空的 v0.2.0 / v0.1.0 release 链接（远端无对应 tag）；README 行为探针数前后统一（8 英文 + 6 中文 = 14）。
-- 测试：新增 v0.4.4 回归（单探针 n=3 其余 504 → 非 pass + non_cooperation + 数字 null；全探针各 n=1 → 同样封顶；合作充分采样不受影响；tokenizer 口径锁定）。
+- 测试：新增 v0.4.4 回归（单探针 n=3 其余 504 → 非 pass + non_cooperation + 数字 null；全探针各 n=1 → 同样封顶；合作充分采样不受影响；tokenizer 口径锁定），合计 **233 passed / 7 skipped**（只增不减）。
 
 ## [0.4.3] - 2026-10-14
 

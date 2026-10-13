@@ -132,3 +132,8 @@ async def test_qwen_tokenizer_rejects_gpt_claim():
     assert tc["overlap"] == 5, json.dumps(tc)
     assert tc["consistent"] == 4, json.dumps(tc)
     assert abs(tc["score"] - 0.8) < 0.01, json.dumps(tc)
+    # v0.4.5: a 4/5 = 0.8 near-agreement at full overlap is NOT a family match
+    # any more -- it is an ambiguous weak signal (Qwen2.5 vs o200k are this
+    # close). Only an exact 5/5 score may be called match.
+    assert tc["verdict"] != "match", json.dumps(tc)
+    assert tc["verdict"] == "ambiguous", json.dumps(tc)

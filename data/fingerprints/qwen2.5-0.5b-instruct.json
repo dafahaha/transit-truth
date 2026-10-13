@@ -6,7 +6,7 @@
     "fingerprint_type": "tokenizer-real",
     "tokenizer_repo": "Qwen/Qwen2.5-0.5B-Instruct",
     "counting_caliber": "system_prompt + user_prompt joined by newline, matching exactly what the probe battery sends to an OpenAI-compatible endpoint (system message + user message). This is the same string the self-hosted reference_server encodes, so a reference backend's reported usage.prompt_tokens line up with these reference counts.",
-    "note": "Real prompt-token counts measured with the Qwen2.5-0.5B-Instruct tokenizer (downloaded via HF_ENDPOINT=hf-mirror). Behavioral distributions are NOT captured (no local generation); for open-source behavioral references see the Zenodo 176-model fingerprint dataset (CC-BY-4.0) cited in THIRD_PARTY_NOTICES.md. Tokenization is deterministic, so samples are identical by construction. IMPORTANT: with no behavioral reference, verify can only certify tokenizer-family consistency and must NOT output verdict=pass; it caps at insufficient_evidence."
+    "note": "Real prompt-token counts measured with the Qwen2.5-0.5B-Instruct tokenizer (downloaded via HF_ENDPOINT=hf-mirror). Behavioral distributions are NOT captured (no local generation); for open-source behavioral references see the Zenodo 165-model fingerprint dataset (CC-BY-4.0) cited in THIRD_PARTY_NOTICES.md. Tokenization is deterministic, so samples are identical by construction. IMPORTANT: with no behavioral reference, verify can only certify tokenizer-family consistency and must NOT output verdict=pass; it caps at insufficient_evidence."
   },
   "tokenizer": {
     "tok-whitespace": {

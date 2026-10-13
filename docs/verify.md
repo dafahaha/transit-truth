@@ -44,7 +44,9 @@ proof** and not a verdict on authenticity.
 }
 ```
 
-Exit codes: `0` pass, `3` suspicious, `2` error.
+Exit codes: `0` for `pass` **or** `insufficient_evidence` (a run that simply
+lacks enough evidence exits 0, so scripting can distinguish via the JSON
+verdict field), `3` for `suspicious`, `2` for an execution error.
 
 ## Reference fingerprints
 
@@ -77,6 +79,18 @@ public-URL SSRF guard.
 > are measured on the **system_prompt + user_prompt** caliber (the full request
 > the battery sends), so a self-hosted reference server's reported counts line up
 > with the on-disk reference.
+
+> **Recalibration note (v0.4.5): tokenizer near-agreement is a WEAK signal.**
+> After recomputing the baselines on the battery's exact system+user caliber,
+> different tokenizer families can be nearly indistinguishable on the public
+> probes: Qwen2.5's tokenizer and o200k (gpt-4o) agree on **4 of the 5** battery
+> probes (only mixed-unicode diverges by 3 tokens). `tokenizer_consistency`
+> therefore no longer calls a 4/5 = 0.8 agreement `match` at full overlap -- it
+> reports `ambiguous` (with a weak-signal note); `match` now requires exact
+> agreement across the whole probe battery. Never read a tokenizer agreement as
+> "same model family": the **behavioral fingerprint is the primary judge**, and
+> official cryptographic attestation (provider-signed responses) remains the only
+> endgame.
 
 ## Deterministic-replay honesty (v0.4.2)
 

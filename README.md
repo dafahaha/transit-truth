@@ -112,7 +112,9 @@ TransitTruth 是一个开源的 **AI API 安全审计平台**，基于学术前�
 
 ### 2. 🔤 Tokenizer指纹
 
-不同模型家族使用不同的tokenizer（GPT用cl100k/o200k，Claude用自定义tokenizer，Gemini用SentencePiece）。发送精心构造的字符串（数字序列、CJK、emoji、代码、URL），对比token计数，可以反推后端模型家族。
+不同模型家族历史上使用不同的tokenizer（GPT用cl100k/o200k，Claude用自定义tokenizer，Gemini用SentencePiece）。发送精心构造的字符串（数字序列、CJK、emoji、代码、URL），对比token计数，可作为后端模型家族的**辅助线索**。
+
+**弱信号，不可反推家族（v0.4.5 重校后诚实口径）**：重校基线后发现，不同家族的 tokenizer 在公开探针上可能高度趋同——Qwen2.5 的 tokenizer 与 o200k（gpt-4o）在电池 5 个探针中 **4 项完全相等**（仅 mixed-unicode 差 3 token）。因此 tokenizer 计数只是**弱信号**：满探针覆盖下 4/5 一致已判 `ambiguous` 而非 `match`，**不能据此反推模型家族**；行为指纹才是主判据，官方密码学 attestation（厂商签名响应）是唯一终局，本工具只是概率性辅助证据。
 
 **局限**：不能区分同一家族的不同模型（如gpt-4o vs gpt-4o-mini）——这正是行为指纹的价值。
 
@@ -215,7 +217,7 @@ transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
 - [x] **持续监控+告警**（4种告警检测，4种告警通道）
 - [x] **真实基准数据库**（gpt-4o-mini、gpt-4o，各50样本）
 - [x] **灵活配置管理**（14个环境变量，支持自定义探针数量/超时/重试等）
-- [x] **测试**：实测 **229 passed / 7 skipped**（v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.2 诚实性/抗回放、v0.4.3 饥饿式样本绕过回归）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
+- [x] **测试**：实测 **238 passed / 7 skipped**（v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.2 诚实性/抗回放、v0.4.3 饥饿式样本绕过回归、v0.4.4 覆盖率门+tokenizer 口径、v0.4.5 版本一致性+tokenizer 严格匹配回归）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
 - [x] **CI/CD**（GitHub Actions，Python 3.10/3.11/3.12矩阵）
 
 ### 🚧 开发中

@@ -158,14 +158,42 @@ def tokenizer_consistency(
         verdict = "insufficient_overlap"
     elif score < 0.5:
         verdict = "mismatch"
-    elif score >= 0.8:
+    elif score >= 0.8 and not _near_match_at_full_overlap(overlap, score):
         verdict = "match"
     else:
         verdict = "ambiguous"
-    return {
+    result = {
         "overlap": overlap,
         "consistent": consistent,
         "score": round(score, 2),
         "verdict": verdict,
         "details": details,
     }
+    if verdict == "ambiguous" and score >= 0.5:
+        # v0.4.5: recalibration showed different tokenizer families can be nearly
+        # identical on the public probes (Qwen2.5 vs o200k agree on 4/5, only
+        # mixed-unicode diverges by 3). A near-but-not-exact agreement is a WEAK
+        # signal: it must NOT be reported as a family match, and the behavioral
+        # fingerprint remains the primary judge.
+        result["note"] = (
+            "Tokenizer counts nearly agree across all N probes, but different "
+            "families (e.g. Qwen2.5 vs o200k) can be this close. Treat this as a "
+            "WEAK signal only -- do NOT infer the model family from it; the "
+            "behavioral fingerprint is the primary judge, and an official "
+            "cryptographic attestation remains the endgame."
+        )
+    return result
+
+
+# The bounded battery sends exactly 5 tokenizer probes by default
+# (``battery.DEFAULT_TOKENIZER_IDS``). At FULL coverage a "match" must be
+# EXACT: a 4/5 = 0.8 agreement used to be called ``match``, but recalibration
+# proved Qwen2.5 and o200k land 4/5 (only mixed-unicode differs by 3), so a
+# near-agreement at full overlap is a weak, ambiguous signal -- not a family
+# identity. (v0.4.5)
+FULL_TOKENIZER_OVERLAP = 5
+
+
+def _near_match_at_full_overlap(overlap: int, score: float) -> bool:
+    """True when a >=0.8 score comes from a near-miss at full probe coverage."""
+    return overlap >= FULL_TOKENIZER_OVERLAP and score < 1.0
