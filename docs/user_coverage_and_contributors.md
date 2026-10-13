@@ -60,7 +60,7 @@
 #### 方案B：离线版本
 - 用户下载 `index.html` 文件，本地双击打开
 - 所有功能纯前端实现，不需要后端
-- 文件大小：55KB，秒下载
+- 单文件，秒下载
 
 #### 方案C：Docker镜像
 - 用户本地部署：`docker run -p 8000:8000 dafahaha/transit-truth`

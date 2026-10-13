@@ -643,11 +643,18 @@ class StatisticalAnalyzer:
         baseline = self._resolve_baseline(claimed_model)
 
         if baseline is None:
+            # No reference at all: the default dataclass would otherwise print a
+            # fabricated prior (posterior=0.5, CI=[0,1]). With nothing to compare
+            # against those numbers are meaningless, so emit them as null (NA),
+            # matching the v0.4.2 honesty contract.
             return StatisticalVerdict(
                 claimed_model=claimed_model,
                 detected_family=None,
                 conclusion="inconclusive",
                 confidence_level="low",
+                posterior_probability=None,
+                posterior_ci_lower=None,
+                posterior_ci_upper=None,
                 details={"error": f"No baseline found for {claimed_model}"},
             )
 

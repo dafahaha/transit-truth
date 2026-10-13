@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-10-14
+
+### Fixed — 饥饿式绕过 / 诚实性热修（独立审批抓 1 P2 安全 + 若干 P2/P3）
+- **P2-A 饥饿式行为样本绕过**：对抗后端对每个行为探针只回 1 次公开模态串、其余 2 次回 504，使每探针 n=1。旧 `_behavioral_degeneracy` 跳过 n<2 → 不打回放风险、置信不封顶；单模态样本仍 chi2 匹配点质量基线（p≈0.9985）→ 实跑得到 pass/medium、posterior=0.913、无任何回放警示。修复：(1) 退化检测纳入 n≥1（n=1 恒为点质量，必触发 `deterministic_replay_risk`）；(2) 新增行为样本量下限门——任一重叠探针成功样本 < 3（或整体重叠观测过薄）即标 `thin_evidence`：置信封顶 `low`，并把 `posterior / likelihood_ratio / posterior_ci_95` 一律置 `null`（与 v0.4.2 "无行为证据"诚实契约一致），不再展示伪造的高置信后验。正常充分采样路径（n=3/探针）不受影响。
+- **P3 未知模型伪造先验**：无参考基线时 `posterior` 不再打印默认 0.5 / CI=[0,1]，一律 `null`。
+
+### Docs / P2-P3
+- **P2-D 夸大文案据实**：`docs/final_release_package.md`、`docs/promotion_guide.md` 约 10 处"80% 以上中转站偷偷降级"无据数字，全部替换为有据口径（UCSB：428 站中 26 家动手脚；CISPA：45.83% 未过行为指纹核验；arXiv:2603.01919）。
+- 版本号统一 0.4.3（root + backend `pyproject.toml`、`config.py APP_VERSION`、egg-info 构建产物）。
+- 删除 `_redact()` 死代码；reference-server 启动语改为 mode 自适应（消除 "real (stub)" 自相矛盾）；README 说明纯前端 demo 经 esm.sh CDN 加载 js-tiktoken（离线受限）；THIRD_PARTY_NOTICES 点名 USENIX Security'25 LLMmap；去掉过时的"55KB 单文件""46 个单元测试"等静态数字。
+- 测试：新增 v0.4.3 回归 3 个（饥饿后端 n=1 必须封顶 low + thin_evidence + 置 null；充分采样对照不受影响；未知模型 posterior 为 null），共 **229 passed / 7 skipped**（只增不减）。
+
 ## [0.4.2] - 2026-10-14
 
 ### Fixed — 诚实性 / 抗回放热修（独立审批抓到 1 P1 + 1 P2 + 若干 P3）
@@ -149,9 +161,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker support
 - README, LICENSE, .gitignore
 
-[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.4.3...HEAD
+[0.4.3]: https://github.com/dafahaha/transit-truth/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/dafahaha/transit-truth/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/dafahaha/transit-truth/compare/v0.4.0...v0.4.1
-[0.4.0]: https://github.com/dafahaha/transit-truth/compare/v0.2.0...v0.4.0
+[0.4.0]: https://github.com/dafahaha/transit-truth/releases/tag/v0.4.0
 [0.2.0]: https://github.com/dafahaha/transit-truth/releases/tag/v0.2.0
 [0.1.0]: https://github.com/dafahaha/transit-truth/releases/tag/v0.1.0

@@ -12,6 +12,11 @@ Licenses were verified against each project's canonical source.
   re-implemented the statistics in this repo rather than vendoring code.
   https://pypi.org/project/knowlyr-modelaudit/
 
+- **LLMmap** (USENIX Security 2025) — the black-box behavioral-fingerprinting /
+  relay-mapping study that the knowlyr ModelAudit built-in method derives from.
+  Our same lineage of open-ended, cheap behavioral probes (rather than a curated
+  benchmark) follows LLMmap; the statistics here are re-implemented from scratch.
+
 - **Zenodo: "Single-token output distributions as behavioral fingerprints of
   large language models"** (Bruckner, Tomáš et al.) — *Creative Commons
   Attribution 4.0 International (CC-BY-4.0)*.

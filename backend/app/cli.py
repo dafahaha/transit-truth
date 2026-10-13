@@ -386,11 +386,21 @@ def cmd_reference_server(args):
         sys.exit(2)
 
     app, backend = build_app(args.model)
+    if backend.mode == "tokenizer":
+        honesty_note = (
+            "prompt_tokens are computed by the REAL local tokenizer; "
+            "behavioral content is a deterministic stub (not a real model)."
+        )
+    else:
+        honesty_note = (
+            "PLUMBING STUB: no real tokenizer/model loaded -- prompt_tokens are "
+            "hash placeholders and behavioral content is a fixed stub. The verify "
+            "pipeline only runs end-to-end; it cannot certify anything."
+        )
     print(
         f"TransitTruth reference-server: model={args.model} mode={backend.mode}\n"
         f"OpenAI-compatible endpoint: http://{args.host}:{args.port}/v1\n"
-        f"Behavioral content is a deterministic stub; prompt_tokens are real "
-        f"({backend.mode}).",
+        f"{honesty_note}",
         file=sys.stderr,
     )
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning")

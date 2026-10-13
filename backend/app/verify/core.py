@@ -27,17 +27,18 @@ from .report import build_report, error_report
 logger = logging.getLogger(__name__)
 
 
-# A key never leaves the process; we only keep a redacted fingerprint for logs.
-def _redact(key: Optional[str]) -> str:
-    if not key:
-        return "<none>"
-    return f"{key[:3]}…({len(key)} chars)"
-
-
 # A behavioral probe whose empirical mode fraction is at least this close to 1.0
 # is treated as a point mass (zero entropy): under temperature=0 the shipped
 # public baselines are exactly such point masses, so they are replayable.
 _POINT_MASS_MODE_FRACTION = 0.99
+
+# Minimum successful behavioral repeats per *overlapping* probe before the
+# observed distribution is worth trusting. A single answer per probe is one
+# replayable modal string, NOT a distribution: it still chi2-matches a point-mass
+# baseline (p~=1.0) but carries no statistical power to certify identity.
+_MIN_BEHAVIORAL_SAMPLES_PER_PROBE = 3
+# ...and a floor on the total number of overlapping behavioral observations.
+_MIN_TOTAL_BEHAVIORAL_OBS = 3
 
 
 def _behavioral_degeneracy(
@@ -46,15 +47,20 @@ def _behavioral_degeneracy(
     """Per-probe empirical entropy / mode fraction for behavioral responses.
 
     Returns ``{probe_id: {n, mode, mode_fraction, shannon_entropy_nats,
-    point_mass}}`` for every probe with at least two samples. A point-mass
-    probe (mode fraction >= 0.99, zero entropy) is *replayable*: the shipped
-    public baselines are collected at temperature=0, so an attacker can hard-code
-    the public modal strings and reproduce the distribution deterministically.
+    point_mass}}`` for EVERY probe with at least one sample. A point-mass probe
+    (mode fraction >= 0.99, zero entropy) is *replayable*: the shipped public
+    baselines are collected at temperature=0, so an attacker can hard-code the
+    public modal strings and reproduce the distribution deterministically.
+
+    Note that n=1 is *always* a point mass by construction (the single observed
+    response IS the mode, mode fraction = 1.0, entropy = 0.0): a starving backend
+    that answers each probe exactly once still registers as degenerate even
+    though it has no repeated samples to compare.
     """
     out: dict[str, dict] = {}
     for probe_id, responses in observed_behavioral.items():
         n = len(responses)
-        if n < 2:
+        if n < 1:
             continue
         counts = Counter(responses)
         mode, mode_n = counts.most_common(1)[0]
@@ -313,5 +319,59 @@ async def verify_endpoint(
                 + " Caveat: behavioral evidence is point-mass (temperature=0 public "
                 "baselines are replayable verbatim), so this pass is low-confidence."
             )
+
+    # -- Behavioral sample-size floor (v0.4.3) -----------------------------
+    # A starving adversarial backend can answer each behavioral probe exactly ONCE
+    # (the public modal string) and 504 every repeat: every overlapping probe
+    # ends up with n=1. That single sample still chi2-matches a point-mass
+    # baseline (p~=1.0) and used to yield pass/medium with a spurious
+    # posterior=0.913. n=1 is a point mass by construction AND the evidence is
+    # statistically too thin to certify. Require at least
+    # _MIN_BEHAVIORAL_SAMPLES_PER_PROBE successful observations per overlapping
+    # probe (and a non-trivial total overlap). Below the floor we flag
+    # ``thin_evidence``, cap confidence to low, and withhold the Bayesian
+    # posterior/LR/CI -- the same honesty contract as "no behavioral evidence".
+    overlap_samples = {
+        pid: len(resp)
+        for pid, resp in battery.observed_behavioral.items()
+        if pid in behavioral_reference_probes
+    }
+    total_overlap = sum(overlap_samples.values())
+    thin_probes = {
+        pid: n
+        for pid, n in overlap_samples.items()
+        if n < _MIN_BEHAVIORAL_SAMPLES_PER_PROBE
+    }
+    thin_evidence = bool(real_behavioral_evidence) and (
+        bool(thin_probes) or total_overlap < _MIN_TOTAL_BEHAVIORAL_OBS
+    )
+    if thin_evidence:
+        report["statistics"]["thin_evidence"] = {
+            "flag": True,
+            "thin_probes": thin_probes,
+            "total_overlapping_observations": total_overlap,
+            "min_samples_per_probe": _MIN_BEHAVIORAL_SAMPLES_PER_PROBE,
+            "reason": (
+                "Behavioral evidence is too thin to certify: at least "
+                f"{_MIN_BEHAVIORAL_SAMPLES_PER_PROBE} successful samples per "
+                "overlapping probe are required, but some probe(s) were observed "
+                "only once (e.g. a backend that serves the public modal string once "
+                "and 504s the repeats). A single replayable answer is a point mass "
+                "with no statistical power, so confidence is capped low and the "
+                "Bayesian posterior/LR/CI are withheld."
+            ),
+        }
+        # Honest contract: never present a spurious posterior=0.913 / LR next to
+        # evidence this thin.
+        report["statistics"]["posterior"] = None
+        report["statistics"]["likelihood_ratio"] = None
+        report["statistics"]["posterior_ci_95"] = None
+        report["confidence"] = "low"
+        report["evidence_reason"] = (
+            report.get("evidence_reason", "")
+            + " Caveat: behavioral evidence is too thin (fewer than "
+            f"{_MIN_BEHAVIORAL_SAMPLES_PER_PROBE} successful samples per overlapping "
+            "probe); confidence capped low and Bayesian posterior/LR/CI withheld."
+        )
 
     return report

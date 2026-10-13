@@ -9,9 +9,9 @@
 ## 📊 项目核心卖点
 
 1. **震撼发现**：GPT选数字100%返回7，选动物76%返回Okapi——大模型有"行为指纹"
-2. **真实痛点**：80%以上AI API中转站存在模型偷偷降级，用户花了GPT-4的钱用的是GPT-3.5
+2. **真实痛点**：公开研究已证实部分 AI API 中转站存在模型偷换（UCSB 扫描 428 站发现 26 家动手脚；CISPA 测试中 45.83% 的中转站未通过行为指纹核验，arXiv:2603.01919），用户花了 GPT-4 的钱可能用到别的模型
 3. **技术创新**：行为指纹可以区分同家族模型（gpt-4o vs gpt-4o-mini），tokenizer指纹做不到
-4. **零门槛使用**：55KB单文件，浏览器打开即用，不需要安装，不需要后端
+4. **零门槛使用**：单文件，浏览器打开即用，不需要安装，不需要后端
 5. **全民共建**：中转站排行榜，5种贡献方式（GitHub/复制JSON/邮件/社区/API），无GitHub账号也能贡献
 6. **学术潜力**：基于统计分析（卡方检验+KS检验+贝叶斯更新），可复现验证，有论文转化潜力
 
@@ -54,7 +54,7 @@
 
 ## 这有什么用？
 
-80%以上的AI API中转站存在模型偷偷降级（用mini冒充pro，用3.5冒充4）。但tokenizer指纹区分不了同家族的模型（gpt-4o和gpt-4o-mini用同一个tokenizer），而行为指纹可以。
+公开研究已证实部分 AI API 中转站存在模型偷换（用 mini 冒充 pro、用旧型号冒充新型号；UCSB：428 站中 26 家动手脚，CISPA：45.83% 未过行为指纹核验，arXiv:2603.01919）。但 tokenizer 指纹区分不了同家族的模型（gpt-4o 和 gpt-4o-mini 用同一个 tokenizer），而行为指纹可以。
 
 ## 我做了一个开源工具
 
@@ -66,7 +66,7 @@
 - ⚡ 延迟与协议检查
 - 💳 余额查询
 - 🏆 中转站排行榜（12条初始数据，全民共建）
-- 🚀 零安装在线Demo（55KB单文件，浏览器即用）
+- 🚀 零安装在线Demo（单文件，浏览器即用）
 - 📋 5种贡献方式（GitHub/复制JSON/邮件/社区/API），无GitHub账号也能贡献
 
 **在线体验**：https://dafahaha.github.io/transit-truth/
@@ -134,7 +134,7 @@
 ```
 ## 前言
 
-AI API中转站市场乱象频发，80%以上存在模型偷偷降级。但作为普通用户，你怎么验证自己用的中转站有没有"参水分"？
+AI API 中转站市场乱象频发，公开研究已证实部分站点存在模型偷换（UCSB：428 站中 26 家动手脚；CISPA：45.83% 未过行为指纹核验，arXiv:2603.01919）。但作为普通用户，你怎么验证自己用的中转站有没有"参水分"？
 
 我做了一个27分钟的小实验，发现了GPT模型的"行为指纹"...
 
@@ -160,7 +160,7 @@ AI API中转站市场乱象频发，80%以上存在模型偷偷降级。但作�
 - ⚡ **延迟与协议检查**：P50/P95/P99，7项协议合规
 - 💳 **余额查询**：多中转站账户余额聚合
 - 🏆 **中转站排行榜**：12条初始数据，全民共建，5种贡献方式
-- 🚀 **纯前端在线Demo**：零安装，浏览器即用（55KB单文件，苹果风格设计）
+- 🚀 **纯前端在线Demo**：零安装，浏览器即用（单文件，苹果风格设计）
 
 ### 技术栈
 
@@ -223,7 +223,7 @@ I'm a third-year CS student, and I recently did a 27-minute experiment that reve
 
 ## Why this matters
 
-80%+ of AI API relay services in China secretly downgrade models (charging for GPT-4o but serving GPT-4o-mini). Tokenizer fingerprints can't distinguish same-family models, but behavioral fingerprints can.
+Public studies confirm some AI API relays secretly swap models (UCSB found 26 of 428 scanned sites actively manipulating models; CISPA found 45.83% of relays fail behavioral-fingerprint checks; arXiv:2603.01919). Tokenizer fingerprints can't distinguish same-family models, but behavioral fingerprints can.
 
 ## What I built
 
@@ -236,7 +236,7 @@ I built **TransitTruth**, an open-source AI API security audit platform based on
 - ⚡ Latency & protocol checks
 - 💳 Balance checking
 - 🏆 Community relay ranking (12 initial entries, 5 contribution methods)
-- 🚀 Zero-install online demo (55KB single file, pure frontend)
+- 🚀 Zero-install online demo (single file, pure frontend)
 
 **Live demo**: https://dafahaha.github.io/transit-truth/
 **GitHub**: https://github.com/dafahaha/transit-truth
@@ -362,7 +362,7 @@ GitHub开源：https://github.com/dafahaha/transit-truth
 
 原来每个大模型都有自己的"行为指纹"，就像每个人说话习惯不一样一样！
 
-而80%的AI中转站都在偷偷降级！你花了GPT-4的钱，实际用的可能是GPT-3.5😡
+而公开研究已证实部分 AI 中转站确在偷换模型（UCSB：428 站中 26 家动手脚；CISPA：45.83% 未过指纹，arXiv:2603.01919）！你花了 GPT-4 的钱，实际用的可能是别的模型😡
 
 于是我做了个工具👉TransitTruth
 
@@ -410,13 +410,13 @@ GitHub开源：https://github.com/dafahaha/transit-truth
 
 【第三部分：120-180秒 这有什么用】
 （画面：中转站价格对比图，降级示意图）
-旁白：这有什么用？80%以上的AI API中转站存在模型偷偷降级——你花了GPT-4的钱，实际用的可能是GPT-3.5。
+旁白：这有什么用？公开研究已证实部分 AI API 中转站存在模型偷换（UCSB：428 站中 26 家动手脚；CISPA：45.83% 未过行为指纹核验，arXiv:2603.01919）——你花了 GPT-4 的钱，实际用的可能是别的模型。
 但tokenizer指纹区分不了同家族的模型，因为gpt-4o和gpt-4o-mini用同一个tokenizer。而行为指纹可以。
 
 【第四部分：180-240秒 我做了什么】
 （画面：TransitTruth在线Demo演示，输入API Key，审计过程，结果展示）
 旁白：基于这个发现，我做了一个开源工具——TransitTruth，AI API安全审计平台。
-- 零安装，55KB单文件，浏览器打开就能用
+- 零安装，单文件，浏览器打开就能用
 - 输入API Key，30秒出结果
 - 行为指纹验证，14个探针，卡方检验+KS检验+贝叶斯更新
 - Token计费审计，看看有没有多扣你钱
@@ -449,7 +449,7 @@ GitHub开源：https://github.com/dafahaha/transit-truth
 ```
 震惊！我用27分钟做了2600次API请求，发现GPT选数字100%返回7，选动物76%返回Okapi（㺢㹢狓？）。原来每个大模型都有自己的"行为指纹"！
 
-而80%的AI中转站都在偷偷降级…你花了GPT-4的钱，用的可能是GPT-3.5😡
+而公开研究已证实部分 AI 中转站确在偷换模型（UCSB：428 站中 26 家动手脚；CISPA：45.83% 未过指纹，arXiv:2603.01919）…你花了 GPT-4 的钱，用的可能是别的模型😡
 
 我做了个开源工具帮你验明正身，零安装浏览器即用👉
 https://dafahaha.github.io/transit-truth/
@@ -467,7 +467,7 @@ https://dafahaha.github.io/transit-truth/
 ✅ 延迟和协议是否正常
 ✅ 中转站排行榜，看看哪些靠谱哪些坑
 
-零安装，55KB单文件，浏览器打开就能用👉
+零安装，单文件，浏览器打开就能用👉
 https://dafahaha.github.io/transit-truth/
 
 GitHub开源：https://github.com/dafahaha/transit-truth
@@ -486,7 +486,7 @@ I discovered GPT's "behavioral fingerprint" in 27 minutes:
 - It returns "Okapi" 76% of the time when asked to pick a random animal
 - On the same baseline, the "response names Okapi" rule gives 88% resubstitution accuracy (Wilson 95% CI [0.80,0.93]); TVD=0.90 is a distributional distance, not held-out accuracy
 
-80%+ of AI API relays secretly downgrade models. I built an open-source tool to detect it:
+Public studies confirm some AI API relays secretly swap models (26 of 428 UCSB-scanned sites; 45.83% fail CISPA behavioral-fingerprint checks; arXiv:2603.01919). I built an open-source tool to detect it:
 
 🔗 https://dafahaha.github.io/transit-truth/
 🐙 https://github.com/dafahaha/transit-truth
@@ -503,7 +503,7 @@ TransitTruth:
 ✅ Token billing audit
 ✅ Latency & protocol checks
 ✅ Community ranking
-✅ Zero-install, 55KB single file, browser-ready
+✅ Zero-install, single file, browser-ready
 
 🔗 https://dafahaha.github.io/transit-truth/
 🐙 https://github.com/dafahaha/transit-truth
@@ -541,7 +541,7 @@ TransitTruth:
 - [ ] 在线Demo可正常访问和使用
 - [ ] 排行榜功能正常（12条数据，筛选/排序/搜索）
 - [ ] 多渠道贡献功能正常（5种方式）
-- [ ] 46个单元测试全部通过
+- [ ] 全套 pytest 通过（229 passed / 7 skipped）
 - [ ] 15个API端点正常
 - [ ] CLI工具正常（audit/list/export/benchmark/balance）
 - [ ] Topics已设置（ai, llm, openai, api, security, fingerprint, audit, gpt）

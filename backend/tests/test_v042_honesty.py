@@ -206,7 +206,7 @@ def test_behavioral_degeneracy_detects_point_mass():
         {
             "beh-number-1-10": ["7", "7", "7"],  # point mass
             "beh-coin-flip": ["Heads", "Tails", "Heads"],  # mixed
-            "short": ["only-one"],  # n<2 -> skipped
+            "short": ["only-one"],  # n=1 -> ALWAYS a point mass (v0.4.3)
         }
     )
     assert deg["beh-number-1-10"]["point_mass"] is True
@@ -214,7 +214,11 @@ def test_behavioral_degeneracy_detects_point_mass():
     assert deg["beh-number-1-10"]["mode_fraction"] == 1.0
     assert deg["beh-number-1-10"]["shannon_entropy_nats"] == 0.0
     assert deg["beh-coin-flip"]["point_mass"] is False
-    assert "short" not in deg
+    # v0.4.3: n=1 is now counted and is a point mass by construction.
+    assert deg["short"]["point_mass"] is True
+    assert deg["short"]["n"] == 1
+    assert deg["short"]["mode_fraction"] == 1.0
+    assert deg["short"]["shannon_entropy_nats"] == 0.0
 
 
 def test_analyze_no_overlap_nulls_posterior():

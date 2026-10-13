@@ -134,6 +134,8 @@ TransitTruth 是一个开源的 **AI API 安全审计平台**，基于学术前�
 
 所有请求直接从浏览器发出，**不需要后端服务器，不需要安装任何东西，API Key 不会经过任何服务器**。
 
+> 注：根 `index.html` 在浏览器端用 `js-tiktoken` 做 token 计数，该运行时经 **esm.sh CDN**（`https://esm.sh/js-tiktoken`）加载。因此纯前端审计在**离线 / 无公网**环境下受限——离线时只能看内置演示数据，真实 token 计数审计需要能访问 esm.sh。演示（无需 Key）部分不依赖该 CDN。
+
 > 注：`standalone/index.html` 现为跳转到根 `index.html` 的重定向页。
 
 ### 🐳 使用Docker
@@ -209,7 +211,7 @@ transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
 - [x] **持续监控+告警**（4种告警检测，4种告警通道）
 - [x] **真实基准数据库**（gpt-4o-mini、gpt-4o，各50样本）
 - [x] **灵活配置管理**（14个环境变量，支持自定义探针数量/超时/重试等）
-- [x] **测试**：实测 **221 passed / 7 skipped**（v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.1 热修补 reference-server 真实 HTTP e2e 与"伪造后端不得判 pass"回归测试）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
+- [x] **测试**：实测 **229 passed / 7 skipped**（v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.2 诚实性/抗回放、v0.4.3 饥饿式样本绕过回归）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
 - [x] **CI/CD**（GitHub Actions，Python 3.10/3.11/3.12矩阵）
 
 ### 🚧 开发中
