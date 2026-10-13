@@ -138,7 +138,13 @@ async def verify_endpoint(
         capability_failure_rate=0.0,  # v1: bounded battery skips capability tier probes.
     )
 
-    return build_report(
+    # Direct deterministic tokenizer-count check (cross-family signal that does
+    # not depend on chi-square power; works on the small open-source catalog).
+    from .reference import tokenizer_consistency
+
+    tok_check = tokenizer_consistency(battery.observed_tokenizer, baseline)
+
+    report = build_report(
         claimed_model=claimed_model,
         endpoint_base_url=host_label,
         verdict=stat,
@@ -156,3 +162,27 @@ async def verify_endpoint(
             "behavioral": battery.observed_behavioral,
         },
     )
+    report["statistics"]["tokenizer_consistency"] = tok_check
+
+    # -- Tokenizer override layer -------------------------------------------
+    # A hard tokenizer mismatch (>=3 probes disagree) is strong wrong-family
+    # evidence; a clean tokenizer match can upgrade an underpowered behavioral
+    # result from "insufficient" to "pass".
+    if baseline_found:
+        if tok_check.get("verdict") == "mismatch" and report["verdict"] != "suspicious":
+            report["verdict"] = "suspicious"
+            report["evidence_reason"] = (
+                "Tokenizer prompt-token counts disagree with the claimed reference "
+                "across multiple probes: likely a different model family."
+            )
+        elif (
+            tok_check.get("verdict") == "match"
+            and report["verdict"] == "insufficient_evidence"
+        ):
+            report["verdict"] = "pass"
+            report["evidence_reason"] = (
+                "Tokenizer prompt-token counts match the claimed reference; behavioral "
+                "sample was underpowered but the tokenizer family is consistent."
+            )
+
+    return report

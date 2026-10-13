@@ -357,6 +357,31 @@ def cmd_verify(args):
     return report
 
 
+def cmd_reference_server(args):
+    """Run the self-hosted OpenAI-compatible reference backend (local fingerprint)."""
+    import uvicorn
+
+    from .verify.reference_server import CATALOG_TOKENIZERS, build_app
+
+    if args.model not in CATALOG_TOKENIZERS:
+        print(
+            f"Unknown reference model '{args.model}'. "
+            f"Available: {', '.join(CATALOG_TOKENIZERS)}",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    app, backend = build_app(args.model)
+    print(
+        f"TransitTruth reference-server: model={args.model} mode={backend.mode}\n"
+        f"OpenAI-compatible endpoint: http://{args.host}:{args.port}/v1\n"
+        f"Behavioral content is a deterministic stub; prompt_tokens are real "
+        f"({backend.mode}).",
+        file=sys.stderr,
+    )
+    uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
+
+
 def main():
     # Check for quick mode: first argument starts with "sk-"
     if len(sys.argv) > 1 and sys.argv[1].startswith("sk-"):
@@ -554,6 +579,16 @@ Environment variables:
         help="Allow loopback/private targets (for the local reference server)",
     )
     verify_parser.set_defaults(func=cmd_verify)
+
+    # Reference-server: self-hosted OpenAI-compatible local fingerprint backend
+    ref_parser = subparsers.add_parser(
+        "reference-server",
+        help="Run a local OpenAI-compatible reference backend (no paid key needed)",
+    )
+    ref_parser.add_argument("--model", required=True, help="Catalog model name")
+    ref_parser.add_argument("--host", default="127.0.0.1")
+    ref_parser.add_argument("--port", type=int, default=8765)
+    ref_parser.set_defaults(func=cmd_reference_server)
 
     args = parser.parse_args()
     if not args.command:

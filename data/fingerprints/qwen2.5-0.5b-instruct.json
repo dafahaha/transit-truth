@@ -1,0 +1,34 @@
+{
+  "metadata": {
+    "model": "qwen2.5-0.5b-instruct",
+    "samples_per_probe": 5,
+    "collected_at": "2026-10-14",
+    "fingerprint_type": "tokenizer-real",
+    "tokenizer_repo": "Qwen/Qwen2.5-0.5B-Instruct",
+    "note": "Real prompt-token counts measured with the Qwen2.5-0.5B-Instruct tokenizer (downloaded via HF_ENDPOINT=hf-mirror). Behavioral distributions are NOT captured (no local generation); for open-source behavioral references see the Zenodo 176-model fingerprint dataset (CC-BY-4.0) cited in THIRD_PARTY_NOTICES.md. Tokenization is deterministic, so samples are identical by construction."
+  },
+  "tokenizer": {
+    "tok-whitespace": {
+      "prompt_tokens": { "samples": [20, 20, 20, 20, 20] }
+    },
+    "tok-code": {
+      "prompt_tokens": { "samples": [18, 18, 18, 18, 18] }
+    },
+    "tok-url": {
+      "prompt_tokens": { "samples": [22, 22, 22, 22, 22] }
+    },
+    "tok-mixed-unicode": {
+      "prompt_tokens": { "samples": [18, 18, 18, 18, 18] }
+    },
+    "tok-repeated-chars": {
+      "prompt_tokens": { "samples": [11, 11, 11, 11, 11] }
+    },
+    "tok-cjk": {
+      "prompt_tokens": { "samples": [16, 16, 16, 16, 16] }
+    },
+    "tok-digits": {
+      "prompt_tokens": { "samples": [36, 36, 36, 36, 36] }
+    }
+  },
+  "behavioral": {}
+}
