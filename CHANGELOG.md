@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-14
+
+### Added — 模型真实性核验（stateless verify）
+- **无状态核验核心** `app/verify/`：`verify_endpoint(base_url, claimed_model, key from env)` 跑有界探针电池，输出单一机器可读 JSON 报告，三态结论 `pass` / `suspicious` / `insufficient_evidence`。
+- **CLI** `transit-truth verify ...`（key 不落盘、不进日志/报告；loopback 需 `--allow-local`，默认 SSRF 防护）。
+- **开源参考指纹库** `data/fingerprints/`：Qwen2.5-0.5B 真实 tokenizer 计数；DeepSeek-R1-Distill-Qwen（沿用 Qwen2 tokenizer）；GLM 目录收录（tokenizer 下载受网络限制待补）。
+- **自托管参考后端** `transit-truth reference-server --model X`：返回真实 tokenizer prompt_tokens，行为响应为明确标注的桩。
+- **ε-稀释序贯检验** `app/verify/sequential.py`：预算内检出假模型的统计能力 / 所需样本。
+- **SDK 与可观测**：`from app.verify import verify_endpoint[_sync]`；可选 OpenTelemetry/OpenInference span、DeepEval metric、Langfuse score 示例（`examples/`）。
+- **THIRD_PARTY_NOTICES.md**：核验并列出复用/引用的开源资产与许可证。
+- 测试：217 passed / 7 skipped。
+
 ### Added
 - **Statistical analyzer** (`app/core/statistical_analyzer.py`): Rigorous statistical methods for model verification
   - Kolmogorov-Smirnov test for tokenizer distribution comparison

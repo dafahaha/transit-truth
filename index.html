@@ -705,6 +705,7 @@
     <div class="btn-row">
       <button class="btn" id="start-btn" onclick="startAudit()">🚀 开始审计</button>
       <button class="btn btn-demo" id="demo-btn" onclick="runDemo()">🎬 先看演示（无需 Key）</button>
+      <button class="btn btn-demo" id="verify-demo-btn" onclick="runVerifyDemo()">🔍 模型真实性核验演示</button>
     </div>
   </div>
 
@@ -1214,6 +1215,51 @@ async function runDemo() {
 
   btn.disabled = false;
   btn.textContent = '🎬 先看演示（无需 Key）';
+}
+
+// ─── 模型真实性核验演示（离线，无 Key，纯演示数据） ─────────────
+async function runVerifyDemo() {
+  const btn = document.getElementById('verify-demo-btn');
+  const progressContainer = document.getElementById('progress-container');
+  const progressFill = document.getElementById('progress-fill');
+  const progressText = document.getElementById('progress-text');
+  btn.disabled = true;
+
+  const steps = [
+    [15, '解析 base_url 并做 SSRF 校验…'],
+    [35, '读取环境变量中的 API Key（不落盘）…'],
+    [55, '跑有界探针电池（tokenizer + 行为，并发≤2）…'],
+    [75, '对比本地参考指纹（Qwen / gpt-4o-mini）…'],
+    [95, '统计判定：后验 / TVD / tokenizer 一致性…'],
+  ];
+  progressContainer.style.display = 'block';
+  for (const [pct, txt] of steps) {
+    updateProgress(pct, txt);
+    await sleep(450);
+  }
+
+  const report = {
+    claimed_model: 'gpt-4o-mini',
+    verdict: 'suspicious',
+    confidence: 'low',
+    matched_reference: 'gpt-4o-mini',
+    tokenizer_consistency: { score: 0.0, verdict: 'mismatch' },
+    note: '演示：声称 gpt-4o-mini，但 tokenizer 计数与参考不符（疑似 Qwen 后端）。'
+  };
+  updateProgress(100, '核验完成（演示数据）');
+  await sleep(400);
+  progressContainer.style.display = 'none';
+  btn.disabled = false;
+  alert(
+    '🔍 模型真实性核验报告（离线演示，未连接任何端点）\n\n' +
+    'verdict: ' + report.verdict + '\n' +
+    'claimed_model: ' + report.claimed_model + '\n' +
+    'tokenizer 一致性: score=' + report.tokenizer_consistency.score +
+    ' (' + report.tokenizer_consistency.verdict + ')\n\n' +
+    report.note + '\n\n' +
+    '三态结论: pass / suspicious / insufficient_evidence\n' +
+    '（概率性辅助证据，非密码学证明，不做真伪裁判）'
+  );
 }
 
 async function startAudit() {

@@ -2,7 +2,53 @@
 
 ![TransitTruth Banner](docs/banner_1280x640.png)
 
-> **AI API 安全审计平台** — 用行为指纹验证你用的 GPT-4 是真的吗？30秒测出答案。
+> **AI API 模型真实性核验 / 路由层可信度监控** — 无状态验证你用的模型是否货真价实。
+
+---
+
+## 🚦 模型真实性核验（`transit-truth verify`）
+
+新增的核心产品能力：给一个 OpenAI 兼容端点和它**声称**的模型名，跑一个**有界**探针电池，对比本地参考指纹，输出**单一机器可读 JSON 报告**与三态结论。
+
+```bash
+# key 从环境变量读，不落盘、不进日志/报告
+export TRANSIT_TRUTH_API_KEY=sk-...
+transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o-mini
+```
+
+报告样例：
+
+```json
+{
+  "claimed_model": "gpt-4o-mini",
+  "verdict": "pass",
+  "confidence": "medium",
+  "statistics": {
+    "matched_reference_model": "gpt-4o-mini",
+    "posterior": 0.87,
+    "tokenizer_consistency": {"score": 1.0, "verdict": "match"}
+  },
+  "disclaimer": "Probabilistic auxiliary evidence, NOT a cryptographic proof."
+}
+```
+
+三态结论：`pass` / `suspicious` / `insufficient_evidence`（证据不足时**绝不硬判**）。
+
+**无付费 Key 的自托管参考后端**（用真实 tokenizer 生成参考指纹）：
+
+```bash
+transit-truth reference-server --model qwen2.5-0.5b-instruct --port 8765
+transit-truth verify --base-url http://127.0.0.1:8765/v1 \
+    --model qwen2.5-0.5b-instruct --allow-local
+```
+
+> **覆盖范围（诚实标注）**：当前自带参考指纹仅覆盖本地开源模型——Qwen2.5-0.5B（真实 tokenizer 计数）、DeepSeek-R1-Distill-Qwen（沿用 Qwen2 tokenizer）、GLM（目录已收录，tokenizer 下载受网络限制待补）。**GPT/Claude/Gemini 等闭源指纹需用户提供自己的 key 后采集接入。**
+>
+> **定位声明**：黑盒结果是**概率性辅助证据，不是密码学证明，也不做真伪裁判**。`suspicious` 不等于"确定造假"。详见 [docs/verify.md](docs/verify.md) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+
+Python SDK：`from app.verify import verify_endpoint`（可选 OpenTelemetry/OpenInference、DeepEval、Langfuse 集成见 `examples/`）。
+
+下面保留的原有能力（行为指纹动物探针、Token 计费审计、社区排行榜、持续监控）均为**子模块**，见目录与下文各节。
 
 ---
 
@@ -159,7 +205,7 @@ transit-truth sk-your-key --base-url https://your-relay.com/v1 --model gpt-4o
 - [x] **持续监控+告警**（4种告警检测，4种告警通道）
 - [x] **真实基准数据库**（gpt-4o-mini、gpt-4o，各50样本）
 - [x] **灵活配置管理**（14个环境变量，支持自定义探针数量/超时/重试等）
-- [x] **测试**：实测 **204 collected / 197 passed / 7 skipped**；其中 7 个端到端集成测试需要真实 API key，用 `pytest -m integration` 单独运行
+- [x] **测试**：实测 **217 passed / 7 skipped**（v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
 - [x] **CI/CD**（GitHub Actions，Python 3.10/3.11/3.12矩阵）
 
 ### 🚧 开发中
@@ -226,6 +272,8 @@ transit-truth/
 │   ├── app/
 │   │   ├── core/              # 核心引擎（auditor/fingerprint/probes/
 │   │   │                      #   statistical_analyzer/retry/balance_checker/...）
+│   │   ├── verify/            # 无状态模型真实性核验（v1–v5：battery/reference/
+│   │   │                      #   report/sequential/otel/reference_server）
 │   │   ├── api/               # REST API
 │   │   ├── utils/             # 工具函数
 │   │   ├── config.py          # 配置管理（14 个环境变量）
@@ -234,9 +282,10 @@ transit-truth/
 │   └── requirements.txt
 ├── frontend/                   # Web 前端资源
 ├── data/
-│   └── baselines/              # 真实基准数据（经同一中转站采集）
-│       ├── gpt-4o-mini.json
-│       └── gpt-4o.json
+│   ├── baselines/              # 真实基准数据（经同一中转站采集）
+│   │   ├── gpt-4o-mini.json
+│   │   └── gpt-4o.json
+│   └── fingerprints/           # 开源参考指纹目录（Qwen 真实 tokenizer 计数等）
 ├── docs/
 │   ├── tech_report.tex         # 扩展技术报告 LaTeX 源
 │   ├── tech_report.pdf / .html # 扩展技术报告

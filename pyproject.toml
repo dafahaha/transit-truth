@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "transit-truth"
-version = "0.3.0"
-description = "AI API 中转站验真器 — 检测你的AI中转站有没有偷工减料"
+version = "0.4.0"
+description = "模型真实性核验 / 路由层可信度监控 — 无状态验证你用的模型是否货真价实"
 readme = "README.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
