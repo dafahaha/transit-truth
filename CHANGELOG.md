@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-10-14
+
+### Fixed — 覆盖率门 + tokenizer 口径热修（独立审批抓 1 P1 绕过 + 1 P1 引用错误 + 1 P2 口径误报）
+- **P1 饥饿绕过 2.0（通用覆盖率门）**：对抗后端只回答 1 个重叠行为探针（n=3、按公开基线 2:1 切分躲过点质量阈值）、其余重叠探针全部 504（n=0）。旧 thin_evidence 门只统计"出现过"的探针，对完全饿死的 n=0 探针不可见 → 实跑 pass/medium、posterior=0.913、无任何标记。修复：覆盖率门改为以**客户端实际发出的探针全集**为分母（`battery.planned_behavioral_ids`），统计每探针可用观测数、行为覆盖率（充分采样的重叠探针 / 应重叠探针）、整体非 200 率。任一应重叠行为探针 n=0，或行为覆盖率 < 0.8，或整体失败率 > 0.5 → 判 `non_cooperation`/证据不足：**不得 pass**（pass 落 `insufficient_evidence`），置信封顶 low，`posterior / likelihood_ratio / posterior_ci_95 / chi2_pvalue` 全部置 `null`。对选择性作答、隔次作恶、部分探针饿死、点质量、伪造 usage 等稀疏形态统一生效；正常充分采样后端不受影响。
+- **P2 tokenizer 口径失配**：电池发 `messages=[system, user]`，但 gpt-4o / gpt-4o-mini shipped 基线是 user-only 口径（27/25/29/22/18），真端点按 system+user 自报 43/41/45/38/34 → `tokenizer_consistency` 强制 mismatch → 货真价实的 gpt-4o-mini 被误报 suspicious。修复：用 tiktoken **离线**（仅 token 计数、无需 API key）按电池 system+user 实际请求重算两基线 tokenizer 计数并覆盖 `data/baselines/`（行为 n=50 不动）；`collect_baseline.py` 采集口径改为 system+user 以防再漂移；新增 `tokenizer_caliber` 口径锁定测试（基线均值 == o200k 对电池完整请求的计数，且真实口径下 tokenizer_consistency=match）；e2e/stub 伪造的 user-only 数字改为真实 system+user 值。
+
+### Docs / P1-P3
+- **P1 引用事实错误**：UCSB《Your Agent Is Mine》（arXiv:2604.08407）是 **agent 供应链攻击**研究（428 路由中 9 个注入恶意 tool-call、17 个窃取云凭据；"26"系自行加总），**通篇不测模型替换**。已从中转站偷换模型证据中移除，改置于"agent 供应链风险"语境并显式标注不测模型替换；模型替换主张以 CISPA arXiv:2603.01919（"45.83% 的**指纹测试**身份核验失败"，非"45.83% 的中转站"）、Berkeley arXiv:2504.04715、知道创宇 34.9% 为锚点。
+- **P2 README 无 Key 快速开始跑不通**：快速开始命令块补设 dummy key（`export TRANSIT_TRUTH_API_KEY=...`，附 PowerShell `$env:` 写法），原样可跑。
+- **P3**：`backend/app/__init__.py __version__` 0.1.0 → 0.4.4（全仓版本统一）；删除 CHANGELOG 底部悬空的 v0.2.0 / v0.1.0 release 链接（远端无对应 tag）；README 行为探针数前后统一（8 英文 + 6 中文 = 14）。
+- 测试：新增 v0.4.4 回归（单探针 n=3 其余 504 → 非 pass + non_cooperation + 数字 null；全探针各 n=1 → 同样封顶；合作充分采样不受影响；tokenizer 口径锁定）。
+
 ## [0.4.3] - 2026-10-14
 
 ### Fixed — 饥饿式绕过 / 诚实性热修（独立审批抓 1 P2 安全 + 若干 P2/P3）
@@ -161,10 +173,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker support
 - README, LICENSE, .gitignore
 
-[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.4.3...HEAD
+[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.4.4...HEAD
+[0.4.4]: https://github.com/dafahaha/transit-truth/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/dafahaha/transit-truth/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/dafahaha/transit-truth/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/dafahaha/transit-truth/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/dafahaha/transit-truth/releases/tag/v0.4.0
-[0.2.0]: https://github.com/dafahaha/transit-truth/releases/tag/v0.2.0
-[0.1.0]: https://github.com/dafahaha/transit-truth/releases/tag/v0.1.0

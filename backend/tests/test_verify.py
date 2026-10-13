@@ -20,12 +20,14 @@ import uvicorn
 from fastapi import FastAPI, Request
 
 # --- Canned reference values that reproduce the gpt-4o-mini baseline -------
+# v0.4.4: these are the battery's system+user o200k prompt-token counts, not the
+# old user-only numbers. A genuine gpt-4o-mini self-reports these.
 _HONEST_TOKENS = {
-    "a    b    c    d    e    f    g    h": 27,
-    "def foo(x): return x*2+1  # test": 25,
-    "https://api.example.com/v1/chat/completions?model=gpt-4": 29,
-    "café résumé naïve über 日本語 한국어 العربية": 22,
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": 18,
+    "a    b    c    d    e    f    g    h": 43,
+    "def foo(x): return x*2+1  # test": 41,
+    "https://api.example.com/v1/chat/completions?model=gpt-4": 45,
+    "café résumé naïve über 日本語 한국어 العربية": 38,
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": 34,
 }
 # A "cheating" relay that actually serves a Qwen-like tokenizer behind a
 # gpt-4o-mini claim: token counts look nothing like the reference.

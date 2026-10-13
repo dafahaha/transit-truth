@@ -35,12 +35,13 @@ from fastapi.responses import JSONResponse
 from app.verify import verify_endpoint
 
 # Public gpt-4o-mini tokenizer numbers (the battery's 5 tokenizer probes).
+# v0.4.4: battery system+user o200k counts.
 _HONEST_TOKENS = {
-    "a    b    c    d    e    f    g    h": 27,
-    "def foo(x): return x*2+1  # test": 25,
-    "https://api.example.com/v1/chat/completions?model=gpt-4": 29,
-    "café résumé naïve über 日本語 한국어 العربية": 22,
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": 18,
+    "a    b    c    d    e    f    g    h": 43,
+    "def foo(x): return x*2+1  # test": 41,
+    "https://api.example.com/v1/chat/completions?model=gpt-4": 45,
+    "café résumé naïve über 日本語 한국어 العربية": 38,
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": 34,
 }
 # Public modal behavioral strings (temperature=0 point-mass baselines).
 _HONEST_BEH = {

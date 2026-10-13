@@ -47,9 +47,14 @@ _PUBLIC_QWEN = {
 }
 
 
-def _start_qwen_stub_with_garbage_behavioral() -> tuple[str, uvicorn.Server]:
-    """Reports the PUBLIC Qwen tokenizer numbers and a fixed garbage behavioral
-    string every time (the open-source catalog has no behavioral reference)."""
+def _start_qwen_stub_with_garbage_behavioral(
+    tok_map: dict[str, int] | None = None,
+) -> tuple[str, uvicorn.Server]:
+    """Reports a fixed tokenizer map and a fixed garbage behavioral string every
+    time. By default it reports the PUBLIC Qwen numbers (the open-source catalog
+    has no behavioral reference); callers passing gpt-4o-mini should instead
+    pass a clearly-mismatched map so the tokenizer check stays a mismatch."""
+    tok_map = _PUBLIC_QWEN if tok_map is None else tok_map
     app = FastAPI(title="qwen public-numbers stub")
 
     @app.post("/v1/chat/completions")
@@ -67,7 +72,7 @@ def _start_qwen_stub_with_garbage_behavioral() -> tuple[str, uvicorn.Server]:
         content = "GARBAGE-BEHAVIOR-DO-NOT-TRUST"
         if "Repeat this string exactly: " in user:
             s = user.split("Repeat this string exactly: ", 1)[1]
-            pt = _PUBLIC_QWEN.get(s, 10)
+            pt = tok_map.get(s, 10)
         return {
             "choices": [
                 {"index": 0, "message": {"role": "assistant", "content": content}}
@@ -136,8 +141,21 @@ async def test_no_behavioral_evidence_stats_are_null():
 @pytest.mark.asyncio
 async def test_real_behavioral_baseline_keeps_numbers():
     """Control: the SAME garbage backend claimed against gpt-4o-mini DOES have
-    behavioral overlap, so the statistics must stay real numbers (not nulled)."""
-    url, server = _start_qwen_stub_with_garbage_behavioral()
+    behavioral overlap, so the statistics must stay real numbers (not nulled).
+
+    It reports a clearly DIFFERENT tokenizer (the old user-only gpt counts, which
+    now mismatch the recalibrated system+user baseline) so the tokenizer check
+    stays a mismatch. (After v0.4.4 the Qwen system+user numbers nearly coincide
+    with the gpt-4o-mini baseline, so reusing them here would flip this to a
+    match and defeat the test's intent.)"""
+    _MISMATCH = {
+        "a    b    c    d    e    f    g    h": 27,
+        "def foo(x): return x*2+1  # test": 25,
+        "https://api.example.com/v1/chat/completions?model=gpt-4": 29,
+        "café résumé naïve über 日本語 한국어 العربية": 22,
+        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": 18,
+    }
+    url, server = _start_qwen_stub_with_garbage_behavioral(tok_map=_MISMATCH)
     try:
         report = await asyncio.wait_for(
             verify_endpoint(

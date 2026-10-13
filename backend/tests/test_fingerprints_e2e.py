@@ -117,7 +117,18 @@ async def test_qwen_tokenizer_rejects_gpt_claim():
         )
     finally:
         server.should_exit = True
-    # Qwen token counts must NOT be certified as gpt-4o-mini.
+    # A Qwen endpoint claiming gpt-4o-mini must NOT be certified as honest.
+    # After v0.4.4 the gpt baselines are recalibrated to the battery's
+    # system+user caliber: the dominant identical 23-token system prompt
+    # compresses the o200k-vs-Qwen family gap, so they now agree on 4/5
+    # tokenizer probes (only mixed-unicode diverges by 3). tokenizer_consistency
+    # is therefore a weak near-match rather than a clean mismatch -- the family
+    # rejection still comes from the behavioral mismatch (fixed stub content vs
+    # the real gpt distributions), which keeps the verdict suspicious and
+    # never a pass.
+    assert report["verdict"] != "pass", json.dumps(report, indent=2)
     assert report["verdict"] == "suspicious", json.dumps(report, indent=2)
     tc = report["statistics"]["tokenizer_consistency"]
-    assert tc["verdict"] == "mismatch"
+    assert tc["overlap"] == 5, json.dumps(tc)
+    assert tc["consistent"] == 4, json.dumps(tc)
+    assert abs(tc["score"] - 0.8) < 0.01, json.dumps(tc)

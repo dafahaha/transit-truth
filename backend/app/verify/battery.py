@@ -48,6 +48,13 @@ class BatteryResult:
     observed_behavioral: dict[str, list[str]] = field(default_factory=dict)
     requests_used: int = 0
     failures: int = 0
+    # The CLIENT-SENT probe universe (the denominator the coverage gate uses).
+    # A backend cannot shrink the evaluated set by selective non-response: we
+    # record exactly which probes (and how many repeats) we attempted, so a
+    # probe that 504s every repeat is still counted as n=0 -- not invisible.
+    planned_tokenizer_ids: list[str] = field(default_factory=list)
+    planned_behavioral_ids: list[str] = field(default_factory=list)
+    expected_behavioral_repeats: dict[str, int] = field(default_factory=dict)
 
 
 def _by_id(probes: list[Probe], wanted: list[str]) -> list[Probe]:
@@ -97,8 +104,25 @@ async def run_battery(
             jobs.append(("beh", p))
     jobs = jobs[:max_requests]
 
+    # Record the actually-sent probe universe (post-budget-trim). A probe that
+    # was trimmed out by the request budget is NOT evaluated; a probe we sent
+    # but got zero usable responses for IS evaluated as n=0.
+    planned_tok: list[str] = []
+    planned_beh: list[str] = []
+    expected_repeats: dict[str, int] = {}
+    for kind, probe in jobs:
+        if kind == "tok" and probe.id not in planned_tok:
+            planned_tok.append(probe.id)
+        elif kind == "beh":
+            if probe.id not in planned_beh:
+                planned_beh.append(probe.id)
+            expected_repeats[probe.id] = expected_repeats.get(probe.id, 0) + 1
+
     responses = await asyncio.gather(*[call(p) for _, p in jobs])
     result.requests_used = len(jobs)
+    result.planned_tokenizer_ids = planned_tok
+    result.planned_behavioral_ids = planned_beh
+    result.expected_behavioral_repeats = expected_repeats
 
     for (kind, probe), (_, raw) in zip(jobs, responses):
         if "error" in raw:

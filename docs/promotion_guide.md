@@ -88,7 +88,7 @@ GitHub：https://github.com/dafahaha/transit-truth
 ```
 ## 前言
 
-AI API 中转站市场乱象频发，公开研究已证实部分站点存在模型偷换（UCSB：428 站中 26 家动手脚；CISPA：45.83% 未过行为指纹核验，arXiv:2603.01919）。但作为普通用户，你怎么验证自己用的中转站有没有"参水分"？
+AI API 中转站市场乱象频发，公开研究已证实部分站点存在模型偷换（CISPA：45.83% 的指纹测试未通过身份核验，arXiv:2603.01919；Berkeley：LLM API 模型替换的形式化审计，arXiv:2504.04715）。但作为普通用户，你怎么验证自己用的中转站有没有"参水分"？
 
 我做了一个27分钟的小实验，发现了GPT模型的"行为指纹"...
 
@@ -144,7 +144,7 @@ I'm a third-year CS student, and I recently did a 27-minute experiment that reve
 
 ## Why this matters
 
-Public studies confirm some AI API relays secretly swap models (UCSB found 26 of 428 scanned sites actively manipulating models; CISPA found 45.83% of relays fail behavioral-fingerprint checks; arXiv:2603.01919). Tokenizer fingerprints can't distinguish same-family models, but behavioral fingerprints can.
+Public studies confirm some AI API relays secretly swap models (CISPA found 45.83% of fingerprint tests fail identity verification on shadow APIs, arXiv:2603.01919; Berkeley formally audits model substitution in LLM APIs, arXiv:2504.04715). Tokenizer fingerprints can't distinguish same-family models, but behavioral fingerprints can.
 
 ## What I built
 

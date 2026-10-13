@@ -40,6 +40,17 @@ _MIN_BEHAVIORAL_SAMPLES_PER_PROBE = 3
 # ...and a floor on the total number of overlapping behavioral observations.
 _MIN_TOTAL_BEHAVIORAL_OBS = 3
 
+# v0.4.4 coverage gate: coverage is measured against the CLIENT-SENT probe
+# universe, so a backend cannot pass by answering only a subset of probes.
+# behavioral_coverage = overlapping probes with >= _MIN_BEHAVIORAL_SAMPLES
+# successful observations / overlapping probes the battery SENT. Below this
+# (or with any fully-starved n=0 overlapping probe), the run is
+# non-cooperative / evidence-insufficient and the Bayesian numbers are withheld.
+_MIN_BEHAVIORAL_COVERAGE = 0.8
+# The whole-battery non-200 rate must stay bounded: if most requests failed,
+# whatever slipped through is not a trustworthy fingerprint.
+_MAX_BATTERY_FAILURE_RATE = 0.5
+
 
 def _behavioral_degeneracy(
     observed_behavioral: dict[str, list[str]],
@@ -320,31 +331,72 @@ async def verify_endpoint(
                 "baselines are replayable verbatim), so this pass is low-confidence."
             )
 
-    # -- Behavioral sample-size floor (v0.4.3) -----------------------------
-    # A starving adversarial backend can answer each behavioral probe exactly ONCE
-    # (the public modal string) and 504 every repeat: every overlapping probe
-    # ends up with n=1. That single sample still chi2-matches a point-mass
-    # baseline (p~=1.0) and used to yield pass/medium with a spurious
-    # posterior=0.913. n=1 is a point mass by construction AND the evidence is
-    # statistically too thin to certify. Require at least
-    # _MIN_BEHAVIORAL_SAMPLES_PER_PROBE successful observations per overlapping
-    # probe (and a non-trivial total overlap). Below the floor we flag
-    # ``thin_evidence``, cap confidence to low, and withhold the Bayesian
-    # posterior/LR/CI -- the same honesty contract as "no behavioral evidence".
-    overlap_samples = {
-        pid: len(resp)
-        for pid, resp in battery.observed_behavioral.items()
+    # -- Behavioral coverage / sample-size gate (v0.4.3 thin + v0.4.4 coverage)
+    # The denominator is the CLIENT-SENT probe universe
+    # (``battery.planned_behavioral_ids``), NOT just the probes the backend
+    # deigned to answer. A starving backend that 504s every repeat of 3 of the 4
+    # overlapping probes and answers the 4th with a 2:1 split used to earn
+    # pass/medium with a spurious posterior=0.913: the n=0 probes never entered
+    # ``observed_behavioral`` so the old gate was blind to them. Now a probe we
+    # sent but got zero usable responses for is counted as n=0, coverage drops,
+    # and the run is judged non-cooperative / evidence-insufficient.
+    expected_overlap = sorted(
+        pid
+        for pid in battery.planned_behavioral_ids
         if pid in behavioral_reference_probes
+    )
+    overlap_samples = {
+        pid: len(battery.observed_behavioral.get(pid, [])) for pid in expected_overlap
     }
     total_overlap = sum(overlap_samples.values())
+    starved_probes = {pid: n for pid, n in overlap_samples.items() if n == 0}
     thin_probes = {
         pid: n
         for pid, n in overlap_samples.items()
-        if n < _MIN_BEHAVIORAL_SAMPLES_PER_PROBE
+        if 0 < n < _MIN_BEHAVIORAL_SAMPLES_PER_PROBE
     }
+    well_sampled = sum(
+        1 for n in overlap_samples.values() if n >= _MIN_BEHAVIORAL_SAMPLES_PER_PROBE
+    )
+    behavioral_coverage = (
+        well_sampled / len(expected_overlap) if expected_overlap else 0.0
+    )
+    battery_failure_rate = (
+        battery.failures / battery.requests_used if battery.requests_used else 0.0
+    )
+
     thin_evidence = bool(real_behavioral_evidence) and (
         bool(thin_probes) or total_overlap < _MIN_TOTAL_BEHAVIORAL_OBS
     )
+    non_cooperation = (
+        bool(real_behavioral_evidence)
+        and bool(expected_overlap)
+        and (
+            bool(starved_probes)
+            or behavioral_coverage < _MIN_BEHAVIORAL_COVERAGE
+            or battery_failure_rate > _MAX_BATTERY_FAILURE_RATE
+        )
+    )
+    withheld = thin_evidence or non_cooperation
+
+    if non_cooperation:
+        report["statistics"]["non_cooperation"] = {
+            "flag": True,
+            "starved_probes": starved_probes,
+            "expected_overlap_probes": len(expected_overlap),
+            "well_sampled_overlap_probes": well_sampled,
+            "behavioral_coverage": round(behavioral_coverage, 3),
+            "battery_failure_rate": round(battery_failure_rate, 3),
+            "reason": (
+                "The endpoint did not cooperate with the probe battery: it fully "
+                "starved (0 usable responses) or under-sampled too many of the "
+                "overlapping behavioral probes the client actually sent, or the "
+                f"whole-battery failure rate exceeded {_MAX_BATTERY_FAILURE_RATE:.0%}. "
+                "Selectively answering only a subset of probes (504ing the rest) "
+                "cannot certify identity, so confidence is capped low and the "
+                "Bayesian posterior/LR/CI/chi-square are withheld."
+            ),
+        }
     if thin_evidence:
         report["statistics"]["thin_evidence"] = {
             "flag": True,
@@ -361,17 +413,26 @@ async def verify_endpoint(
                 "Bayesian posterior/LR/CI are withheld."
             ),
         }
+    if withheld:
         # Honest contract: never present a spurious posterior=0.913 / LR next to
-        # evidence this thin.
+        # evidence this thin / non-cooperative. Chi-square over a degenerate or
+        # selectively-sampled subset (p~=1.0) must also be withheld.
         report["statistics"]["posterior"] = None
         report["statistics"]["likelihood_ratio"] = None
         report["statistics"]["posterior_ci_95"] = None
+        report["statistics"]["chi2_pvalue"] = None
         report["confidence"] = "low"
-        report["evidence_reason"] = (
-            report.get("evidence_reason", "")
-            + " Caveat: behavioral evidence is too thin (fewer than "
+        if report["verdict"] == "pass":
+            report["verdict"] = "insufficient_evidence"
+        caveat = (
+            " Caveat: behavioral coverage/evidence is insufficient (some overlapping "
+            "probes the client sent were starved or under-sampled); confidence "
+            "capped low and Bayesian posterior/LR/CI/chi-square withheld."
+            if non_cooperation
+            else " Caveat: behavioral evidence is too thin (fewer than "
             f"{_MIN_BEHAVIORAL_SAMPLES_PER_PROBE} successful samples per overlapping "
             "probe); confidence capped low and Bayesian posterior/LR/CI withheld."
         )
+        report["evidence_reason"] = report.get("evidence_reason", "") + caveat
 
     return report

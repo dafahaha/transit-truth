@@ -123,9 +123,20 @@ async def collect_baseline(
                 flush=True,
             )
 
-            # Run all samples concurrently
+            # Run all samples concurrently. v0.4.4: the verifier battery sends
+            # messages=[system, user] for every probe; collect with the SAME
+            # caliber so baseline prompt_tokens match what a real endpoint
+            # reports for the battery's request (was user-only, which caused a
+            # genuine gpt-4o-mini to be falsely flagged tokenizer-mismatch).
             tasks = [
-                run_request([{"role": "user", "content": probe.prompt}], 128, 0)
+                run_request(
+                    [
+                        {"role": "system", "content": probe.system_prompt},
+                        {"role": "user", "content": probe.prompt},
+                    ],
+                    128,
+                    0,
+                )
                 for _ in range(samples)
             ]
             results = await asyncio.gather(*tasks)

@@ -34,9 +34,13 @@ transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o-mini
 
 三态结论：`pass` / `suspicious` / `insufficient_evidence`（证据不足时**绝不硬判**）。
 
-**无付费 Key 的自托管参考后端**（用真实 tokenizer 生成参考指纹）：
+**无付费 Key 的自托管参考后端**（用真实 tokenizer 生成参考指纹）。verify 客户端**强制要求一个非空 API key**（本地 reference-server 本身不校验它），所以先设一个 dummy 值：
 
 ```bash
+# bash / macOS / Linux
+export TRANSIT_TRUTH_API_KEY=local-dummy-no-billing
+# Windows PowerShell: $env:TRANSIT_TRUTH_API_KEY="local-dummy-no-billing"
+
 transit-truth reference-server --model qwen2.5-0.5b-instruct --port 8765
 transit-truth verify --base-url http://127.0.0.1:8765/v1 \
     --model qwen2.5-0.5b-instruct --allow-local
@@ -97,7 +101,7 @@ TransitTruth 是一个开源的 **AI API 安全审计平台**，基于学术前�
 
 ### 1. 🧬 行为指纹（核心技术）
 
-不同模型在"随机"任务上有强烈的分布偏好——这是训练数据和 RLHF 的产物。我们用 8 个行为探针（随机数、字母、颜色、动物、星期、掷骰子、抛硬币），每个采样 50 次，构建经验分布，再用**卡方检验 + KS 检验 + 贝叶斯更新**对比基准分布，计算模型匹配的后验概率。
+不同模型在"随机"任务上有强烈的分布偏好——这是训练数据和 RLHF 的产物。我们用 8 个英文行为探针（随机数 1-100、随机数 1-10、字母、颜色、抛硬币、掷骰子、动物、星期；另有 6 个中文文化探针，合计 14 个），每个采样 50 次，构建经验分布，再用**卡方检验 + KS 检验 + 贝叶斯更新**对比基准分布，计算模型匹配的后验概率。
 
 > 响应做了归一化（如 "Heads." 与 "Heads" 合并、大小写统一）。
 

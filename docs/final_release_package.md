@@ -9,7 +9,7 @@
 ## 📊 项目核心卖点
 
 1. **震撼发现**：GPT选数字100%返回7，选动物76%返回Okapi——大模型有"行为指纹"
-2. **真实痛点**：公开研究已证实部分 AI API 中转站存在模型偷换（UCSB 扫描 428 站发现 26 家动手脚；CISPA 测试中 45.83% 的中转站未通过行为指纹核验，arXiv:2603.01919），用户花了 GPT-4 的钱可能用到别的模型
+2. **真实痛点**：公开研究已证实部分 AI API 中转站存在模型偷换（CISPA 对 shadow API 的深度审计中，45.83% 的指纹测试未通过身份核验，arXiv:2603.01919；Berkeley 形式化记录 LLM API 中的模型替换，arXiv:2504.04715），用户花了 GPT-4 的钱可能用到别的模型
 3. **技术创新**：行为指纹可以区分同家族模型（gpt-4o vs gpt-4o-mini），tokenizer指纹做不到
 4. **零门槛使用**：单文件，浏览器打开即用，不需要安装，不需要后端
 5. **全民共建**：中转站排行榜，5种贡献方式（GitHub/复制JSON/邮件/社区/API），无GitHub账号也能贡献
@@ -54,7 +54,9 @@
 
 ## 这有什么用？
 
-公开研究已证实部分 AI API 中转站存在模型偷换（用 mini 冒充 pro、用旧型号冒充新型号；UCSB：428 站中 26 家动手脚，CISPA：45.83% 未过行为指纹核验，arXiv:2603.01919）。但 tokenizer 指纹区分不了同家族的模型（gpt-4o 和 gpt-4o-mini 用同一个 tokenizer），而行为指纹可以。
+公开研究已证实部分 AI API 中转站存在模型偷换（用 mini 冒充 pro、用旧型号冒充新型号；CISPA：45.83% 的指纹测试未通过身份核验，arXiv:2603.01919；Berkeley：LLM API 模型替换的形式化审计，arXiv:2504.04715；国内知道创宇实测约 34.9% 中转站存在异常）。但 tokenizer 指纹区分不了同家族的模型（gpt-4o 和 gpt-4o-mini 用同一个 tokenizer），而行为指纹可以。
+
+> 口径说明：UCSB《Your Agent Is Mine》（arXiv:2604.08407）扫描 428 个路由发现的是**另一类风险——agent 供应链攻击**（9 个路由注入恶意 tool-call、17 个窃取研究者云凭据），该研究**不测量模型替换**，因此不作为"偷换模型"的证据引用。模型替换主张以 CISPA（arXiv:2603.01919）、Berkeley（arXiv:2504.04715）与知道创宇实测为锚点。
 
 ## 我做了一个开源工具
 
@@ -134,7 +136,7 @@
 ```
 ## 前言
 
-AI API 中转站市场乱象频发，公开研究已证实部分站点存在模型偷换（UCSB：428 站中 26 家动手脚；CISPA：45.83% 未过行为指纹核验，arXiv:2603.01919）。但作为普通用户，你怎么验证自己用的中转站有没有"参水分"？
+AI API 中转站市场乱象频发，公开研究已证实部分站点存在模型偷换（CISPA：45.83% 的指纹测试未通过身份核验，arXiv:2603.01919；Berkeley：LLM API 模型替换的形式化审计，arXiv:2504.04715）。但作为普通用户，你怎么验证自己用的中转站有没有"参水分"？
 
 我做了一个27分钟的小实验，发现了GPT模型的"行为指纹"...
 
@@ -223,7 +225,7 @@ I'm a third-year CS student, and I recently did a 27-minute experiment that reve
 
 ## Why this matters
 
-Public studies confirm some AI API relays secretly swap models (UCSB found 26 of 428 scanned sites actively manipulating models; CISPA found 45.83% of relays fail behavioral-fingerprint checks; arXiv:2603.01919). Tokenizer fingerprints can't distinguish same-family models, but behavioral fingerprints can.
+Public studies confirm some AI API relays secretly swap models (CISPA found 45.83% of fingerprint tests fail identity verification on shadow APIs, arXiv:2603.01919; Berkeley formally audits model substitution in LLM APIs, arXiv:2504.04715). Tokenizer fingerprints can't distinguish same-family models, but behavioral fingerprints can.
 
 ## What I built
 
@@ -362,7 +364,7 @@ GitHub开源：https://github.com/dafahaha/transit-truth
 
 原来每个大模型都有自己的"行为指纹"，就像每个人说话习惯不一样一样！
 
-而公开研究已证实部分 AI 中转站确在偷换模型（UCSB：428 站中 26 家动手脚；CISPA：45.83% 未过指纹，arXiv:2603.01919）！你花了 GPT-4 的钱，实际用的可能是别的模型😡
+而公开研究已证实部分 AI 中转站确在偷换模型（CISPA：45.83% 的指纹测试未通过身份核验，arXiv:2603.01919；Berkeley：模型替换形式化审计，arXiv:2504.04715）！你花了 GPT-4 的钱，实际用的可能是别的模型😡
 
 于是我做了个工具👉TransitTruth
 
@@ -410,7 +412,7 @@ GitHub开源：https://github.com/dafahaha/transit-truth
 
 【第三部分：120-180秒 这有什么用】
 （画面：中转站价格对比图，降级示意图）
-旁白：这有什么用？公开研究已证实部分 AI API 中转站存在模型偷换（UCSB：428 站中 26 家动手脚；CISPA：45.83% 未过行为指纹核验，arXiv:2603.01919）——你花了 GPT-4 的钱，实际用的可能是别的模型。
+旁白：这有什么用？公开研究已证实部分 AI API 中转站存在模型偷换（CISPA：45.83% 的指纹测试未通过身份核验，arXiv:2603.01919；Berkeley：LLM API 模型替换的形式化审计，arXiv:2504.04715）——你花了 GPT-4 的钱，实际用的可能是别的模型。
 但tokenizer指纹区分不了同家族的模型，因为gpt-4o和gpt-4o-mini用同一个tokenizer。而行为指纹可以。
 
 【第四部分：180-240秒 我做了什么】
@@ -449,7 +451,7 @@ GitHub开源：https://github.com/dafahaha/transit-truth
 ```
 震惊！我用27分钟做了2600次API请求，发现GPT选数字100%返回7，选动物76%返回Okapi（㺢㹢狓？）。原来每个大模型都有自己的"行为指纹"！
 
-而公开研究已证实部分 AI 中转站确在偷换模型（UCSB：428 站中 26 家动手脚；CISPA：45.83% 未过指纹，arXiv:2603.01919）…你花了 GPT-4 的钱，用的可能是别的模型😡
+而公开研究已证实部分 AI 中转站确在偷换模型（CISPA：45.83% 的指纹测试未通过身份核验，arXiv:2603.01919；Berkeley：模型替换形式化审计，arXiv:2504.04715）…你花了 GPT-4 的钱，用的可能是别的模型😡
 
 我做了个开源工具帮你验明正身，零安装浏览器即用👉
 https://dafahaha.github.io/transit-truth/
@@ -486,7 +488,7 @@ I discovered GPT's "behavioral fingerprint" in 27 minutes:
 - It returns "Okapi" 76% of the time when asked to pick a random animal
 - On the same baseline, the "response names Okapi" rule gives 88% resubstitution accuracy (Wilson 95% CI [0.80,0.93]); TVD=0.90 is a distributional distance, not held-out accuracy
 
-Public studies confirm some AI API relays secretly swap models (26 of 428 UCSB-scanned sites; 45.83% fail CISPA behavioral-fingerprint checks; arXiv:2603.01919). I built an open-source tool to detect it:
+Public studies confirm some AI API relays secretly swap models (CISPA: 45.83% of fingerprint tests fail identity verification, arXiv:2603.01919; Berkeley: model-substitution audit, arXiv:2504.04715). I built an open-source tool to detect it:
 
 🔗 https://dafahaha.github.io/transit-truth/
 🐙 https://github.com/dafahaha/transit-truth
