@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-10-14
+
+### Fixed — 发布阻断热修（独立审批抓到）
+- **P0-1 reference-server 422**：`reference_server.py` 把 `FastAPI/Request` 提到模块级 import。此前 `from __future__ import annotations` + 函数体内 import 使 FastAPI 把 `request: Request` 当成必填 query 参数，`/v1/chat/completions` POST 全 422、17/17 探针失败。新增 TestClient 冒烟 + 真实 uvicorn→verify e2e（断言 observations 非空）。
+- **P0-2 伪造后端伪 pass（安全红线）**：开源目录 `behavioral:{}` 为空时，卡方哨兵 p=1.0 曾被当成"行为强一致 ×3.0"。现在无行为参考的目录，tokenizer 自报数字（usage.prompt_tokens 由中转站自报、探针数字完全公开）**绝不单独输出 pass**，结论封顶 `insufficient_evidence`。回归测试：上报公开 tokenizer 数字 + 行为乱码的后端必须 NOT pass；对照 gpt-4o-mini（有真实行为基线）同样乱码仍判 suspicious。
+- **P1 tokenizer 口径**：指纹重算为 system_prompt+user_prompt 口径（与电池实际发送一致），消除"自己 verify 自己参考后端被判可疑"；`tokenizer_consistency` match 与 mismatch 对称，均要求 overlap≥3。
+- endpoint_base_url 剥除 base_url 内嵌 userinfo（凭据不入报告/OTel）；quick mode 不再把 key 当位置 argv（优先 env，位置传 key 告警）。
+
+### Docs
+- README 测试数统一（221/7）；补已上线竞品（knowlyr-modelaudit / zing-audit / veridrop / apiranking / IRIS / KBF）；ε-稀释检验降级为辅助工程估算工具；诚实标注指纹库当前为 1 模型 PoC。
+- 测试：221 passed / 7 skipped。
+
 ## [0.4.0] - 2026-10-14
 
 ### Added — 模型真实性核验（stateless verify）

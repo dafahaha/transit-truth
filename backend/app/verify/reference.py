@@ -151,8 +151,12 @@ def tokenizer_consistency(
             "details": details,
         }
     score = consistent / overlap
-    # Need at least 3 overlapping probes before declaring a family mismatch.
-    if overlap >= 3 and score < 0.5:
+    # Symmetric minimum-overlap rule: we need at least 3 overlapping probes before
+    # declaring EITHER a family mismatch OR a family match. Two overlapping probes
+    # agreeing is not enough to certify the same tokenizer family.
+    if overlap < 3:
+        verdict = "insufficient_overlap"
+    elif score < 0.5:
         verdict = "mismatch"
     elif score >= 0.8:
         verdict = "match"

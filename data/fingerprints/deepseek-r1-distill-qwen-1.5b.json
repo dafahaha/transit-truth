@@ -9,25 +9,25 @@
   },
   "tokenizer": {
     "tok-whitespace": {
-      "prompt_tokens": { "samples": [20, 20, 20, 20, 20] }
+      "prompt_tokens": { "samples": [43, 43, 43, 43, 43] }
     },
     "tok-code": {
-      "prompt_tokens": { "samples": [18, 18, 18, 18, 18] }
+      "prompt_tokens": { "samples": [41, 41, 41, 41, 41] }
     },
     "tok-url": {
-      "prompt_tokens": { "samples": [22, 22, 22, 22, 22] }
+      "prompt_tokens": { "samples": [45, 45, 45, 45, 45] }
     },
     "tok-mixed-unicode": {
-      "prompt_tokens": { "samples": [18, 18, 18, 18, 18] }
+      "prompt_tokens": { "samples": [41, 41, 41, 41, 41] }
     },
     "tok-repeated-chars": {
-      "prompt_tokens": { "samples": [11, 11, 11, 11, 11] }
+      "prompt_tokens": { "samples": [34, 34, 34, 34, 34] }
     },
     "tok-cjk": {
-      "prompt_tokens": { "samples": [16, 16, 16, 16, 16] }
+      "prompt_tokens": { "samples": [39, 39, 39, 39, 39] }
     },
     "tok-digits": {
-      "prompt_tokens": { "samples": [36, 36, 36, 36, 36] }
+      "prompt_tokens": { "samples": [59, 59, 59, 59, 59] }
     }
   },
   "behavioral": {}

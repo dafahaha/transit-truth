@@ -3,7 +3,9 @@
 Spins up a local OpenAI-compatible stub that serves REAL measured Qwen tokenizer
 counts, then runs the verifier twice:
 
-  1. claim "qwen2.5-0.5b-instruct" against the Qwen stub  -> expect pass
+  1. claim "qwen2.5-0.5b-instruct" against the Qwen stub  -> tokenizer MATCH,
+     but verdict stays insufficient_evidence (no behavioral reference; a tokenizer-only
+     self-reported match is deliberately NOT a certification)
   2. claim "gpt-4o-mini"            against the Qwen stub  -> expect suspicious
 
 Run from the repo root with the venv::
@@ -25,12 +27,13 @@ from fastapi import FastAPI, Request
 from app.verify import verify_endpoint
 
 # Real Qwen tokenizer counts (data/fingerprints/qwen2.5-0.5b-instruct.json).
+# Caliber: system_prompt + user_prompt (the full request the battery sends).
 QWEN_TOKENS = {
-    "a    b    c    d    e    f    g    h": 20,
-    "def foo(x): return x*2+1  # test": 18,
-    "https://api.example.com/v1/chat/completions?model=gpt-4": 22,
-    "café résumé naïve über 日本語 한국어 العربية": 18,
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": 11,
+    "a    b    c    d    e    f    g    h": 43,
+    "def foo(x): return x*2+1  # test": 41,
+    "https://api.example.com/v1/chat/completions?model=gpt-4": 45,
+    "café résumé naïve über 日本語 한국어 العربية": 41,
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": 34,
 }
 
 

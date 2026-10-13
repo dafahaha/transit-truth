@@ -54,9 +54,17 @@ async def verify_endpoint(
             server and tests). Default ``False`` enforces the public-URL SSRF
             guard.
     """
-    # Normalize + record host only (no credentials in the report).
+    # Normalize + record host only (no credentials in the report). Strip any
+    # embedded userinfo (`https://user:pass@host/v1`) so credentials never leak
+    # into endpoint_base_url / OTel attributes.
     parsed = urlparse(base_url)
-    host_label = f"{parsed.scheme}://{parsed.netloc}" if parsed.netloc else base_url
+    if parsed.netloc:
+        host_only = parsed.hostname or ""
+        if parsed.port:
+            host_only = f"{host_only}:{parsed.port}"
+        host_label = f"{parsed.scheme}://{host_only}" if host_only else base_url
+    else:
+        host_label = base_url
 
     # -- URL validation (fail closed on bad targets) -----------------------
     try:
@@ -164,10 +172,28 @@ async def verify_endpoint(
     )
     report["statistics"]["tokenizer_consistency"] = tok_check
 
+    # -- Behavioral-evidence guarantee (anti false-pass) --------------------
+    # Tokenizer prompt-token counts are *self-reported* by the endpoint in
+    # usage.prompt_tokens, and the probe prompts + reference numbers are fully
+    # public. An attacker can report the public numbers without running the real
+    # model. A matching tokenizer count therefore alone NEVER certifies identity.
+    # Only a real behavioral distribution (overlapping a reference with actual
+    # behavioral data) can. The open-source catalog currently ships tokenizer-only
+    # fingerprints (behavioral={}); for those, the verdict is capped at
+    # insufficient_evidence regardless of how good the tokenizer match looks.
+    behavioral_reference_probes = (
+        set(baseline.behavioral_distributions) if baseline else set()
+    )
+    behavioral_overlap = sum(
+        len(resp)
+        for probe_id, resp in battery.observed_behavioral.items()
+        if probe_id in behavioral_reference_probes
+    )
+    real_behavioral_evidence = (
+        bool(behavioral_reference_probes) and behavioral_overlap > 0
+    )
+
     # -- Tokenizer override layer -------------------------------------------
-    # A hard tokenizer mismatch (>=3 probes disagree) is strong wrong-family
-    # evidence; a clean tokenizer match can upgrade an underpowered behavioral
-    # result from "insufficient" to "pass".
     if baseline_found:
         if tok_check.get("verdict") == "mismatch" and report["verdict"] != "suspicious":
             report["verdict"] = "suspicious"
@@ -178,11 +204,27 @@ async def verify_endpoint(
         elif (
             tok_check.get("verdict") == "match"
             and report["verdict"] == "insufficient_evidence"
+            and real_behavioral_evidence
         ):
             report["verdict"] = "pass"
             report["evidence_reason"] = (
-                "Tokenizer prompt-token counts match the claimed reference; behavioral "
-                "sample was underpowered but the tokenizer family is consistent."
+                "Tokenizer prompt-token counts match the claimed reference AND "
+                "behavioral evidence overlaps the reference distribution."
             )
+
+    # Hard cap: no real behavioral reference => never output pass.
+    if baseline_found and not real_behavioral_evidence:
+        if report["verdict"] == "pass":
+            report["verdict"] = "insufficient_evidence"
+        report["evidence_reason"] = (
+            "Reference fingerprint has no behavioral distribution (tokenizer-only "
+            "catalog). Tokenizer prompt-token counts are self-reported by the endpoint "
+            "and fully public, so they alone cannot certify model identity. Result is "
+            "tokenizer-family-consistent but NOT a certification: collect a behavioral "
+            "reference (e.g. Zenodo 176-model fingerprint dataset, CC-BY-4.0) or verify "
+            "against a baseline with behavioral data before trusting."
+        )
+        report["statistics"]["behavioral_evidence"] = "none_tokenizer_only"
+        report["statistics"]["certification"] = "not_certified_tokenizer_only"
 
     return report

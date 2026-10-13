@@ -21,12 +21,14 @@ from tests.test_verify import _start_server
 from app.verify import verify_endpoint
 
 # Real Qwen tokenizer counts measured on 2026-10-14 (see fingerprint file).
+# Caliber: system_prompt + user_prompt (the full request the battery sends),
+# matching data/fingerprints/qwen2.5-0.5b-instruct.json.
 QWEN_TOKENS = {
-    "a    b    c    d    e    f    g    h": 20,
-    "def foo(x): return x*2+1  # test": 18,
-    "https://api.example.com/v1/chat/completions?model=gpt-4": 22,
-    "café résumé naïve über 日本語 한국어 العربية": 18,
-    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": 11,
+    "a    b    c    d    e    f    g    h": 43,
+    "def foo(x): return x*2+1  # test": 41,
+    "https://api.example.com/v1/chat/completions?model=gpt-4": 45,
+    "café résumé naïve über 日本語 한국어 العربية": 41,
+    "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": 34,
 }
 
 
@@ -78,6 +80,12 @@ def _start_qwen_stub() -> tuple[str, "uvicorn.Server"]:
 
 @pytest.mark.asyncio
 async def test_qwen_tokenizer_matches_qwen_claim():
+    """Tokenizers match, but the catalog has NO behavioral reference.
+
+    Per the v0.4.1 anti-false-pass guarantee, a tokenizer-only self-reported
+    match must NOT certify the endpoint (verdict stays insufficient_evidence);
+    tokenizer-consistency itself is still reported as a cross-family signal.
+    """
     url, server = _start_qwen_stub()
     try:
         report = await verify_endpoint(
@@ -88,10 +96,13 @@ async def test_qwen_tokenizer_matches_qwen_claim():
         )
     finally:
         server.should_exit = True
-    assert report["verdict"] == "pass", json.dumps(report, indent=2)
     tc = report["statistics"]["tokenizer_consistency"]
-    assert tc["verdict"] == "match"
+    assert tc["verdict"] == "match", json.dumps(report, indent=2)
     assert tc["score"] == 1.0
+    assert tc["overlap"] >= 3
+    # Hard guarantee: tokenizer-only match must NOT output pass.
+    assert report["verdict"] != "pass", json.dumps(report, indent=2)
+    assert report["verdict"] == "insufficient_evidence", json.dumps(report, indent=2)
 
 
 @pytest.mark.asyncio

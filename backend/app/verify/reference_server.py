@@ -18,7 +18,8 @@ from __future__ import annotations
 
 import hashlib
 import os
-from typing import Optional
+
+from fastapi import FastAPI, Request
 
 # model name shipped in the fingerprint catalog -> HF tokenizer repo
 CATALOG_TOKENIZERS: dict[str, str] = {
@@ -72,10 +73,15 @@ class ReferenceBackend:
         return f"stub-{self.model}-{bucket}"
 
 
-def build_app(model: str) -> "object":
-    """Build a FastAPI app for the given reference model (test-server style)."""
-    from fastapi import FastAPI, Request
+def build_app(model: str) -> tuple:
+    """Build a FastAPI app for the given reference model (test-server style).
 
+    Returns ``(app, backend)``. FastAPI/Request are imported at module level on
+    purpose: with ``from __future__ import annotations`` a function-level import
+    left ``Request`` unresolvable at route-registration time, which made FastAPI
+    treat ``request: Request`` as a *required query param* and every
+    ``/v1/chat/completions`` POST return 422.
+    """
     backend = ReferenceBackend(model)
     mode = backend.load()
 

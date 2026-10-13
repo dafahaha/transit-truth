@@ -617,7 +617,33 @@ def quick_mode():
     """Quick mode: transit-truth sk-xxx [--model ...] [--base-url ...]"""
     print_banner()
 
-    api_key = sys.argv[1]
+    # SECURITY: prefer the environment variable. Passing a key as a positional
+    # argv makes it visible in the process list / shell history; the recommended
+    # form is `$env:TRANSIT_TRUTH_API_KEY=...; transit-truth` (or stdin). We
+    # still accept a legacy positional token but warn loudly.
+    api_key = os.environ.get("TRANSIT_TRUTH_API_KEY", "").strip()
+    positional = (
+        sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("-") else None
+    )
+    if positional:
+        import sys as _sys
+
+        print(
+            Colors.yellow(
+                "⚠ Passing the API key as a command-line argument is insecure (it is "
+                "visible in the process list). Set TRANSIT_TRUTH_API_KEY instead."
+            ),
+            file=_sys.stderr,
+        )
+        api_key = positional
+    if not api_key:
+        print(
+            Colors.red(
+                "❌ Error: no API key. Set the TRANSIT_TRUTH_API_KEY environment "
+                "variable (it is never written to disk or logged)."
+            )
+        )
+        sys.exit(1)
 
     # Parse optional arguments
     model = os.environ.get("TRANSIT_TRUTH_MODEL", "gpt-4o")

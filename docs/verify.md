@@ -66,6 +66,18 @@ transit-truth verify --base-url http://127.0.0.1:8765/v1 \
 `--allow-local` is required for loopback targets; the default enforces the
 public-URL SSRF guard.
 
+> **Honesty: tokenizer-only is NOT a certification.** The open-source catalog
+> currently ships tokenizer counts only (no behavioral distribution). Tokenizer
+> counts are *self-reported* by the endpoint in `usage.prompt_tokens`, and the
+> probe prompts + reference numbers are public — a fake relay can report them
+> without running the real model. Therefore, when the reference has no behavioral
+> distribution, `verify` deliberately caps the verdict at `insufficient_evidence`
+> even when `tokenizer_consistency.verdict == "match"`. A `pass` requires
+> behavioral evidence that overlaps a real reference distribution. Tokenizer counts
+> are measured on the **system_prompt + user_prompt** caliber (the full request
+> the battery sends), so a self-hosted reference server's reported counts line up
+> with the on-disk reference.
+
 ## SDK
 
 ```python

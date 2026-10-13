@@ -205,7 +205,7 @@ transit-truth sk-your-key --base-url https://your-relay.com/v1 --model gpt-4o
 - [x] **持续监控+告警**（4种告警检测，4种告警通道）
 - [x] **真实基准数据库**（gpt-4o-mini、gpt-4o，各50样本）
 - [x] **灵活配置管理**（14个环境变量，支持自定义探针数量/超时/重试等）
-- [x] **测试**：实测 **217 passed / 7 skipped**（v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
+- [x] **测试**：实测 **221 passed / 7 skipped**（v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.1 热修补 reference-server 真实 HTTP e2e 与"伪造后端不得判 pass"回归测试）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
 - [x] **CI/CD**（GitHub Actions，Python 3.10/3.11/3.12矩阵）
 
 ### 🚧 开发中
@@ -228,6 +228,28 @@ transit-truth sk-your-key --base-url https://your-relay.com/v1 --model gpt-4o
 2. **工程化全功能平台**：不只是指纹工具，而是完整的API安全审计平台
 3. **中文社区优先**：面向中文用户，解决国内中转站乱象
 4. **零门槛在线Demo**：纯前端实现，浏览器即用
+
+### 相关工作与已上线竞品（诚实对标）
+
+本赛道已相当拥挤，我们**不**是首个做中转站审计的工具。已上线的同类项目：
+
+| 项目 | 状态 | 与本项目重叠 |
+|---|---|---|
+| **knowlyr-modelaudit**（PyPI，MIT） | 已上线 CLI+MCP，行为指纹+蒸馏检测 | 与 `verify` SDK/CLI 几乎同定位 |
+| **zing-audit**（PyPI） | local-first CLI，审计偷换/截断上下文/假流式/计费虚高 | 与 CLI 直接同赛道 |
+| **veridrop.org**（开源） | 已覆盖上万家中转站、十余万份报告，贝叶斯加权红黑榜 | 与"排行榜/买徽章"方向**直接撞车且已规模化**——该身位已被占据 |
+| **apiranking.com** | 自研探针周期性轮询，模型真假+费用实测 | 同上 |
+| **IRIS**（arXiv:2607.20860） | 预算化黑盒审计模型替换与路由稀释，并估计稀释比例 ε̂ | 已覆盖本仓库"ε-稀释预算化检验"的核心思想 |
+| **KBF**（arXiv:2605.29524） | 知识边界指纹，可检出 5~10% 流量掺假 | 覆盖 ε-稀释场景 |
+
+我们的真实身位（二次工程集成，**非方法论创新**）：
+- **三态 fail-closed JSON 报告契约**（`pass / suspicious / insufficient_evidence`，证据不足绝不硬判）；
+- **自托管 / 可嵌入**（无 SaaS、无排行榜）：`verify` SDK 与 `reference-server` 可嵌入 Agent/网关做准入，与 zing-audit 错位竞争；
+- **中文开源模型 tokenizer 目录**——但需诚实说明其**当前规模是 1 个模型的 PoC**（见下）。
+
+> **关于"预算化 ε-稀释检验"**：`backend/app/verify/sequential.py` 的样本量/检出力计算是闭式工程估算工具，用于回答"给定预算 N 与稀释 ε，能否检出掺假"。方法层面 IRIS（arXiv:2607.20860）已做过预算化审计与 ε 估计，我们此处只是一个实用辅助计算器，**不声称方法论原创**。
+>
+> **指纹库覆盖现状（诚实标注）**：`data/fingerprints/` 当前仅 **Qwen2.5-0.5B-Instruct 一个模型的真实 tokenizer 计数 PoC**（7 个探针，无行为分布）；GLM tokenizer 因镜像限流 pending；DeepSeek-R1-Distill-Qwen 派生自 Qwen2 tokenizer（计数相同，tokenizer 无法区分两者）。GPT/Claude/Gemini 闭源指纹需用户自配 key 采集。**因此对开源目录的 verify 只能输出 tokenizer 家族一致性，不得输出 `pass`**——无行为参考时结论封顶 `insufficient_evidence`。
 
 ## 真实基准数据
 
@@ -277,7 +299,7 @@ transit-truth/
 │   │   ├── api/               # REST API
 │   │   ├── utils/             # 工具函数
 │   │   ├── config.py          # 配置管理（14 个环境变量）
-│   │   ├── tests/             # 204 collected / 197 passed / 7 skipped
+│   │   ├── tests/             # 离线桩 e2e + 统计/加固/集成测试（计数见顶部"测试"行）
 │   │   └── main.py            # FastAPI 入口
 │   └── requirements.txt
 ├── frontend/                   # Web 前端资源
