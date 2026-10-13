@@ -54,7 +54,7 @@ TransitTruth 是一个开源的 **AI API 安全审计平台**，基于学术前�
 > 响应做了归一化（如 "Heads." 与 "Heads" 合并、大小写统一）。
 
 **实测效果（同一中转站两个标称端点）：**
-- gpt-4o-mini vs gpt-4o：**5/8 探针**统计显著差异（p<0.05；抛硬币探针在归一化后 TVD=0.08、p=0.092，不再显著）
+- gpt-4o-mini vs gpt-4o：**5/8 探针**统计显著差异（p<0.05；抛硬币探针在归一化后 TVD=0.08、未校正 Pearson 卡方 p=0.092，不再显著；经 Yates 连续性校正后 p≈0.206，两种口径下硬币均不显著，5/8 结论稳健）
 - 最强区分探针（选动物）：TVD=0.90；"是否为 Okapi"规则的重代入准确率 **88%**（Wilson [0.80,0.93]）。TVD 是分布距离，不等于准确率。
 - 整体管线：后验概率 **0.913**，95% 可信区间 [0.885, 0.937]。这是**基线样本对自身参考的 in-distribution resubstitution（自洽性检验）**，用于验证管线内部一致；**不是**独立数据上的 held-out 检测准确率。
 
@@ -191,6 +191,8 @@ transit-truth sk-your-key --base-url https://your-relay.com/v1 --model gpt-4o
 |---|---|---|---|---|---|
 | gpt-4o-mini | 50 | 26 | 1300 | 15 分钟 | `data/baselines/gpt-4o-mini.json` |
 | gpt-4o | 50 | 26 | 1300 | 12 分钟 | `data/baselines/gpt-4o.json` |
+
+> **开发期样本说明**：`data/baselines/dev_samples/` 下的 `gpt-4o-mini-test.json`、`gpt-4o-mini-concurrent-test.json` 是早期 3→5→50 采样的开发期增量样本，已移出正式基线目录。`load_real_baselines` 仅加载上表两个正式文件（子目录内文件不参与 glob，且文件名含 "test" 显式跳过），这些样本不进入任何分析。
 
 > **数据缺口披露（gpt-4o-mini）**：mini 的 tokenizer 探针未全部拿到可用样本——`tok-digits`、`tok-cjk`、`tok-emoji` 三个探针零可用响应（冷启动限流），`tok-whitespace` 仅 37/50 条可用；实际拿到可用样本的 tokenizer 探针为 5/8（4 个 n=50、1 个 n=37）。上表"26 探针 / 1300 请求"为设计口径（gpt-4o 侧为完整 26/1300）。所有头条行为指纹结论（Okapi、TVD=0.90、后验 0.913 等）均来自 8 个 n=50 齐全的 behavioral 探针，不受此缺口影响。
 

@@ -427,6 +427,8 @@ We conducted chi-square tests for homogeneity between the two models' behavioral
 
 *TVD = Total Variation Distance (0 = identical, 1 = completely different)*
 
+> **Note on the coin-flip probe.** Its homogeneity p = 0.092 is the uncorrected Pearson chi-square on the 2×2 table (Heads/Tails × model); applying Yates' continuity correction gives p ≈ 0.206. The probe is non-significant under either threshold, so the "5 of 8 significant" conclusion is unchanged.
+
 ### 6.3 Most Discriminative Probes
 
 Ranked by Total Variation Distance (TVD):
