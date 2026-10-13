@@ -57,11 +57,13 @@ class StatisticalVerdict:
     ks_pvalue: Optional[float] = None
     chi2_statistic: Optional[float] = None
     chi2_pvalue: Optional[float] = None
-    # Bayesian posterior probability that the model is as claimed
-    posterior_probability: float = 0.5
-    # Confidence interval for posterior (95%)
-    posterior_ci_lower: float = 0.0
-    posterior_ci_upper: float = 1.0
+    # Bayesian posterior probability that the model is as claimed.
+    # None when there is NO behavioral evidence to update on (see analyze());
+    # a fabricated high posterior on empty data would contradict the verdict.
+    posterior_probability: Optional[float] = 0.5
+    # Credible interval for posterior (95%); None when posterior is None.
+    posterior_ci_lower: Optional[float] = 0.0
+    posterior_ci_upper: Optional[float] = 1.0
     # Sample sizes (for uncertainty quantification)
     baseline_sample_size: int = 0
     observed_sample_size: int = 0
@@ -535,7 +537,10 @@ class StatisticalAnalyzer:
         return posterior, ci_lower, ci_upper
 
     def calculate_likelihood_ratio(
-        self, ks_pvalue: float, chi2_pvalue: float, capability_failure_rate: float
+        self,
+        ks_pvalue: float,
+        chi2_pvalue: Optional[float],
+        capability_failure_rate: float,
     ) -> float:
         """Calculate likelihood ratio from test results.
 
@@ -552,6 +557,10 @@ class StatisticalAnalyzer:
           spurious "tokenizer looks fine -> honest x2".
         - Behavioral chi-square is the PRIMARY same-family fingerprint signal
           and may go both ways: low p = mismatch (<1), high p = match (>1).
+        - ``chi2_pvalue=None`` means there was NO behavioral overlap at all
+          (empty reference distribution or zero observed behavioral responses):
+          the chi-square sentinel p=1.0 on empty data must NOT be read as a
+          behavioral match, so the whole behavioral block is skipped.
         - High capability failure rate suggests downgrade (<1).
         """
         lr = 1.0
@@ -568,16 +577,19 @@ class StatisticalAnalyzer:
         # else: consistent -> factor 1.0 (NEUTRAL, never rewards)
 
         # --- Behavioral chi-square: PRIMARY same-family fingerprint ---
-        if chi2_pvalue < 0.01:
-            lr *= 0.05  # distribution strongly off baseline -> downgrade
-        elif chi2_pvalue < 0.05:
-            lr *= 0.3
-        elif chi2_pvalue < 0.1:
-            lr *= 0.7
-        elif chi2_pvalue > 0.5:
-            lr *= 3.0  # strong behavioral fingerprint match -> honest
-        elif chi2_pvalue > 0.2:
-            lr *= 1.3
+        # Skipped entirely when there is no behavioral evidence (chi2_pvalue
+        # is None): empty data must never earn the x3.0 "strong match" factor.
+        if chi2_pvalue is not None:
+            if chi2_pvalue < 0.01:
+                lr *= 0.05  # distribution strongly off baseline -> downgrade
+            elif chi2_pvalue < 0.05:
+                lr *= 0.3
+            elif chi2_pvalue < 0.1:
+                lr *= 0.7
+            elif chi2_pvalue > 0.5:
+                lr *= 3.0  # strong behavioral fingerprint match -> honest
+            elif chi2_pvalue > 0.2:
+                lr *= 1.3
 
         # --- Capability failure rate ---
         if capability_failure_rate > 0.7:
@@ -645,21 +657,48 @@ class StatisticalAnalyzer:
             observed_behavioral, baseline
         )
 
+        # -- v0.4.2 honesty: no behavioral evidence at all -------------------
+        # Count observed behavioral responses that overlap a probe the reference
+        # actually has a distribution for. Zero overlap means there is NO
+        # behavioral evidence: either the reference has no behavioral
+        # distribution (tokenizer-only catalog) or the endpoint produced no
+        # response for any overlapping probe. The chi-square sentinel (p=1.0 on
+        # empty data) must NOT be read as "behavioral match": drop it, skip the
+        # x3.0 reward, and report posterior/LR/CI as null (NA) rather than a
+        # confident certification we do not have. This keeps the JSON report
+        # consistent with the verdict (insufficient_evidence).
+        behavioral_overlap_n = sum(
+            len(responses)
+            for probe_id, responses in observed_behavioral.items()
+            if baseline.behavioral_distributions.get(probe_id)
+        )
+        has_behavioral_evidence = behavioral_overlap_n > 0
+        if not has_behavioral_evidence:
+            chi2_stat = None
+            chi2_pvalue = None
+
         # Calculate likelihood ratio
         lr = self.calculate_likelihood_ratio(
             ks_pvalue, chi2_pvalue, capability_failure_rate
         )
 
-        # Bayesian update
+        # Bayesian update (skipped when there is no behavioral evidence: a
+        # posterior computed from the empty-data sentinel would imply a
+        # confidence that contradicts the verdict).
         observed_size = sum(
             len(responses) for responses in observed_behavioral.values()
         )
-        posterior, ci_lower, ci_upper = self.bayesian_update(
-            self.prior_honest,
-            lr,
-            observed_size=observed_size,
-            baseline_size=baseline.sample_size,
-        )
+        if has_behavioral_evidence:
+            posterior, ci_lower, ci_upper = self.bayesian_update(
+                self.prior_honest,
+                lr,
+                observed_size=observed_size,
+                baseline_size=baseline.sample_size,
+            )
+        else:
+            posterior = None
+            ci_lower = None
+            ci_upper = None
 
         # Assess sample adequacy
         sample_adequacy, sample_warning = assess_sample_adequacy(
@@ -668,19 +707,27 @@ class StatisticalAnalyzer:
         )
 
         # Determine conclusion
-        if posterior > 0.9 and ci_lower > 0.7:
-            conclusion = "match"
-            confidence_level = "high"
-        elif posterior > 0.7 and ci_lower > 0.5:
-            conclusion = "match"
-            confidence_level = "medium"
-        elif posterior < 0.1 and ci_upper < 0.3:
-            conclusion = "mismatch"
-            confidence_level = "high"
-        elif posterior < 0.3 and ci_upper < 0.5:
-            conclusion = "mismatch"
-            confidence_level = "medium"
+        if has_behavioral_evidence:
+            if posterior > 0.9 and ci_lower > 0.7:
+                conclusion = "match"
+                confidence_level = "high"
+            elif posterior > 0.7 and ci_lower > 0.5:
+                conclusion = "match"
+                confidence_level = "medium"
+            elif posterior < 0.1 and ci_upper < 0.3:
+                conclusion = "mismatch"
+                confidence_level = "high"
+            elif posterior < 0.3 and ci_upper < 0.5:
+                conclusion = "mismatch"
+                confidence_level = "medium"
+            else:
+                conclusion = "inconclusive"
+                confidence_level = "low"
         else:
+            # No behavioral evidence: stay inconclusive/low. Do NOT let the
+            # tokenizer-only signal (which only penalizes, never rewards) drive
+            # a "match" conclusion here; the verify layer's tokenizer override
+            # still escalates blatant cross-family mismatch to "suspicious".
             conclusion = "inconclusive"
             confidence_level = "low"
 
@@ -712,11 +759,22 @@ class StatisticalAnalyzer:
                 "observed_sample_size": observed_size,
                 "sample_adequacy": sample_adequacy,
                 "sample_warning": sample_warning,
-                "likelihood_ratio": lr,
+                "likelihood_ratio": lr if has_behavioral_evidence else None,
+                "behavioral_evidence": (
+                    "present" if has_behavioral_evidence else "none"
+                ),
                 "prior_honest": self.prior_honest,
                 "ks_interpretation": self._interpret_pvalue(ks_pvalue),
-                "chi2_interpretation": self._interpret_pvalue(chi2_pvalue),
-                "posterior_95ci": [round(ci_lower, 3), round(ci_upper, 3)],
+                "chi2_interpretation": (
+                    self._interpret_pvalue(chi2_pvalue)
+                    if chi2_pvalue is not None
+                    else "无行为证据（参考行为分布为空或观测为空），未做卡方检验"
+                ),
+                "posterior_95ci": (
+                    [round(ci_lower, 3), round(ci_upper, 3)]
+                    if has_behavioral_evidence
+                    else None
+                ),
             },
         )
 

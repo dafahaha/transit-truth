@@ -333,6 +333,19 @@ def cmd_verify(args):
     """Run the stateless model-identity verifier and print a JSON report."""
     from .verify import verify_endpoint
 
+    # SECURITY: passing the key as --api-key sk-xxx exposes it in the process
+    # list / shell history, same as the old positional quick mode. Warn loudly
+    # and recommend the environment variable.
+    if args.api_key is not None:
+        print(
+            Colors.yellow(
+                "⚠ Passing the API key via --api-key exposes it in the process "
+                "list / shell history. Prefer the environment variable "
+                f"({args.api_key_env}); it is never written to disk or logged."
+            ),
+            file=sys.stderr,
+        )
+
     report = asyncio.run(
         verify_endpoint(
             base_url=args.base_url,
@@ -343,6 +356,7 @@ def cmd_verify(args):
             behavioral_samples=args.behavioral_samples,
             timeout=args.timeout,
             allow_local=args.allow_local,
+            total_timeout=args.total_timeout,
         )
     )
 
@@ -572,6 +586,12 @@ Environment variables:
         type=float,
         default=30.0,
         help="Per-request timeout seconds (default: 30)",
+    )
+    verify_parser.add_argument(
+        "--total-timeout",
+        type=float,
+        default=90.0,
+        help="Whole-battery wall-clock cap seconds; fail-closed on expiry (default: 90)",
     )
     verify_parser.add_argument(
         "--allow-local",

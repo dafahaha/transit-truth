@@ -42,9 +42,11 @@ transit-truth verify --base-url http://127.0.0.1:8765/v1 \
     --model qwen2.5-0.5b-instruct --allow-local
 ```
 
+> **无 tokenizers 时降级为 stub**：reference-server 启动时若下载不到真实 tokenizer（网络受限，`HF_ENDPOINT` 默认 `https://hf-mirror.com`），会自动降级为**显式标注的 plumbing stub** 模式——`prompt_tokens` 只是哈希占位值、行为内容是 `stub-*` 固定串，服务启动 stderr 与 `GET /v1/models` 的 `mode`/`note` 会明确告诉你是 stub，**不会假装是真模型**。此时 verify 只能跑通管线，无法给出任何认证。
+>
 > **覆盖范围（诚实标注）**：当前自带参考指纹仅覆盖本地开源模型——Qwen2.5-0.5B（真实 tokenizer 计数）、DeepSeek-R1-Distill-Qwen（沿用 Qwen2 tokenizer）、GLM（目录已收录，tokenizer 下载受网络限制待补）。**GPT/Claude/Gemini 等闭源指纹需用户提供自己的 key 后采集接入。**
 >
-> **定位声明**：黑盒结果是**概率性辅助证据，不是密码学证明，也不做真伪裁判**。`suspicious` 不等于"确定造假"。详见 [docs/verify.md](docs/verify.md) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+> **定位声明**：黑盒结果是**概率性辅助证据，不是密码学证明，也不做真伪裁判**。`suspicious` 不等于"确定造假"。行为探针在 temperature=0 下退化为点质量，公开基线可被确定性回放（硬编码约 4 个众数字符串即可复现"匹配"），报告对此会显式标 `deterministic_replay_risk` 并把置信封顶——**官方密码学 attestation 才是终局，本工具只是概率性辅助**。详见 [docs/verify.md](docs/verify.md) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
 Python SDK：`from app.verify import verify_endpoint`（可选 OpenTelemetry/OpenInference、DeepEval、Langfuse 集成见 `examples/`）。
 
@@ -169,7 +171,9 @@ git clone https://github.com/dafahaha/transit-truth.git
 cd transit-truth
 pip install -e .
 
-transit-truth sk-your-key --base-url https://your-relay.com/v1 --model gpt-4o
+# key 从环境变量读（位置传 sk-xxx / --api-key sk-xxx 会在进程列表可见，仅兼容告警）
+export TRANSIT_TRUTH_API_KEY=sk-your-key
+transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
 ```
 
 （后端方式见上方"本地运行"：`cd backend; pip install -r requirements.txt`。）
@@ -241,6 +245,10 @@ transit-truth sk-your-key --base-url https://your-relay.com/v1 --model gpt-4o
 | **apiranking.com** | 自研探针周期性轮询，模型真假+费用实测 | 同上 |
 | **IRIS**（arXiv:2607.20860） | 预算化黑盒审计模型替换与路由稀释，并估计稀释比例 ε̂ | 已覆盖本仓库"ε-稀释预算化检验"的核心思想 |
 | **KBF**（arXiv:2605.29524） | 知识边界指纹，可检出 5~10% 流量掺假 | 覆盖 ε-稀释场景 |
+| **truthprobe**（GitHub+PyPI） | 已上线 LLM 审计 CLI | 与 `verify` 同定位 |
+| **BazaarLink Probe**（bazaarlink.ai） | 84 项规则检查 + 行为证据身份判定，专做中转站降智/掺假/偷换检测 | 同赛道产品化检测器 |
+| **Tosea.ai**（浏览器端工具，GitHub 开源） | 随机数行为指纹校验 LLM API 真伪，纯前端不出 key | 与本仓库"行为探针"思路几乎一致 |
+| **token-difr**（PyPI） | 用参考 provider 的 token log-prob 比对生成 token 序列是否货真价实 | tokenizer/log-prob 路线，比我们自报 token 计数更强 |
 
 我们的真实身位（二次工程集成，**非方法论创新**）：
 - **三态 fail-closed JSON 报告契约**（`pass / suspicious / insufficient_evidence`，证据不足绝不硬判）；

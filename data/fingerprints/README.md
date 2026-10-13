@@ -16,7 +16,7 @@ These are reference fingerprints for the verifier, in the same on-disk format as
 - **No real generation / behavioral responses.** A local model was not run (torch/
   transformers + CPU inference was out of scope; see v2 notes). Behavioral
   reference distributions for open-source models should be sourced from the
-  [Zenodo 176-model fingerprint dataset](https://zenodo.org/) (CC-BY-4.0, cited
+  [Zenodo 165-model fingerprint dataset](https://zenodo.org/) (CC-BY-4.0, cited
   in `THIRD_PARTY_NOTICES.md`).
 - **No closed-model fingerprints** (GPT/Claude/Gemini). Those require the user's
   own paid keys to collect; the verifier compares against whatever reference the

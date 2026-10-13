@@ -91,12 +91,17 @@ def build_report(
         "ks_pvalue": verdict.ks_pvalue,
         "chi2_pvalue": verdict.chi2_pvalue,
         "likelihood_ratio": verdict.details.get("likelihood_ratio"),
+        # posterior / CI are None (NA) when there was no behavioral evidence at
+        # all: a fabricated high posterior would contradict the verdict.
         "posterior": verdict.posterior_probability,
-        "posterior_ci_95": [
-            round(verdict.posterior_ci_lower, 3),
-            round(verdict.posterior_ci_upper, 3),
-        ],
+        "posterior_ci_95": (
+            [round(verdict.posterior_ci_lower, 3), round(verdict.posterior_ci_upper, 3)]
+            if verdict.posterior_ci_lower is not None
+            and verdict.posterior_ci_upper is not None
+            else None
+        ),
         "sample_adequacy": verdict.sample_adequacy,
+        "behavioral_evidence": verdict.details.get("behavioral_evidence"),
     }
 
     return {

@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-10-14
+
+### Fixed — 诚实性 / 抗回放热修（独立审批抓到 1 P1 + 1 P2 + 若干 P3）
+- **P1 报告数字与 verdict 自相矛盾**：开源目录（无行为参考）下 verdict 已封顶 `insufficient_evidence`，但 JSON 仍打印 `posterior=0.913 / CI=[0.745,0.993] / LR=4.5`——根因是空行为数据 chi2 仍返回哨兵 p=1.0 并被当成"行为强一致 ×3.0"。现在当某探针/整体**无行为重叠样本**（参考行为分布为空或观测为空）时：不 ×3.0、不报暗示高置信的数字，`posterior / likelihood_ratio / posterior_ci_95 / chi2_pvalue` 一律输出 `null`（NA），并给原因 `behavioral_evidence=none`；JSON 与 verdict 自洽。有真实行为基线（gpt-4o-mini）路径的数字不受影响。
+- **P2 确定性回放可骗 pass**：行为探针 temperature=0 退化为点质量，公开基线随仓库分发，硬编码约 4 个众数字符串即可确定性拿 pass。现在计算每探针经验熵/众数占比，零熵或点质量（众数占比≈100%）时报告显式标 `statistics.deterministic_replay_risk.flag=true` 并列退化探针；点质量行为证据**不允许无保留高置信 pass**——verdict 可仍为 pass，但 `confidence` 封顶为 `low`。docs/verify.md 与 README 诚实说明：公开探针在 temperature=0 下可被确定性回放，tokenizer 计数是弱信号，官方密码学 attestation 才是终局，本工具是概率性辅助。
+
+### Changed / P3
+- `config.py APP_VERSION` 0.3.0 → 0.4.2，与 pyproject 对齐。
+- `verify --api-key sk-xxx`（位置/flag 传 key）现在 stderr 告警，推荐环境变量；README 从源码安装段改为 env 写法。
+- 整批探针电池新增整体墙钟超时 `--total-timeout`（默认 90s）：挂死/500 后端不再因重试退避拖到 47–137s，到点优雅 fail-closed 返回 `error.code=battery_timeout`。
+- 指纹数据集表述统一为原论文 **165 模型**（此前 data/fingerprints/README 与报告文案误写 176）。
+- reference-server 无 tokenizer 时降级为显式标注 stub 的提示写入快速开始。
+- 竞品表补 truthprobe / BazaarLink Probe / Tosea.ai / token-difr。
+- `.pytest_cache/` 不入库（.gitignore 已有，确认未被跟踪）。
+- 测试：新增 v0.4.2 回归（零行为证据路径 posterior/LR 为 null；确定性回放后端不得无保留高置信 pass），总数只增不减。
+
 ## [0.4.1] - 2026-10-14
 
 ### Fixed — 发布阻断热修（独立审批抓到）
@@ -133,6 +149,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker support
 - README, LICENSE, .gitignore
 
-[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/dafahaha/transit-truth/compare/v0.4.1...v0.4.2
+[0.4.1]: https://github.com/dafahaha/transit-truth/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/dafahaha/transit-truth/compare/v0.2.0...v0.4.0
 [0.2.0]: https://github.com/dafahaha/transit-truth/releases/tag/v0.2.0
 [0.1.0]: https://github.com/dafahaha/transit-truth/releases/tag/v0.1.0

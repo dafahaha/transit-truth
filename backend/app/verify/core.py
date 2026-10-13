@@ -9,8 +9,11 @@ never written to disk, logged, or included in the report.
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import math
 import os
+from collections import Counter
 from typing import Optional
 from urllib.parse import urlparse
 
@@ -31,6 +34,42 @@ def _redact(key: Optional[str]) -> str:
     return f"{key[:3]}…({len(key)} chars)"
 
 
+# A behavioral probe whose empirical mode fraction is at least this close to 1.0
+# is treated as a point mass (zero entropy): under temperature=0 the shipped
+# public baselines are exactly such point masses, so they are replayable.
+_POINT_MASS_MODE_FRACTION = 0.99
+
+
+def _behavioral_degeneracy(
+    observed_behavioral: dict[str, list[str]],
+) -> dict[str, dict]:
+    """Per-probe empirical entropy / mode fraction for behavioral responses.
+
+    Returns ``{probe_id: {n, mode, mode_fraction, shannon_entropy_nats,
+    point_mass}}`` for every probe with at least two samples. A point-mass
+    probe (mode fraction >= 0.99, zero entropy) is *replayable*: the shipped
+    public baselines are collected at temperature=0, so an attacker can hard-code
+    the public modal strings and reproduce the distribution deterministically.
+    """
+    out: dict[str, dict] = {}
+    for probe_id, responses in observed_behavioral.items():
+        n = len(responses)
+        if n < 2:
+            continue
+        counts = Counter(responses)
+        mode, mode_n = counts.most_common(1)[0]
+        mode_frac = mode_n / n
+        entropy = -sum((c / n) * math.log(c / n) for c in counts.values())
+        out[probe_id] = {
+            "n": n,
+            "mode": mode,
+            "mode_fraction": round(mode_frac, 3),
+            "shannon_entropy_nats": round(entropy, 4),
+            "point_mass": mode_frac >= _POINT_MASS_MODE_FRACTION,
+        }
+    return out
+
+
 async def verify_endpoint(
     *,
     base_url: str,
@@ -43,6 +82,7 @@ async def verify_endpoint(
     timeout: float = 30.0,
     concurrency: int = 2,
     allow_local: bool = False,
+    total_timeout: float = 90.0,
 ) -> dict:
     """Probe *base_url* and return a verify-report dict.
 
@@ -53,6 +93,9 @@ async def verify_endpoint(
         allow_local: permit loopback/private targets (for the local reference
             server and tests). Default ``False`` enforces the public-URL SSRF
             guard.
+        total_timeout: whole-battery wall-clock cap. A hung / 500-ing backend
+            otherwise spends minutes inside retry+backoff; on expiry we fail
+            closed with an error report instead of waiting indefinitely.
     """
     # Normalize + record host only (no credentials in the report). Strip any
     # embedded userinfo (`https://user:pass@host/v1`) so credentials never leak
@@ -102,7 +145,7 @@ async def verify_endpoint(
     baseline = analyzer._resolve_baseline(claimed_model)
     baseline_found = baseline is not None
 
-    # -- Probe the endpoint -------------------------------------------------
+    # -- Probe the endpoint (whole-battery wall-clock cap; fail closed) ------
     try:
         async with AsyncAPIClient(
             api_key=api_key,
@@ -110,13 +153,27 @@ async def verify_endpoint(
             timeout=timeout,
             ssrf_guard=not allow_local,
         ) as client:
-            battery = await run_battery(
-                client,
-                claimed_model,
-                max_requests=max_requests,
-                behavioral_samples=behavioral_samples,
-                concurrency=concurrency,
-            )
+            try:
+                battery = await asyncio.wait_for(
+                    run_battery(
+                        client,
+                        claimed_model,
+                        max_requests=max_requests,
+                        behavioral_samples=behavioral_samples,
+                        concurrency=concurrency,
+                    ),
+                    timeout=total_timeout,
+                )
+            except asyncio.TimeoutError:
+                return error_report(
+                    claimed_model=claimed_model,
+                    endpoint_base_url=host_label,
+                    code="battery_timeout",
+                    message=(
+                        f"The probe battery did not finish within {total_timeout:.0f}s "
+                        "(hung or erroring backend). Failing closed: no certification."
+                    ),
+                )
     except Exception as exc:  # noqa: BLE001 - network/timeout, sanitized
         logger.warning("verify_endpoint transport error: %s", type(exc).__name__)
         return error_report(
@@ -221,10 +278,40 @@ async def verify_endpoint(
             "catalog). Tokenizer prompt-token counts are self-reported by the endpoint "
             "and fully public, so they alone cannot certify model identity. Result is "
             "tokenizer-family-consistent but NOT a certification: collect a behavioral "
-            "reference (e.g. Zenodo 176-model fingerprint dataset, CC-BY-4.0) or verify "
+            "reference (e.g. Zenodo 165-model fingerprint dataset, CC-BY-4.0) or verify "
             "against a baseline with behavioral data before trusting."
         )
         report["statistics"]["behavioral_evidence"] = "none_tokenizer_only"
         report["statistics"]["certification"] = "not_certified_tokenizer_only"
+
+    # -- Deterministic-replay honesty (v0.4.2) -----------------------------
+    # The shipped behavioral baselines are sampled at temperature=0, so they are
+    # point masses (e.g. beh-number-1-10 always answers "7"). The probe prompts
+    # and the baselines are public, so an attacker can hard-code ~4 modal
+    # strings and "pass" deterministically -- not by luck. We flag degenerate
+    # (zero-entropy) behavioral evidence explicitly and never let it carry an
+    # unreserved high-confidence pass: a pass on point-mass evidence is capped to
+    # low confidence and labelled replayable.
+    degeneracy = _behavioral_degeneracy(battery.observed_behavioral)
+    degenerate = {pid: d for pid, d in degeneracy.items() if d["point_mass"]}
+    if degenerate and real_behavioral_evidence:
+        report["statistics"]["deterministic_replay_risk"] = {
+            "flag": True,
+            "degenerate_probes": degenerate,
+            "reason": (
+                "Behavioral responses are point-mass (zero empirical entropy): the "
+                "public baselines are sampled at temperature=0, so an attacker can "
+                "replay the public modal strings verbatim. Behavioral 'match' here is "
+                "replayable, NOT a cryptographic identity proof; official attestation "
+                "remains the only endgame."
+            ),
+        }
+        if report["verdict"] == "pass":
+            report["confidence"] = "low"
+            report["evidence_reason"] = (
+                report.get("evidence_reason", "")
+                + " Caveat: behavioral evidence is point-mass (temperature=0 public "
+                "baselines are replayable verbatim), so this pass is low-confidence."
+            )
 
     return report

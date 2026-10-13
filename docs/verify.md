@@ -78,6 +78,29 @@ public-URL SSRF guard.
 > the battery sends), so a self-hosted reference server's reported counts line up
 > with the on-disk reference.
 
+## Deterministic-replay honesty (v0.4.2)
+
+The shipped behavioral baselines are collected at **temperature=0**, which makes
+them *point masses*: e.g. `beh-number-1-10` for gpt-4o-mini answers `"7"` every
+single time. The probe prompts and the baselines ship in this public repo, so an
+adversary does not need luck — they can hard-code ~4 public modal strings
+(`"7"` / `"Heads"` / `"Cerulean"` / `"4"`) and reproduce a behavioral "match"
+**deterministically**.
+
+`verify` therefore measures each probe's empirical entropy / mode fraction:
+
+- when overlapping behavioral responses are point-mass (zero entropy, mode
+  fraction ≈ 1.0), the report sets
+  `statistics.deterministic_replay_risk.flag = true` with the degenerate probes
+  listed;
+- such a behavioral "match" can no longer carry an unreserved high-confidence
+  `pass`: the verdict may still be `pass`, but `confidence` is capped to `low`.
+
+**Bottom line:** tokenizer counts are a weak, self-reported signal; behavioral
+probes at temperature=0 are replayable; and neither is a proof. Official
+cryptographic attestation (provider-signed responses) remains the only endgame —
+this tool is probabilistic auxiliary evidence, nothing more.
+
 ## SDK
 
 ```python
