@@ -249,7 +249,7 @@ transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
 |---|---|---|
 | **knowlyr-modelaudit**（PyPI，MIT） | 已上线 CLI+MCP，行为指纹+蒸馏检测 | 与 `verify` SDK/CLI 几乎同定位 |
 | **zing-audit**（PyPI） | local-first CLI，审计偷换/截断上下文/假流式/计费虚高 | 与 CLI 直接同赛道 |
-| **veridrop.org**（开源） | 已覆盖上万家中转站、十余万份报告，贝叶斯加权红黑榜 | 与"排行榜/买徽章"方向**直接撞车且已规模化**——该身位已被占据 |
+| **veridrop.org**（开源） | 官网当下口径：已覆盖约 1.08 万家中转站、约 4.9 万份独立检测报告（Claude 分榜），贝叶斯加权红黑榜 | 与"排行榜/买徽章"方向**直接撞车且已规模化**——该身位已被占据 |
 | **apiranking.com** | 自研探针周期性轮询，模型真假+费用实测 | 同上 |
 | **IRIS**（arXiv:2607.20860） | 预算化黑盒审计模型替换与路由稀释，并估计稀释比例 ε̂ | 已覆盖本仓库"ε-稀释预算化检验"的核心思想 |
 | **KBF**（arXiv:2605.29524） | 知识边界指纹，可检出 5~10% 流量掺假 | 覆盖 ε-稀释场景 |
@@ -257,6 +257,10 @@ transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
 | **BazaarLink Probe**（bazaarlink.ai） | 84 项规则检查 + 行为证据身份判定，专做中转站降智/掺假/偷换检测 | 同赛道产品化检测器 |
 | **Tosea.ai**（浏览器端工具，GitHub 开源） | 随机数行为指纹校验 LLM API 真伪，纯前端不出 key | 与本仓库"行为探针"思路几乎一致 |
 | **token-difr**（PyPI） | 用参考 provider 的 token log-prob 比对生成 token 序列是否货真价实 | tokenizer/log-prob 路线，比我们自报 token 计数更强 |
+| **TokensQC**（tokensqc.com） | 免费在线 AI API 质检：协议一致性 / 模型身份 / 延迟探针 | 同定位在线工具 |
+| **Ztest 真测**（ztest.ai） | 独立第三方中转站模型真伪检测 + 可信度排行 | 与"红黑榜"方向直接撞车 |
+| **Ofox Model Verify**（ofox.run/verify） | AI 网关自带免费"模型验真"：身份 + 拒答指纹探针 | 同定位在线工具 |
+| **大模型照妖镜**（llmtest.cn） | 纯前端（基于 GitHub 开源项目），多维度检测套壳 | 同定位在线工具 |
 
 我们的真实身位（二次工程集成，**非方法论创新**）：
 - **三态 fail-closed JSON 报告契约**（`pass / suspicious / insufficient_evidence`，证据不足绝不硬判）；

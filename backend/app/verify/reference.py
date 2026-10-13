@@ -12,6 +12,7 @@ verifier is a thin, stateless shell around the already-audited statistics.
 
 from __future__ import annotations
 
+import sys
 from pathlib import Path
 from typing import Optional
 
@@ -95,7 +96,10 @@ def load_reference_analyzer(
                 try:
                     _inject_fingerprint(analyzer, jf)
                 except Exception as exc:  # noqa: BLE001
-                    print(f"  Warning: could not load fingerprint {jf.name}: {exc}")
+                    print(
+                        f"  Warning: could not load fingerprint {jf.name}: {exc}",
+                        file=sys.stderr,
+                    )
 
     return analyzer
 

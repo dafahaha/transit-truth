@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.6] - 2026-10-14
+
+### Fixed — 契约与健壮性收尾（v0.4.5 全新审批两片均无 P0/P1，3 P2 + 少量 P3）
+- **P2 单个畸形字段拖垮整电池**：`battery.py` 对响应字段提取未设防——行为响应 `content:null` 时 `.strip()` 抛 `AttributeError`（不在旧 `(KeyError, IndexError, TypeError)` 捕获内），tokenizer 响应 `usage:null` 时 `None.get(...)` 同样抛错；二者都会使整个电池中止 → `transport_error`，其余约 16 条好证据被一并丢弃（fail-closed 但过脆）。修复：对 `usage`/`message`/`content` 加 `isinstance` 守卫，并把单探针字段提取整段包进 try/except；单条畸形只记为一次失败/缺失（计入 `request_failures`，由既有的覆盖率门 / 薄证据门正确处置），**不再中止整电池**。回归测试：17 个请求中仅 1 个 behavioral repeat 返回 `content:null`（另测 `usage:null`）→ 不得整批 `transport_error`，正常完成、该探针计为缺失、最终出合法三态 JSON。
+- **P2 verify stdout 单一 JSON 契约**：verify 的 stdout 被 `Loaded real baseline:` 等诊断日志污染（3 行），破坏"stdout 只有一份机器可读 JSON"契约（jq / `json.load` 直接失败）。修复：基线加载与指纹加载的全部诊断/告警打印（`statistical_analyzer.py`、`reference.py`）一律改走 **stderr**，stdout 仅承载最终 JSON 报告。回归测试：捕获式断言 stdout 不含 `Loaded` 等日志、可解析为单一 JSON，stderr 承载诊断。
+- **P2 demo 横幅矛盾**：Pages 离线 demo `index.html` 排行榜横幅"所有数据来自真实审计"与种子行"基于公开信息估算"自相矛盾。修复：横幅改为诚实口径——"离线演示：审计流程为真实实现，榜单与种子数据为基于公开信息估算的演示数据（各行持续标注）"，种子行标注保留。
+
+### P3
+- **负 verdict 数字自相矛盾**：tokenizer 失配把 verdict 翻成 `suspicious` 时，行为 `posterior=0.913 / LR=4.5 / CI` 仍展示。修复：该翻转发生时一并把 `posterior / likelihood_ratio / posterior_ci_95 / chi2_pvalue` 置 `null`、置信封顶 `low`，保证报告自洽；补回归测试。
+- **竞品表据实**：veridrop"十余万份报告"改为官网当下可核实口径（约 1.08 万家中转站、约 4.9 万份独立检测报告/Claude 分榜）；经公开页核实后补入 TokensQC（tokensqc.com）、Ztest 真测（ztest.ai）、Ofox Model Verify（ofox.run/verify）、大模型照妖镜（llmtest.cn）四家真实存在的同类工具。
+- 版本号四源统一 **0.4.6**；`[Unreleased]` 指向 `v0.4.6...HEAD`，补齐 `[0.4.5]` / `[0.4.6]` compare 链接。
+- 测试：新增 v0.4.6 回归（单 `content:null`/`usage:null` 不中止电池；诊断日志走 stderr；tokenizer 翻 negative 置空行为数字），总数只增不减。
+
 ## [0.4.5] - 2026-10-14
 
 ### Fixed — 收尾热修（v0.4.4 全新审批两片均无 P0/P1，4 P2 + 少量 P3）
@@ -185,7 +198,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker support
 - README, LICENSE, .gitignore
 
-[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.4.4...HEAD
+[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.4.6...HEAD
+[0.4.6]: https://github.com/dafahaha/transit-truth/compare/v0.4.5...v0.4.6
+[0.4.5]: https://github.com/dafahaha/transit-truth/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/dafahaha/transit-truth/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/dafahaha/transit-truth/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/dafahaha/transit-truth/compare/v0.4.1...v0.4.2

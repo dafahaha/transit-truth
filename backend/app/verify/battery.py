@@ -117,21 +117,40 @@ async def run_battery(
         if "error" in raw:
             result.failures += 1
             continue
-        if kind == "tok":
-            usage = raw.get("usage", {})
-            pt = usage.get("prompt_tokens")
-            if pt is not None:
+        try:
+            if kind == "tok":
+                # A backend may send ``usage: null`` (or omit it). Treat a
+                # malformed usage block as ONE failed observation -- never let
+                # ``None.get(...)`` raise AttributeError and abort the whole
+                # battery, discarding the ~16 good evidence rows with it.
+                usage = raw.get("usage")
+                if not isinstance(usage, dict):
+                    raise ValueError("usage block is missing/not an object")
+                pt = usage.get("prompt_tokens")
+                if pt is None:
+                    continue
+                pt = float(pt)
                 # Average repeated tokenizer samples if any (here: one each).
                 prev = result.observed_tokenizer.get(probe.id)
-                result.observed_tokenizer[probe.id] = float(
-                    pt if prev is None else (prev + float(pt)) / 2
+                result.observed_tokenizer[probe.id] = (
+                    pt if prev is None else (prev + pt) / 2
                 )
-        else:
-            try:
-                content = raw["choices"][0]["message"]["content"].strip()
-            except (KeyError, IndexError, TypeError):
-                result.failures += 1
-                continue
-            result.observed_behavioral.setdefault(probe.id, []).append(content)
+            else:
+                # ``content`` may legitimately be JSON null (refusal / stub).
+                # A single such repeat only counts as one failed/missing
+                # observation (the coverage / thin-evidence gate then handles
+                # it); it must never crash extraction and nuke the battery.
+                message = raw["choices"][0].get("message")
+                if not isinstance(message, dict):
+                    raise ValueError("message is missing/not an object")
+                content = message.get("content")
+                if not isinstance(content, str):
+                    raise ValueError("content is null/not a string")
+                result.observed_behavioral.setdefault(probe.id, []).append(
+                    content.strip()
+                )
+        except (KeyError, IndexError, TypeError, ValueError, AttributeError):
+            result.failures += 1
+            continue
 
     return result

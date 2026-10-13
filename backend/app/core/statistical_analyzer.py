@@ -19,6 +19,7 @@ References:
 import math
 import re
 import statistics
+import sys
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -240,7 +241,8 @@ class StatisticalAnalyzer:
             baseline_path = Path(data_dir)
         if not baseline_path.exists():
             print(
-                f"Warning: baseline directory {baseline_path} not found, keeping synthetic baselines"
+                f"Warning: baseline directory {baseline_path} not found, keeping synthetic baselines",
+                file=sys.stderr,
             )
             return
 
@@ -304,11 +306,12 @@ class StatisticalAnalyzer:
                 n_tok = len(tokenizer_dist)
                 n_beh = len(behavioral_dist)
                 print(
-                    f"  Loaded real baseline: {model_name} (n={baseline.sample_size}, {n_tok} tokenizer, {n_beh} behavioral probes)"
+                    f"  Loaded real baseline: {model_name} (n={baseline.sample_size}, {n_tok} tokenizer, {n_beh} behavioral probes)",
+                    file=sys.stderr,
                 )
 
             except Exception as e:
-                print(f"  Error loading {json_file.name}: {e}")
+                print(f"  Error loading {json_file.name}: {e}", file=sys.stderr)
 
         if loaded > 0:
             # Drop synthetic-only placeholders that no real file overwrote
@@ -318,7 +321,10 @@ class StatisticalAnalyzer:
             for k in list(synthetic_keys):
                 if k not in real_keys:
                     self.baseline_db.pop(k, None)
-            print(f"Loaded {loaded} real baselines from {baseline_path.resolve()}")
+            print(
+                f"Loaded {loaded} real baselines from {baseline_path.resolve()}",
+                file=sys.stderr,
+            )
 
     def _infer_family(self, model_name: str) -> str:
         """Infer model family from model name."""

@@ -275,6 +275,16 @@ async def verify_endpoint(
                 "Tokenizer prompt-token counts disagree with the claimed reference "
                 "across multiple probes: likely a different model family."
             )
+            # Self-consistency contract (v0.4.6): a tokenizer-family mismatch
+            # OVERRIDES the behavioral statistical match. The behavioral
+            # posterior/LR/CI/chi2 were computed from modal (possibly replayed)
+            # strings; leaving posterior=0.913 / LR=4.5 displayed next to
+            # verdict=suspicious is self-contradictory, so withhold them.
+            report["statistics"]["posterior"] = None
+            report["statistics"]["likelihood_ratio"] = None
+            report["statistics"]["posterior_ci_95"] = None
+            report["statistics"]["chi2_pvalue"] = None
+            report["confidence"] = "low"
         elif (
             tok_check.get("verdict") == "match"
             and report["verdict"] == "insufficient_evidence"
