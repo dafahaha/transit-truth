@@ -1,0 +1,98 @@
+# `transit-truth verify` — model-identity verification
+
+`verify` is a stateless, pipelinable check: given an OpenAI-compatible endpoint
+and the model it *claims* to serve, it runs a bounded battery of black-box
+probes and emits a single machine-readable JSON report.
+
+```
+transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
+```
+
+The API key is read from the environment (`TRANSIT_TRUTH_API_KEY` by default, or
+`--api-key-env`). It is **never** written to disk, logged, or included in the
+report.
+
+## Verdict (three states)
+
+| verdict | meaning |
+|---|---|
+| `pass` | observed fingerprint is statistically consistent with the reference. |
+| `suspicious` | observed fingerprint differs significantly (e.g. wrong model family). |
+| `insufficient_evidence` | no reference, sample too small, or an error — we do **not** guess. |
+
+A black-box result is **probabilistic auxiliary evidence, not a cryptographic
+proof** and not a verdict on authenticity.
+
+## Report shape
+
+```json
+{
+  "schema": "transit-truth/verify-report/v1",
+  "claimed_model": "gpt-4o-mini",
+  "endpoint_base_url": "https://relay.example",
+  "timestamp": "2026-10-14T...",
+  "verdict": "pass",
+  "confidence": "medium",
+  "statistics": {
+    "matched_reference_model": "gpt-4o-mini",
+    "posterior": 0.87,
+    "chi2_pvalue": 0.9,
+    "tokenizer_consistency": {"score": 1.0, "verdict": "match"}
+  },
+  "observations": {"tokenizer": {...}, "behavioral": {...}},
+  "disclaimer": "..."
+}
+```
+
+Exit codes: `0` pass, `3` suspicious, `2` error.
+
+## Reference fingerprints
+
+- `data/baselines/` — real collected baselines (`gpt-4o-mini`, `gpt-4o`).
+- `data/fingerprints/` — open-source catalog (Qwen real tokenizer; see its
+  README for honest coverage status).
+- Closed-model (GPT/Claude/Gemini) fingerprints require the operator's own keys.
+
+## Self-hosted reference backend
+
+Generate/compare reference fingerprints without a paid key:
+
+```
+transit-truth reference-server --model qwen2.5-0.5b-instruct --port 8765
+transit-truth verify --base-url http://127.0.0.1:8765/v1 \
+    --model qwen2.5-0.5b-instruct --allow-local
+```
+
+`--allow-local` is required for loopback targets; the default enforces the
+public-URL SSRF guard.
+
+## SDK
+
+```python
+from app.verify import verify_endpoint, verify_endpoint_sync
+
+report = verify_endpoint_sync(
+    base_url="https://relay.example/v1", claimed_model="gpt-4o-mini"
+)
+```
+
+## Observability (optional)
+
+```python
+from app.verify.otel import to_openinference_attributes, emit_otel_span
+
+attrs = to_openinference_attributes(report)   # plain dict, no dependency
+emit_otel_span(report)                         # real OTel span if installed
+```
+
+See `examples/` for DeepEval-style metric and Langfuse score integrations.
+
+## ε-dilution (budgeted sequential test)
+
+A relay may route only a fraction ε of traffic to a fake model. Estimate what a
+request budget can detect:
+
+```python
+from app.verify.sequential import budgeted_sequential_analysis
+print(budgeted_sequential_analysis(epsilon=0.1, budget=100))
+```
