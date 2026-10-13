@@ -329,6 +329,34 @@ def cmd_balance(args):
     )
 
 
+def cmd_verify(args):
+    """Run the stateless model-identity verifier and print a JSON report."""
+    from .verify import verify_endpoint
+
+    report = asyncio.run(
+        verify_endpoint(
+            base_url=args.base_url,
+            claimed_model=args.model,
+            api_key=args.api_key,
+            api_key_env=args.api_key_env,
+            max_requests=args.max_requests,
+            behavioral_samples=args.behavioral_samples,
+            timeout=args.timeout,
+            allow_local=args.allow_local,
+        )
+    )
+
+    # Single machine-readable JSON report to stdout (pipe-friendly).
+    print(json.dumps(report, indent=2, ensure_ascii=False))
+
+    # Exit code reflects the verdict for scripting.
+    if report.get("verdict") == "suspicious":
+        sys.exit(3)
+    if report.get("error"):
+        sys.exit(2)
+    return report
+
+
 def main():
     # Check for quick mode: first argument starts with "sk-"
     if len(sys.argv) > 1 and sys.argv[1].startswith("sk-"):
@@ -476,6 +504,56 @@ Environment variables:
         help="JSON file containing account list for batch check",
     )
     balance_parser.set_defaults(func=cmd_balance)
+
+    # Verify command: stateless model-identity check -> JSON report
+    verify_parser = subparsers.add_parser(
+        "verify",
+        help="Statelessly verify a relay's claimed model identity (JSON report)",
+    )
+    verify_parser.add_argument(
+        "--base-url",
+        required=True,
+        help="OpenAI-compatible base URL, e.g. https://relay.example/v1",
+    )
+    verify_parser.add_argument(
+        "--model",
+        required=True,
+        help="Claimed model name, e.g. gpt-4o-mini",
+    )
+    verify_parser.add_argument(
+        "--api-key",
+        default=None,
+        help="API key (prefer --api-key-env; never written to disk)",
+    )
+    verify_parser.add_argument(
+        "--api-key-env",
+        default="TRANSIT_TRUTH_API_KEY",
+        help="Env var to read the key from (default: TRANSIT_TRUTH_API_KEY)",
+    )
+    verify_parser.add_argument(
+        "--max-requests",
+        type=int,
+        default=20,
+        help="Hard cap on probe requests (default: 20)",
+    )
+    verify_parser.add_argument(
+        "--behavioral-samples",
+        type=int,
+        default=3,
+        help="Samples per behavioral probe (default: 3)",
+    )
+    verify_parser.add_argument(
+        "--timeout",
+        type=float,
+        default=30.0,
+        help="Per-request timeout seconds (default: 30)",
+    )
+    verify_parser.add_argument(
+        "--allow-local",
+        action="store_true",
+        help="Allow loopback/private targets (for the local reference server)",
+    )
+    verify_parser.set_defaults(func=cmd_verify)
 
     args = parser.parse_args()
     if not args.command:

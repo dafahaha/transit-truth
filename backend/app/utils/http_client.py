@@ -16,10 +16,19 @@ logger = logging.getLogger(__name__)
 class AsyncAPIClient:
     """Async client for OpenAI-compatible APIs with exponential backoff retry."""
 
-    def __init__(self, api_key: str, base_url: str, timeout: int = REQUEST_TIMEOUT):
+    def __init__(
+        self,
+        api_key: str,
+        base_url: str,
+        timeout: int = REQUEST_TIMEOUT,
+        ssrf_guard: bool = True,
+    ):
         self.api_key = api_key
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout
+        # When ssrf_guard is False (only for explicitly opted-in local targets
+        # such as the self-hosted reference server / tests), use a plain client.
+        self._ssrf_guard = ssrf_guard
         self._client: Optional[httpx.AsyncClient] = None
         # 统计信息
         self._stats = {
@@ -32,12 +41,19 @@ class AsyncAPIClient:
         }
 
     async def __aenter__(self):
-        # Use the SSRF-guarded transport so a DNS-rebinding second resolution
-        # can never connect to an internal IP (N1).
-        self._client = guarded_async_client(
-            timeout=self.timeout,
-            headers=self._default_headers(),
-        )
+        if self._ssrf_guard:
+            # Use the SSRF-guarded transport so a DNS-rebinding second resolution
+            # can never connect to an internal IP (N1).
+            self._client = guarded_async_client(
+                timeout=self.timeout,
+                headers=self._default_headers(),
+            )
+        else:
+            # Explicitly opted-in local/private target (reference server, tests).
+            self._client = httpx.AsyncClient(
+                timeout=self.timeout,
+                headers=self._default_headers(),
+            )
         return self
 
     async def __aexit__(self, *args):
