@@ -56,7 +56,7 @@
 
 公开研究已证实部分 AI API 中转站存在模型偷换（用 mini 冒充 pro、用旧型号冒充新型号；CISPA：45.83% 的指纹测试未通过身份核验，arXiv:2603.01919；Berkeley：LLM API 模型替换的形式化审计，arXiv:2504.04715；国内知道创宇实测：849 个“模型×中转站”组合中 296 个存在异常（≈34.9%，覆盖其调查的 100 个站点中的 75 个））。但 tokenizer 指纹区分不了同家族的模型（gpt-4o 和 gpt-4o-mini 用同一个 tokenizer），而行为指纹可以。
 
-> 口径说明：UCSB《Your Agent Is Mine》（arXiv:2604.08407）扫描 428 个路由发现的是**另一类风险——agent 供应链攻击**（9 个路由注入恶意 tool-call、17 个窃取研究者云凭据），该研究**不测量模型替换**，因此不作为"偷换模型"的证据引用。模型替换主张以 CISPA（arXiv:2603.01919）、Berkeley（arXiv:2504.04715）与知道创宇实测为锚点。
+> 口径说明：UCSB《Your Agent Is Mine》（arXiv:2604.08407）扫描 428 个路由发现的是**另一类风险——agent 供应链攻击**（9 个路由注入恶意 tool-call、17 个路由触达/试图访问 AWS 金丝雀凭据 canary，未确证凭据泄露），该研究**不测量模型替换**，因此不作为"偷换模型"的证据引用。模型替换主张以 CISPA（arXiv:2603.01919）、Berkeley（arXiv:2504.04715）与知道创宇实测为锚点。
 
 ## 我做了一个开源工具
 
@@ -78,7 +78,7 @@
 
 ## 实验数据
 
-- 26个探针（14行为+8 tokenizer+4能力），每个50次
+- 实验设计电池 26 个探针（8 tokenizer + 8 行为 + 10 能力），每个 50 次；gpt-4o-mini  shipped 基线因冷启动限流仅保留 5 个可用 tokenizer（tok-digits/cjk/emoji 冷启动 0 响应被剔除），实际入基线 23 项（5 tokenizer + 8 行为 + 10 能力）
 - 2600次API请求，27分钟，$0成本（用免费中转站额度）
 - 完整实验报告：https://github.com/dafahaha/transit-truth/blob/main/docs/experiment_report.md
 - 基准数据已开源：https://github.com/dafahaha/transit-truth/tree/main/data/baselines
@@ -245,7 +245,7 @@ I built **TransitTruth**, an open-source AI API security audit platform based on
 
 ## Methodology
 
-- 26 probes (14 behavioral + 8 tokenizer + 4 capability), 50 samples each
+- 26 probes in the experimental design (8 tokenizer + 8 behavioral + 10 capability), 50 samples each; the shipped gpt-4o-mini baseline retains 5 usable tokenizer probes (tok-digits/cjk/emoji returned 0 responses during cold-start rate limiting and were dropped), for 23 entries total (5 tokenizer + 8 behavioral + 10 capability)
 - 2600 total API requests, 27 minutes, $0 cost (using free relay credits)
 - Statistical analysis: chi-square test + KS test + Bayesian update with 95% credible intervals
 - Full experiment report: https://github.com/dafahaha/transit-truth/blob/main/docs/experiment_report.md
@@ -543,7 +543,7 @@ TransitTruth:
 - [ ] 在线Demo可正常访问和使用
 - [ ] 排行榜功能正常（12条数据，筛选/排序/搜索）
 - [ ] 多渠道贡献功能正常（5种方式）
-- [ ] 全套 pytest 通过（229 passed / 7 skipped）
+- [ ] 全套 pytest 通过（249 passed / 7 skipped）
 - [ ] 15个API端点正常
 - [ ] CLI工具正常（audit/list/export/benchmark/balance）
 - [ ] Topics已设置（ai, llm, openai, api, security, fingerprint, audit, gpt）

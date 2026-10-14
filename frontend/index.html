@@ -241,7 +241,7 @@
                     <ul>
                         <li>本工具仅供用户验证<strong>自己使用</strong>的服务，审计结果基于有限样本，<strong>不构成对任何服务的最终评价</strong>。</li>
                         <li>Token 差异率包含 chat template 开销，<strong>不等同于造假</strong>。如需确认造假，请与官方 API 精确对比。</li>
-                        <li>模型指纹检测为概率性判断，置信度低于 80% 时<strong>不构成模型降级的证据</strong>。</li>
+                        <li>模型指纹检测为概率性判断，仅当<strong>高置信</strong>（后验概率 &gt; 0.9 且 95% 置信区间下界 &gt; 0.7）时才构成模型降级证据；低置信或 `insufficient_evidence`（证据不足）一律不构成证据。</li>
                         <li>排行榜数据由社区用户贡献，<strong>未经独立验证</strong>，仅供参考。</li>
                         <li>API Key 仅用于本次审计，<strong>不会存储到服务器</strong>。</li>
                         <li>如对审计结果有异议，可在 GitHub 提交 Issue 并附上反驳证据。</li>

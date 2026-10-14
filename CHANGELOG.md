@@ -50,7 +50,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **P2 tokenizer 口径失配**：电池发 `messages=[system, user]`，但 gpt-4o / gpt-4o-mini shipped 基线是 user-only 口径（27/25/29/22/18），真端点按 system+user 自报 43/41/45/38/34 → `tokenizer_consistency` 强制 mismatch → 货真价实的 gpt-4o-mini 被误报 suspicious。修复：用 tiktoken **离线**（仅 token 计数、无需 API key）按电池 system+user 实际请求重算两基线 tokenizer 计数并覆盖 `data/baselines/`（行为 n=50 不动）；`collect_baseline.py` 采集口径改为 system+user 以防再漂移；新增 `tokenizer_caliber` 口径锁定测试（基线均值 == o200k 对电池完整请求的计数，且真实口径下 tokenizer_consistency=match）；e2e/stub 伪造的 user-only 数字改为真实 system+user 值。
 
 ### Docs / P1-P3
-- **P1 引用事实错误**：UCSB《Your Agent Is Mine》（arXiv:2604.08407）是 **agent 供应链攻击**研究（428 路由中 9 个注入恶意 tool-call、17 个窃取云凭据；"26"系自行加总），**通篇不测模型替换**。已从中转站偷换模型证据中移除，改置于"agent 供应链风险"语境并显式标注不测模型替换；模型替换主张以 CISPA arXiv:2603.01919（"45.83% 的**指纹测试**身份核验失败"，非"45.83% 的中转站"）、Berkeley arXiv:2504.04715、知道创宇 34.9% 为锚点。
+- **P1 引用事实错误**：UCSB《Your Agent Is Mine》（arXiv:2604.08407）是 **agent 供应链攻击**研究（428 路由中 9 个注入恶意 tool-call、17 个路由触达/试图访问 AWS 金丝雀凭据 canary，未确证凭据泄露；"26"系自行加总），**通篇不测模型替换**。已从中转站偷换模型证据中移除，改置于"agent 供应链风险"语境并显式标注不测模型替换；模型替换主张以 CISPA arXiv:2603.01919（"45.83% 的**指纹测试**身份核验失败"，非"45.83% 的中转站"）、Berkeley arXiv:2504.04715、知道创宇 34.9% 为锚点。
 - **P2 README 无 Key 快速开始跑不通**：快速开始命令块补设 dummy key（`export TRANSIT_TRUTH_API_KEY=...`，附 PowerShell `$env:` 写法），原样可跑。
 - **P3**：`backend/app/__init__.py __version__` 0.1.0 → 0.4.4（全仓版本统一）；删除 CHANGELOG 底部悬空的 v0.2.0 / v0.1.0 release 链接（远端无对应 tag）；README 行为探针数前后统一（8 英文 + 6 中文 = 14）。
 - 测试：新增 v0.4.4 回归（单探针 n=3 其余 504 → 非 pass + non_cooperation + 数字 null；全探针各 n=1 → 同样封顶；合作充分采样不受影响；tokenizer 口径锁定），合计 **233 passed / 7 skipped**（只增不减）。

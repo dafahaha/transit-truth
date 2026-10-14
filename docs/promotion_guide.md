@@ -162,7 +162,7 @@ I built **TransitTruth**, an open-source AI API security audit platform based on
 
 ## Methodology
 
-- 26 probes (14 behavioral + 8 tokenizer + 4 capability), 50 samples each
+- 26 probes in the experimental design (8 tokenizer + 8 behavioral + 10 capability), 50 samples each; the shipped gpt-4o-mini baseline retains 5 usable tokenizer probes (3 lost to cold-start rate limiting), for 23 entries total (5 tokenizer + 8 behavioral + 10 capability)
 - 2600 total API requests, 27 minutes, $0 cost (using free relay credits)
 - Statistical analysis: chi-square test + KS test + Bayesian update with 95% credible intervals
 

@@ -115,6 +115,27 @@ probes at temperature=0 are replayable; and neither is a proof. Official
 cryptographic attestation (provider-signed responses) remains the only endgame —
 this tool is probabilistic auxiliary evidence, nothing more.
 
+> **Probe-coverage cross-note (v0.4.7).** The older audit submodule's probe
+> catalog contains **14 behavioral probes** (8 English + 6 Chinese cultural:
+> number/color/festival/surname/city/food) and 8 tokenizer probes. The
+> self-hosted `verify` battery only compares against probes that overlap an
+> actually-collected reference: the shipped `gpt-4o-mini` baseline covers
+> **5 tokenizer** (`tok-whitespace/code/url/mixed-unicode/repeated-chars`;
+> `tok-digits/cjk/emoji` returned 0 responses during cold-start rate limiting
+> and were dropped) + **8 behavioral** (the 8 English probes; the 6 Chinese
+> probes have no reference distribution yet) + 10 capability probes (capability
+> is auxiliary and not part of the pass/suspicious/insufficient verdict). The
+> default battery therefore sends 5 tokenizer probes and 4 behavioral probes
+> (×3 repeats each = 17 requests).
+
+> **Weak-signal honesty (v0.4.7 addendum).** A `pass` with `confidence=low`
+> driven only by missing tokenizer signal, or by an endpoint that merely
+> replays the public modal strings, proves only that the endpoint can replay
+> the public fingerprint — it is **NOT** equivalent to confirming the real
+> model. A real-model claim requires sufficient behavioral evidence that also
+> reaches the **high** confidence tier (posterior > 0.9 with 95% CI lower bound
+> > 0.7, per `statistical_analyzer.py`).
+
 ## SDK
 
 ```python

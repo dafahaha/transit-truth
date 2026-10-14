@@ -866,7 +866,7 @@
   <div class="disclaimer">
     <strong>⚠️ 免责声明：</strong>
     本工具仅供用户验证<strong>自己使用</strong>的服务。审计结果基于有限样本，<strong>不构成对任何服务的最终评价</strong>。
-    Token 差异率包含 chat template 开销，<strong>不等同于造假</strong>。模型指纹为概率性判断，置信度低于 80% 时不构成证据。
+    Token 差异率包含 chat template 开销，<strong>不等同于造假</strong>。模型指纹为概率性判断，仅当<strong>高置信</strong>（后验概率 &gt; 0.9 且 95% 置信区间下界 &gt; 0.7）时才构成模型降级证据；低置信或 `insufficient_evidence`（证据不足）一律不构成证据。
     API Key 仅在浏览器本地使用，<strong>不会发送到任何第三方服务器</strong>。
   </div>
 
