@@ -217,7 +217,7 @@ transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
 - [x] **持续监控+告警**（4种告警检测，4种告警通道）
 - [x] **真实基准数据库**（gpt-4o-mini、gpt-4o，各50样本）
 - [x] **灵活配置管理**（14个环境变量，支持自定义探针数量/超时/重试等）
-- [x] **测试**：实测 **243 passed / 7 skipped**（v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.2 诚实性/抗回放、v0.4.3 饥饿式样本绕过回归、v0.4.4 覆盖率门+tokenizer 口径、v0.4.5 版本一致性+tokenizer 严格匹配回归、v0.4.6 单字段容错+stdout 单一 JSON 契约+负 verdict 自洽回归）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
+- [x] **测试**：实测 **249 passed / 7 skipped**（v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.2 诚实性/抗回放、v0.4.3 饥饿式样本绕过回归、v0.4.4 覆盖率门+tokenizer 口径、v0.4.5 版本一致性+tokenizer 严格匹配回归、v0.4.6 单字段容错+stdout 单一 JSON 契约+负 verdict 自洽回归、v0.4.7 非 JSON 200 响应体容错+tokenizer 不确定带不升级 pass 回归）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
 - [x] **CI/CD**（GitHub Actions，Python 3.10/3.11/3.12矩阵）
 
 ### 🚧 开发中
@@ -249,7 +249,7 @@ transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
 |---|---|---|
 | **knowlyr-modelaudit**（PyPI，MIT） | 已上线 CLI+MCP，行为指纹+蒸馏检测 | 与 `verify` SDK/CLI 几乎同定位 |
 | **zing-audit**（PyPI） | local-first CLI，审计偷换/截断上下文/假流式/计费虚高 | 与 CLI 直接同赛道 |
-| **veridrop.org**（开源） | 官网当下口径：已覆盖约 1.08 万家中转站、约 4.9 万份独立检测报告（Claude 分榜），贝叶斯加权红黑榜 | 与"排行榜/买徽章"方向**直接撞车且已规模化**——该身位已被占据 |
+| **veridrop.org**（开源） | 官网当下口径：已覆盖约 1.08 万家中转站、付费 PRO 套餐不改检测分，贝叶斯加权红黑榜 | 与"排行榜/买徽章"方向**直接撞车且已规模化**——该身位已被占据 |
 | **apiranking.com** | 自研探针周期性轮询，模型真假+费用实测 | 同上 |
 | **IRIS**（arXiv:2607.20860） | 预算化黑盒审计模型替换与路由稀释，并估计稀释比例 ε̂ | 已覆盖本仓库"ε-稀释预算化检验"的核心思想 |
 | **KBF**（arXiv:2605.29524） | 知识边界指纹，可检出 5~10% 流量掺假 | 覆盖 ε-稀释场景 |
@@ -259,7 +259,7 @@ transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
 | **token-difr**（PyPI） | 用参考 provider 的 token log-prob 比对生成 token 序列是否货真价实 | tokenizer/log-prob 路线，比我们自报 token 计数更强 |
 | **TokensQC**（tokensqc.com） | 免费在线 AI API 质检：协议一致性 / 模型身份 / 延迟探针 | 同定位在线工具 |
 | **Ztest 真测**（ztest.ai） | 独立第三方中转站模型真伪检测 + 可信度排行 | 与"红黑榜"方向直接撞车 |
-| **Ofox Model Verify**（ofox.run/verify） | AI 网关自带免费"模型验真"：身份 + 拒答指纹探针 | 同定位在线工具 |
+| **Ofox Model Verify**（ofox.ai/verify） | AI 网关自带免费"模型验真"：身份 + 拒答指纹探针 | 同定位在线工具 |
 | **大模型照妖镜**（llmtest.cn） | 纯前端（基于 GitHub 开源项目），多维度检测套壳 | 同定位在线工具 |
 
 我们的真实身位（二次工程集成，**非方法论创新**）：

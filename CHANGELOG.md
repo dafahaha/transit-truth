@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.4.7] - 2026-10-14
+
+### Fixed — v0.4.6 收尾（全新审批：产品片无 P0/P1/P2；技术片无 P0/P1、1 P2 + 2 P3）
+- **P2 非 JSON 的 200 响应体拖垮整电池**：上游回 200 但响应体不是合法 JSON 对象（WAF/维护页 HTML、纯文本、空 body、JSON 数组 `[...]`）时，`http_client.py` 的 `response.json()` 抛 `json.JSONDecodeError`（`ValueError` 子类）/`TypeError`，逃逸 `chat_completion` 的重试捕获；经 `battery.py` 无 `return_exceptions` 的 `asyncio.gather` 炸成整体 `transport_error`，其余约 16 条好证据被一并丢弃（fail-closed 但破坏 v0.4.6"单条畸形不炸电池"契约——上一轮只加固了合法 JSON 内的 null content/usage）。双保险修复：① `chat_completion` 在 200 分支把 `json.JSONDecodeError / ValueError / TypeError` 纳入捕获（返回与其它失败一致的失败结果，触发退避重试/记失败，不再冒泡），并显式拒绝 JSON 数组/非对象体（OpenAI schema 要求 `choices`/`usage` 对象）；② `battery.py` 的 `gather` 改 `return_exceptions=True`，单个请求任何异常只降级该探针、不中止整电池。回归测试：17 个请求中 1 个分别返回 HTML / 纯文本 / 空 body / JSON 数组 → 不出现整体 `transport_error`，电池继续完成、该请求计 failures、其余好证据保留，最终出合法三态 JSON，覆盖率/薄证据门正确处置。
+
+### P3
+- **P3-1 tokenizer 在贝叶斯不确定带仍升级 pass**：分布回放等情形行为 LR≈0.45（<1）、posterior≈0.51（行为不支持）时，tokenizer match 仍把结论翻成 pass（虽 confidence=low）。修复：tokenizer match 只能在行为证据真正支持（LR≥1 且 posterior≥0.5 支持侧）时维持/升级 pass；当行为 LR<1 / posterior 落在非支持侧时，tokenizer match 不得把结论翻成 pass，落 `insufficient_evidence`（保留 `deterministic_replay`/`thin_evidence` 标记），并附"tokenizer 同族但行为证据不支持"说明。有真实行为基线、行为匹配正常 pass 的路径不受影响。
+- **P3-2 文档**：README 竞品表 Ofox 链接 `ofox.run/verify` 已 404，经实测改 `ofox.ai/verify`（200，OfoxAI 官方域）；veridrop 未核实的"约 4.9 万份独立检测报告"删除，仅保留已核实的"约 1.08 万家中转站、付费 PRO 不改检测分"口径。
+- 版本号四源统一 **0.4.7**（root `pyproject.toml`、`backend/pyproject.toml`、`config.py APP_VERSION`、`app/__init__.py __version__`）；版本一致性测试断言同步更新。
+- 测试：新增 v0.4.7 回归（非 JSON 200 容错 ×4 形态参数化；行为 LR<1 + tokenizer match 不得 pass；正常充分行为匹配 + tokenizer match 仍可 pass），总数只增不减。
+
 ## [0.4.6] - 2026-10-14
 
 ### Fixed — 契约与健壮性收尾（v0.4.5 全新审批两片均无 P0/P1，3 P2 + 少量 P3）
@@ -198,7 +209,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker support
 - README, LICENSE, .gitignore
 
-[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.4.6...HEAD
+[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.4.7...HEAD
+[0.4.7]: https://github.com/dafahaha/transit-truth/compare/v0.4.6...v0.4.7
 [0.4.6]: https://github.com/dafahaha/transit-truth/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/dafahaha/transit-truth/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/dafahaha/transit-truth/compare/v0.4.3...v0.4.4

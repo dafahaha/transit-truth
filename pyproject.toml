@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "transit-truth"
-version = "0.4.6"
+version = "0.4.7"
 description = "模型真实性核验 / 路由层可信度监控 — 无状态验证你用的模型是否货真价实"
 readme = "README.md"
 license = {text = "MIT"}

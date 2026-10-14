@@ -290,11 +290,42 @@ async def verify_endpoint(
             and report["verdict"] == "insufficient_evidence"
             and real_behavioral_evidence
         ):
-            report["verdict"] = "pass"
-            report["evidence_reason"] = (
-                "Tokenizer prompt-token counts match the claimed reference AND "
-                "behavioral evidence overlaps the reference distribution."
+            # v0.4.7 P3-1: a tokenizer match alone must NOT flip an
+            # inconclusive/uncertain behavioral verdict into ``pass``. When
+            # the behavioral LR < 1 (or posterior is on the non-support side
+            # of 0.5), the behavioral evidence is actively neutral-to-against
+            # the claim -- e.g. a distribution-replay scenario where the
+            # observed behavioral distribution is point-mass / degenerate and
+            # the chi-square update lands at LR≈0.45, posterior≈0.51. In that
+            # band a tokenizer match is necessary-but-not-sufficient: it
+            # says "same tokenizer family", NOT "this is the claimed model".
+            # Leaving the verdict at insufficient_evidence (which the
+            # deterministic-replay / thin-evidence layer below may then
+            # annotate) is the honest outcome.
+            lr = report["statistics"].get("likelihood_ratio")
+            post = report["statistics"].get("posterior")
+            behavioral_supports = (
+                lr is not None and lr >= 1.0 and post is not None and post >= 0.5
             )
+            if behavioral_supports:
+                report["verdict"] = "pass"
+                report["evidence_reason"] = (
+                    "Tokenizer prompt-token counts match the claimed reference AND "
+                    "behavioral evidence overlaps the reference distribution."
+                )
+            else:
+                # Keep the deterministic-replay / thin-evidence flags intact;
+                # do not flip to suspicious (tokenizer match is not a family
+                # mismatch) -- just decline to certify.
+                report["evidence_reason"] = (
+                    "Tokenizer prompt-token counts match the claimed reference, "
+                    "but behavioral evidence does not support the claim "
+                    "(LR<1 / posterior on the non-support side of 0.5, e.g. "
+                    "degenerate / replayable distribution). Tokenizer match "
+                    "alone is necessary but not sufficient to certify model "
+                    "identity; result is insufficient_evidence pending "
+                    "non-degenerate behavioral evidence."
+                )
 
     # Hard cap: no real behavioral reference => never output pass.
     if baseline_found and not real_behavioral_evidence:

@@ -1,6 +1,7 @@
 """Async HTTP client for API calls."""
 
 import asyncio
+import json
 import logging
 import time
 from typing import Optional
@@ -160,7 +161,69 @@ class AsyncAPIClient:
                 latency_ms = (time.perf_counter() - start) * 1000
 
                 if response.status_code == 200:
-                    data = response.json()
+                    # A 200 does NOT guarantee a JSON body: WAF / maintenance
+                    # / proxy interceptors can return HTML, a login redirect,
+                    # an empty body, or even a JSON array (the OpenAI schema
+                    # requires an object). ``response.json()`` then raises
+                    # ``json.JSONDecodeError`` (a ``ValueError`` subclass) or
+                    # ``TypeError`` on empty body. Previously this escaped the
+                    # retry/exception capture and propagated to the battery's
+                    # ``gather``, aborting the whole run as transport_error
+                    # and discarding every good probe result. Treat a
+                    # non-JSON 200 as a (retryable) failure of this single
+                    # request instead.
+                    try:
+                        data = response.json()
+                    except (ValueError, TypeError) as e:
+                        last_error = {
+                            "status_code": 200,
+                            "error": "non_json_response",
+                            "message": f"200 response body was not JSON ({type(e).__name__})",
+                            "latency_ms": latency_ms,
+                        }
+                        logger.warning(
+                            f"200 but body is not JSON for model={model}: "
+                            f"{type(e).__name__}, retrying if attempts remain..."
+                        )
+                        if attempt < MAX_RETRIES:
+                            delay = await self._calculate_delay(
+                                attempt, 503, dict(response.headers)
+                            )
+                            await asyncio.sleep(delay)
+                            continue
+                        self._stats["failed"] += 1
+                        return {
+                            "error": last_error,
+                            "_latency_ms": latency_ms,
+                            "_status_code": 200,
+                            "_response_headers": dict(response.headers),
+                            "_attempts": attempt + 1,
+                        }
+                    # Even when it parses, the OpenAI schema requires an object
+                    # (choices/usage). A JSON array (``[...]``) is not usable
+                    # evidence either -- count it as one failed observation.
+                    if not isinstance(data, dict):
+                        last_error = {
+                            "status_code": 200,
+                            "error": "non_json_object",
+                            "message": (
+                                f"200 JSON body is {type(data).__name__}, "
+                                "expected an object"
+                            ),
+                            "latency_ms": latency_ms,
+                        }
+                        logger.warning(
+                            f"200 JSON body is not an object for model={model}: "
+                            f"{type(data).__name__}"
+                        )
+                        self._stats["failed"] += 1
+                        return {
+                            "error": last_error,
+                            "_latency_ms": latency_ms,
+                            "_status_code": 200,
+                            "_response_headers": dict(response.headers),
+                            "_attempts": attempt + 1,
+                        }
                     data["_latency_ms"] = latency_ms
                     data["_status_code"] = 200
                     data["_response_headers"] = dict(response.headers)

@@ -109,11 +109,24 @@ async def run_battery(
         if kind == "beh" and probe.id not in planned_beh:
             planned_beh.append(probe.id)
 
-    responses = await asyncio.gather(*[call(p) for _, p in jobs])
+    # return_exceptions=True is the second half of the v0.4.7 P2 guard: even
+    # if a per-request future raises (e.g. an httpx-level bug, an unexpected
+    # stdlib exception we forgot to catch in chat_completion), it must only
+    # degrade that one probe, never abort the whole battery and discard the
+    # ~16 good evidence rows with it.
+    responses = await asyncio.gather(
+        *[call(p) for _, p in jobs], return_exceptions=True
+    )
     result.requests_used = len(jobs)
     result.planned_behavioral_ids = planned_beh
 
-    for (kind, probe), (_, raw) in zip(jobs, responses):
+    for (kind, probe), resp in zip(jobs, responses):
+        # If this individual request raised (any exception), count it as one
+        # failed observation and move on -- never re-raise.
+        if isinstance(resp, BaseException):
+            result.failures += 1
+            continue
+        _, raw = resp
         if "error" in raw:
             result.failures += 1
             continue
