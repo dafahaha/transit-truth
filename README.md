@@ -1,5 +1,7 @@
 ﻿# TransitTruth 🛡️
 
+[English](README.en.md) · 中文
+
 ![TransitTruth Banner](docs/banner_1280x640.png)
 
 > **AI API 模型真实性核验 / 路由层可信度监控** — 无状态验证你用的模型是否货真价实。
@@ -46,7 +48,7 @@ transit-truth verify --base-url http://127.0.0.1:8765/v1 \
     --model qwen2.5-0.5b-instruct --allow-local
 ```
 
-> **无 tokenizers 时降级为 stub**：reference-server 启动时若下载不到真实 tokenizer（网络受限，`HF_ENDPOINT` 默认 `https://hf-mirror.com`），会自动降级为**显式标注的 plumbing stub** 模式——`prompt_tokens` 只是哈希占位值、行为内容是 `stub-*` 固定串，服务启动 stderr 与 `GET /v1/models` 的 `mode`/`note` 会明确告诉你是 stub，**不会假装是真模型**。此时 verify 只能跑通管线，无法给出任何认证。
+> **无 tokenizers 时降级为 stub**：需要真实 tokenizer 计数时先 `pip install "transit-truth[reference]"`（装 `tokenizers` 包）；reference-server 启动时若下载不到真实 tokenizer（网络受限，`HF_ENDPOINT` 默认 `https://hf-mirror.com`），会自动降级为**显式标注的 plumbing stub** 模式——`prompt_tokens` 只是哈希占位值、行为内容是 `stub-*` 固定串，服务启动 stderr 与 `GET /v1/models` 的 `mode`/`note` 会明确告诉你是 stub，**不会假装是真模型**。此时 verify 只能跑通管线，无法给出任何认证。
 >
 > **覆盖范围（诚实标注）**：当前自带参考指纹仅覆盖本地开源模型——Qwen2.5-0.5B（真实 tokenizer 计数）、DeepSeek-R1-Distill-Qwen（沿用 Qwen2 tokenizer）、GLM（目录已收录，tokenizer 下载受网络限制待补）。**GPT/Claude/Gemini 等闭源指纹需用户提供自己的 key 后采集接入。**
 >
