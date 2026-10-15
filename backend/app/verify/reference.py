@@ -21,10 +21,31 @@ from ..core.statistical_analyzer import BaselineDistribution, StatisticalAnalyze
 # Repo root: backend/app/verify/reference.py -> 4 parents up.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
+# When installed from a wheel, the repo checkout does not exist, so the package
+# ships a mirror of the reference catalog under app/verify/data/. The repo
+# checkout wins when present (development / editable installs); the shipped copy
+# is the fallback that makes `transit-truth verify` work out of the box after a
+# plain pip install. Keep both in sync with tools/sync_reference_data.py.
+_PKG_DIR = Path(__file__).resolve().parent
+
 DEFAULT_REFERENCE_DIRS = [
     _REPO_ROOT / "data" / "baselines",
     _REPO_ROOT / "data" / "fingerprints",
 ]
+
+
+def _reference_dir(kind: str) -> "Path | None":
+    """Resolve ``data/<kind>`` for the current install layout.
+
+    Prefers the live repo checkout (development, ``pip install -e .``); falls
+    back to the mirror shipped inside the wheel (``app/verify/data/<kind>``).
+    Returns ``None`` when neither exists -- callers treat that as "no reference".
+    """
+    dev = _REPO_ROOT / "data" / kind
+    if dev.exists():
+        return dev
+    shipped = _PKG_DIR / "data" / kind
+    return shipped if shipped.exists() else None
 
 
 def _inject_fingerprint(analyzer: StatisticalAnalyzer, path: Path) -> None:
@@ -80,12 +101,16 @@ def load_reference_analyzer(
     analyzer = StatisticalAnalyzer()
     analyzer.load_default_baselines()
 
-    # Purge synthetic placeholders once, using the audited baselines dir.
-    baselines_dir = _REPO_ROOT / "data" / "baselines"
-    if baselines_dir.exists():
+    # Purge synthetic placeholders once, using the audited baselines dir
+    # (live repo checkout, or the shipped mirror after a wheel install).
+    baselines_dir = _reference_dir("baselines")
+    if baselines_dir is not None:
         analyzer.load_real_baselines(str(baselines_dir))
 
-    extra: list[Path] = [_REPO_ROOT / "data" / "fingerprints"]
+    extra: list[Path] = []
+    shipped_fp = _reference_dir("fingerprints")
+    if shipped_fp is not None:
+        extra.append(shipped_fp)
     if extra_dirs:
         extra.extend(Path(d) for d in extra_dirs)
     for d in extra:

@@ -1,3 +1,9 @@
+# Legacy in-backend development config (pytest / tooling when working inside
+# backend/). The canonical wheel/sdist build config lives at the repo root
+# pyproject.toml. Do not diverge the version: test_v045_version_tokenizer.py
+# asserts root pyproject.toml, this file, app.config.APP_VERSION and
+# app.__version__ all agree.
+
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"

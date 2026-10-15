@@ -1,3 +1,9 @@
+# Canonical build config for the transit-truth package.
+# `pip install .` / `python -m build` run from the repo root and build this file.
+# backend/pyproject.toml is the legacy in-backend development config (kept for
+# running pytest/tooling from backend/) and must stay version-synced with this
+# file -- test_v045_version_tokenizer.py enforces that.
+
 [build-system]
 requires = ["setuptools>=68.0", "wheel"]
 build-backend = "setuptools.build_meta"
@@ -5,14 +11,17 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "transit-truth"
 version = "0.4.7"
-description = "模型真实性核验 / 路由层可信度监控 — 无状态验证你用的模型是否货真价实"
-readme = "README.md"
+description = "Statelessly verify that the model an OpenAI-compatible endpoint claims to serve is the model it actually serves."
+readme = "README.en.md"
 license = {text = "MIT"}
 requires-python = ">=3.10"
 authors = [
-    {name = "dafahaha", email = "dafahaha@users.noreply.github.com"},
+    {name = "dafahaha", email = "156556011+dafahaha@users.noreply.github.com"},
 ]
-keywords = ["ai", "api", "llm", "audit", "security", "transit", "proxy"]
+keywords = [
+    "llm", "openai-api", "api-gateway", "model-verification",
+    "llm-security", "audit", "fingerprinting", "relay",
+]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
@@ -22,8 +31,8 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Topic :: Scientific/Engineering :: Artificial Intelligence",
     "Topic :: Security",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
 dependencies = [
@@ -44,22 +53,36 @@ dev = [
     "mypy>=1.5.0",
     "ruff>=0.1.0",
 ]
-monitor = [
-    "schedule>=1.2.0",
+# `reference-server` loads a REAL local tokenizer (downloaded from HF_ENDPOINT,
+# default hf-mirror.com) for genuine token-count fingerprints. Without this
+# extra the reference-server still runs, but as an explicitly-labelled plumbing
+# stub (hash placeholders, fixed behavioral strings) -- it can never certify
+# anything in that mode.
+reference = [
+    "tokenizers>=0.15.0",
 ]
 
 [project.scripts]
 transit-truth = "app.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/dafahaha/transit-truth"
+Homepage = "https://dafahaha.github.io/transit-truth/"
 Repository = "https://github.com/dafahaha/transit-truth"
 Issues = "https://github.com/dafahaha/transit-truth/issues"
-Documentation = "https://github.com/dafahaha/transit-truth#readme"
+Changelog = "https://github.com/dafahaha/transit-truth/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/dafahaha/transit-truth/blob/main/README.en.md"
 
 [tool.setuptools.packages.find]
 where = ["backend"]
 include = ["app*"]
+
+# Ship the reference catalog mirror (see sync_reference_data.py) so that
+# `transit-truth verify` works out of the box after a plain pip install.
+[tool.setuptools.package-data]
+"app.verify" = [
+    "data/baselines/*.json",
+    "data/fingerprints/*.json",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["backend/tests"]
