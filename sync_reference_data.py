@@ -25,8 +25,14 @@ REPO = Path(__file__).resolve().parent
 
 # (source dir, destination dir)
 JOBS = [
-    (REPO / "data" / "baselines", REPO / "backend" / "app" / "verify" / "data" / "baselines"),
-    (REPO / "data" / "fingerprints", REPO / "backend" / "app" / "verify" / "data" / "fingerprints"),
+    (
+        REPO / "data" / "baselines",
+        REPO / "backend" / "app" / "verify" / "data" / "baselines",
+    ),
+    (
+        REPO / "data" / "fingerprints",
+        REPO / "backend" / "app" / "verify" / "data" / "fingerprints",
+    ),
 ]
 
 
