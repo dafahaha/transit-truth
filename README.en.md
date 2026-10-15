@@ -1,6 +1,6 @@
 # TransitTruth 🛡️
 
-[English](README.en.md) · [中文](README.md)
+[English](README.en.md) · [中文](README.md) · [日本語](README.ja.md)
 
 ![TransitTruth Banner](docs/banner_1280x640.png)
 
