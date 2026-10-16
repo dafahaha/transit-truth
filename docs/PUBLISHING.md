@@ -1,5 +1,7 @@
 # Publishing transit-truth to PyPI
 
+> ⚠️ **已被取代 / 以 README 为准（v0.5.2）**：本文件是早期发布流程草稿；当前模型身份核验（测中转站真假）需本地/自托管 `transit-truth serve`，浏览器直连受 CORS 限制；测试数与口径以 README.md 为准，勿以本文件旧计数对外表述。
+
 > **Status: build-ready, NOT published.** Everything below has been verified up
 > to the upload step. The actual upload requires your own PyPI account and 2FA —
 > this is the part only you can do. Do it in order; do not skip TestPyPI.
@@ -30,7 +32,7 @@ Checking dist\transit_truth-0.4.7.tar.gz: PASSED
 
 Cut a release only after moving the CHANGELOG `[Unreleased]` entry to a dated
 version header, bumping all four sources, and running the test suite
-(`249 passed / 7 skipped` and counting).
+(`300 passed / 7 skipped` and counting).
 
 Package name: `transit-truth` was checked available on PyPI
 (`https://pypi.org/pypi/transit-truth/json` returned 404 at readiness time).

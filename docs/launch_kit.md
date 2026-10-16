@@ -1,5 +1,7 @@
 # Launch kit
 
+> ⚠️ **冻结 / 历史状态（v0.5.2）**：本文件是旧版"纯前端浏览器演示"时期的发布文案草稿，已被取代、不再维护。其中"零安装 / 纯前端 / Key 不经过任何服务器"等表述已过时：**当前模型身份核验（测中转站真假）必须在本地/自托管运行 `transit-truth serve`**（浏览器跨域直连受 CORS 限制，GitHub Pages 不能在线实测）；测试数与一切口径以 README.md 为准，勿直接照搬以下文案对外发布。
+
 Copy-paste launch posts for each channel. Nothing here is scheduled or sent by anyone but you.
 All claims match the current README/verify.md — do not upgrade the tone. This tool outputs
 **probabilistic auxiliary evidence**, not proof; keep saying so in every version.
@@ -31,9 +33,9 @@ Links to keep consistent:
 - temperature=0 的行为基线是退化分布，公开探针意味着对手可以硬编码复现，报告会显式标 `deterministic_replay_risk` 并把置信度压到 low
 - tokenizer 计数是自报信号，弱证据
 
-没有付费 key 也能跑：自带一个本地 reference-server，dummy key 就能把整条链路跑一遍自检。纯前端 demo 也在 GitHub Pages，key 不经过任何服务器。
+没有付费 key 也能跑：自带一个本地 reference-server，dummy key 就能把整条链路跑一遍自检。GitHub Pages 仅为离线演示（内置种子数据，不发送 key）；真实核验请在本地/自托管运行 `transit-truth serve`，浏览器直连受 CORS 限制。
 
-MIT 协议，测试 249 passed。欢迎拿你常用的站跑一遍，结果贴 Discussion 里（别贴 key）。
+MIT 协议，测试 300 passed。欢迎拿你常用的站跑一遍，结果贴 Discussion 里（别贴 key）。
 
 **评论区置顶：**
 > FAQ 见 https://github.com/dafahaha/transit-truth/discussions/2 。suspicious 不等于实锤欺诈，只是值得去找 provider 要个说法。
@@ -94,7 +96,7 @@ Important, stated up front in the README:
 
 You can run the whole thing without a paid key — it ships a local reference server (dummy key, loopback, `--allow-local`). There's also a zero-install browser demo.
 
-MIT, 249 tests passing (7 skipped = integration tests needing a real key). If you audit a relay you use, I set up a discussion thread to post results — please never paste keys.
+MIT, 300 tests passing (7 skipped = integration tests needing a real key). If you audit a relay you use, I set up a discussion thread to post results — please never paste keys.
 
 ---
 
@@ -135,7 +137,7 @@ A: 现在本地目录只有 Qwen2.5-0.5B-Instruct 的真实 tokenizer 计数（D
 A: 会有风险，所以才设计了三态：参考缺失/样本不足时直接给 `insufficient_evidence` 而不是硬判。温度=0 的退化基线本来就会把置信度压到 low。建议站长先拿自家站自检基线。
 
 **Q: 收费吗？key 安全吗？**
-A: MIT 免费。key 只从环境变量读，不落盘、不进日志、不进报告；报告 JSON 里没有任何 key 字段。浏览器 demo 的 key 不经过任何服务器。
+A: MIT 免费。key 只从环境变量读，不落盘、不进日志、不进报告；报告 JSON 里没有任何 key 字段。GitHub Pages 离线演示本身不发送 key；真实核验走本地/自托管 `transit-truth serve`，key 仅在本地内存，不进分享报告。
 
 ---
 

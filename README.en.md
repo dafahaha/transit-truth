@@ -13,12 +13,20 @@ Built for LLM-security researchers, agent developers, and anyone who routes LLM 
 
 ## Quickstart
 
+> **PyPI is not published yet.** There is no `pip install transit-truth` from
+> PyPI yet (a `pip install transit-truth` today would 404). Install from source:
+
 ```bash
-pip install transit-truth
+git clone https://github.com/dafahaha/transit-truth.git
+cd transit-truth
+pip install .
 # for the self-hosted reference-server's REAL local tokenizer (the no-key path
 # below degrades to an honest plumbing stub without this extra):
-pip install "transit-truth[reference]"
+pip install ".[reference]"
 ```
+<!-- PYPI-FLIP: switch this block back to `pip install transit-truth` +
+`pip install "transit-truth[reference]"` only once the package is actually on PyPI. -->
+
 
 Point it at a relay and the model it claims to serve. The API key is read from
 the environment — it never touches disk, logs, or the report.
@@ -227,7 +235,7 @@ datasets, and an extended technical report.
   loopback only; see [docs/serve.md](docs/serve.md)).
 - **Baseline data:** `data/baselines/` (real n=50 collections),
   `data/fingerprints/` (open-source tokenizer catalog).
-- **Tests:** 292 passed / 7 skipped (the 7 skipped are integration
+- **Tests:** 300 passed / 7 skipped (the 7 skipped are integration
   tests that need a real API key; run them with `pytest -m integration`).
 
 ## Installing from source (before the PyPI release)
