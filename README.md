@@ -253,7 +253,7 @@ transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
 - [x] **持续监控+告警**（4种告警检测，4种告警通道）
 - [x] **真实基准数据库**（gpt-4o-mini、gpt-4o，各50样本）
 - [x] **灵活配置管理**（14个环境变量，支持自定义探针数量/超时/重试等）
-- [x] **测试**：实测 **300 passed / 7 skipped**（v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.2 诚实性/抗回放、v0.4.3 饥饿式样本绕过回归、v0.4.4 覆盖率门+tokenizer 口径、v0.4.5 版本一致性+tokenizer 严格匹配回归、v0.4.6 单字段容错+stdout 单一 JSON 契约+负 verdict 自洽回归、v0.4.7 非 JSON 200 响应体容错+tokenizer 不确定带不升级 pass 回归、v0.5.0 本地 Web serve 端点+key 不落盘/不进日志/脱敏+公共绑定门控回归、v0.5.1 serve XSS 转义+Origin/Host/Content-Type 守卫+绑定门控+Docker 修正回归、v0.5.2 wheel 打包 webapp+全局 Host/Origin 守卫+NaN/Infinity 拒绝+上游错误体不泄漏 key 回归）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
+- [x] **测试**：实测 **312 passed / 7 skipped**（v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.2 诚实性/抗回放、v0.4.3 饥饿式样本绕过回归、v0.4.4 覆盖率门+tokenizer 口径、v0.4.5 版本一致性+tokenizer 严格匹配回归、v0.4.6 单字段容错+stdout 单一 JSON 契约+负 verdict 自洽回归、v0.4.7 非 JSON 200 响应体容错+tokenizer 不确定带不升级 pass 回归、v0.5.0 本地 Web serve 端点+key 不落盘/不进日志/脱敏+公共绑定门控回归、v0.5.1 serve XSS 转义+Origin/Host/Content-Type 守卫+绑定门控+Docker 修正回归、v0.5.2 wheel 打包 webapp+全局 Host/Origin 守卫+NaN/Infinity 拒绝+上游错误体不泄漏 key 回归、v0.5.3 门面模块崩溃修复+非法参数 400+非阻塞 429、v0.5.4 消除外链静态 import+整数旋钮非整 400+CI 守卫/checkout 升级）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
 - [x] **CI/CD**（GitHub Actions，Python 3.10/3.11/3.12矩阵）
 
 ### 🚧 开发中
