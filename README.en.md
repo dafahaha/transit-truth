@@ -5,7 +5,7 @@
 ![TransitTruth Banner](docs/banner_1280x640.png)
 
 **You pay for `gpt-4o-mini` at an API relay. Are you actually getting it?**
-TransitTruth is a stateless CLI that probes any OpenAI-compatible endpoint with a bounded battery of fingerprint probes and tells you, in one JSON report, whether the model it claims to serve matches the reference fingerprint.
+TransitTruth is a stateless CLI that probes any OpenAI-compatible endpoint with a bounded battery of fingerprint probes and tells you, in one JSON report, whether the model it claims to serve matches the reference fingerprint. It also ships a local single-page web UI (`transit-truth serve`) so you can run the same check from a browser on your own machine.
 
 Built for LLM-security researchers, agent developers, and anyone who routes LLM traffic through third-party relays or gateways.
 
@@ -48,6 +48,61 @@ Exit codes: `0` for `pass` **or** `insufficient_evidence`, `3` for
 `suspicious`, `2` for an execution error. Script against the JSON `verdict`
 field, not the exit code.
 
+## Local web UI (`transit-truth serve`)
+
+For a point-and-click check, start the local server and open the browser:
+
+```bash
+transit-truth serve                 # default http://127.0.0.1:8766
+transit-truth serve --open          # open the browser automatically
+```
+
+The UI serves itself and a `POST /api/verify` endpoint from one local process;
+the server runs the probe battery. Fill in the relay `base_url`, the claimed
+model (pick from the catalog or type it), and optionally your key (a password
+field). The report banner shows the three-state verdict, confidence, posterior /
+LR / 95% CI / chi-square / KS p, per-probe evidence, and flags
+(`deterministic_replay_risk`, `thin_evidence`, `non_cooperation`).
+
+### Key safety (hard contract)
+
+- The key lives in **memory only** for the session: it is never written to
+  disk, never logged (including uvicorn access log), never echoed in the
+  response, and never appears in a shareable report.
+- A defense-in-depth `sanitize_report` recursively strips credential fields
+  (`api_key / authorization / bearer / key`) and redacts `sk-...` /
+  `Bearer ...` strings before replying. The report page states it contains no
+  key and may be shared safely.
+- Default bind is `127.0.0.1` (loopback only). Binding a non-loopback address
+  (`0.0.0.0`, `::`, RFC1918, public IP, or a hostname) requires the explicit
+  `--allow-public` flag; the server also enforces same-origin, `Sec-Fetch-Site`,
+  Content-Type (`application/json` only), and (on loopback) a Host whitelist to
+  block DNS-rebinding and cross-site calls.
+
+### Why the hosted Pages site cannot test a real relay (CORS)
+
+A browser on a static GitHub Pages site cannot call a third-party relay
+directly: the relay returns no CORS headers, so the request fails with an
+ambiguous `Failed to fetch`, and a browser should never be asked to send your
+key to the target domain. **Real model-identity verification must run through
+the local/self-hosted `serve` server** (or the CLI), because the server — not
+the browser — sends the probes.
+
+### Deployment boundaries (honest)
+
+- **Docker / VPS:** `Dockerfile.serve` + `docker-compose.serve.yml` publish
+  only host `127.0.0.1:8766:8766`; put Caddy/Nginx + TLS in front for a public
+  VPS. Note the container listens on `0.0.0.0` inside its own private network
+  namespace (docker bridge reaches eth0, not container loopback); the exposure
+  boundary stays on the host side and must never publish `0.0.0.0:8766`.
+- **Cloudflare Pages / GitHub Pages** can only host a static facade/guide.
+  **Cloudflare Workers run on a V8 isolate and cannot execute the Python
+  verification engine** (tiktoken, scipy, the async battery). A live backend
+  needs a Python-capable VPS or container; a thin JS proxy that only forwards
+  probes without statistics is not implemented here and is not claimed.
+- See [docs/serve.md](docs/serve.md) for network model, troubleshooting, and
+  public-hosting responsibility (do not log keys).
+
 ### No paid key? Run the whole pipeline locally
 
 Ships with a self-hosted, OpenAI-compatible reference backend. The verify
@@ -75,20 +130,20 @@ degrades to an explicitly labelled plumbing stub — the stderr banner and
 
 | verdict | meaning |
 |---|---|
-| `pass` | observed fingerprint is statistically consistent with the reference. |
-| `suspicious` | observed fingerprint differs significantly (e.g. wrong model family). |
-| `insufficient_evidence` | no reference, sample too small, or the endpoint refused to cooperate — we do **not** guess. |
+| `pass` | observed fingerprint is statistically consistent with the reference (behavioral evidence supports it; high confidence requires posterior > 0.9 and 95% CI lower bound > 0.7). |
+| `suspicious` | observed fingerprint differs significantly (e.g. wrong model family; a tokenizer mismatch to a different family also raises this). |
+| `insufficient_evidence` | no reference, sample too small, tokenizer match alone without behavioral support, or the endpoint refused to cooperate — we do **not** guess. |
 
 A `suspicious` verdict is not "proven fraud". It is evidence that deserves a
 closer look.
 
 ## What it actually does
 
-Given a claimed model, the default battery sends 17 requests: 5 tokenizer
-probes (self-reported `usage.prompt_tokens` on a fixed prompt suite) and 4
-behavioral probes × 3 repeats (distributional "random task" preferences —
-which number, coin flip, animal, letter a model returns). It compares the
-observed fingerprint against the shipped reference catalog using chi-square /
+Given a claimed model, the default battery sends a bounded set of tokenizer
+probes (self-reported `usage.prompt_tokens` on a fixed prompt suite) and
+behavioral probes × repeats (distributional "random task" preferences — which
+number, coin flip, color, dice a model returns). It compares the observed
+fingerprint against the shipped reference catalog using chi-square /
 KS tests and a Bayesian posterior, and returns a single report. The whole run
 costs under $0.01.
 
@@ -98,7 +153,9 @@ Read this before trusting any verdict.
 
 - **Probabilistic auxiliary evidence, not a cryptographic proof.** Black-box
   fingerprints can be faked; provider-signed responses (official
-  attestations) remain the only endgame. This tool is a cheap, repeatable
+  attestations) remain the only endgame. arXiv:2504.04715 (Berkeley) instead
+  proposes TEE-based cryptographic integrity attestation — a formal/hardware
+  route, not a commercial field measurement. This tool is a cheap, repeatable
   screening layer, not a court witness.
 - **Coverage is narrow, by design.** Shipped references today:
   - `gpt-4o-mini` and `gpt-4o` — n=50 baselines collected through a **single
@@ -112,6 +169,14 @@ Read this before trusting any verdict.
     download.
   - Closed-model fingerprints for Claude / Gemini / other GPT claims need
     your own keys to collect.
+- **Tokenizer signal, precisely.** A tokenizer **match without behavioral
+  reference** only means same-family and caps at `insufficient_evidence` (it
+  can never become `pass`); a tokenizer **mismatch (wrong family)** raises
+  `suspicious` and zeroes posterior/LR/CI/chi-square to avoid contradiction.
+  A missing tokenizer signal, or a pass/low that only replays public modal
+  strings, only proves the endpoint can replay a public fingerprint — it does
+  **not** equal confirming the real model; a genuine model claim rests on
+  sufficient behavioral evidence at high confidence.
 - **Temperature=0 point-mass replay risk.** The shipped behavioral baselines
   are degenerate distributions (e.g. gpt-4o-mini returns "7" for "pick a
   number 1–10" every single time). The probe prompts and baselines ship in
@@ -150,14 +215,20 @@ This repo also ships the broader audit platform it grew out of: a FastAPI web
 UI for relay auditing, a community leaderboard, the collected baseline
 datasets, and an extended technical report.
 
-- **Online demo (zero install):** https://dafahaha.github.io/transit-truth/
-  — runs entirely in the browser, key never touches a server.
-- **Run the web platform:** `cd backend && pip install -r requirements.txt && uvicorn app.main:app --port 8000`
-- **Docker:** `docker-compose up -d` (see README for UID/proxy notes).
+- **Offline browser demo (root `index.html`):**
+  https://dafahaha.github.io/transit-truth/ — an offline, built-in
+  illustration of the audit flow with demo seed data; it needs no key and is
+  not a live measurement of a real relay. Real model-identity verification
+  uses `transit-truth serve` / the CLI (see CORS note above).
+- **Run the local verify web UI:** `transit-truth serve` (default
+  127.0.0.1:8766; see [docs/serve.md](docs/serve.md)).
+- **Run the legacy web platform:** `cd backend && pip install -r requirements.txt && uvicorn app.main:app --port 8000`
+- **Docker:** `docker compose -f docker-compose.serve.yml up -d --build` (host
+  loopback only; see [docs/serve.md](docs/serve.md)).
 - **Baseline data:** `data/baselines/` (real n=50 collections),
   `data/fingerprints/` (open-source tokenizer catalog).
-- **Tests:** 249 passed / 7 skipped (the 7 skipped are integration tests
-  that need a real API key; run them with `pytest -m integration`).
+- **Tests:** 292 passed / 7 skipped (the 7 skipped are integration
+  tests that need a real API key; run them with `pytest -m integration`).
 
 ## Installing from source (before the PyPI release)
 
