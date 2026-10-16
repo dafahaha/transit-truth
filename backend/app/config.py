@@ -30,7 +30,7 @@ RANKING_DIR = DATA_DIR / "rankings"
 DB_PATH = Path(os.getenv("DATABASE_PATH", str(DATA_DIR / "transit_truth.db")))
 
 # Single source of truth for the service version (kept in sync with pyproject.toml).
-APP_VERSION = "0.5.1"
+APP_VERSION = "0.5.2"
 
 # API settings
 REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", "30"))

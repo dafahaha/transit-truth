@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "transit-truth"
-version = "0.5.1"
+version = "0.5.2"
 description = "Statelessly verify that the model an OpenAI-compatible endpoint claims to serve is the model it actually serves."
 readme = "README.en.md"
 license = {text = "MIT"}
@@ -81,6 +81,7 @@ include = ["app*"]
 "app.verify" = [
     "data/baselines/*.json",
     "data/fingerprints/*.json",
+    "webapp/*.html",
 ]
 
 [tool.pytest.ini_options]

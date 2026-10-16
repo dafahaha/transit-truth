@@ -4,19 +4,19 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>TransitTruth - AI API 安全审计平台</title>
-<meta name="description" content="TransitTruth：用行为指纹 30 秒检测你的 AI API 中转站有没有偷工减料——模型降级、Token 虚高、协议不合规，浏览器端零安装运行。">
+<meta name="description" content="TransitTruth 本地/自托管模型身份核验工具：行为指纹 + tokenizer 比对，三态 fail-closed 报告，识别中转站模型降级/偷换。本站为离线演示与引导，真实核验运行本地 transit-truth serve。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%231d1d1f'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle'%3E%F0%9F%9B%A1%3C/text%3E%3C/svg%3E">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="TransitTruth">
-<meta property="og:title" content="TransitTruth — 你的 GPT-4 是真的吗？30 秒测出答案">
-<meta property="og:description" content="用行为指纹验证 AI API 中转站是否真实提供你付费的模型：模型降级、Token 虚高、延迟异常一测便知。纯前端运行，Key 不经过任何服务器。">
+<meta property="og:title" content="TransitTruth — 你付费的模型是真的吗？本地一键核验">
+<meta property="og:description" content="本地/自托管 transit-truth serve 发探针比对行为指纹与 tokenizer，识别模型降级/偷换。本站为离线演示，不发送任何 API Key。">
 <meta property="og:url" content="https://dafahaha.github.io/transit-truth/">
 <meta property="og:image" content="https://dafahaha.github.io/transit-truth/docs/banner_1280x640.png">
 <meta property="og:image:width" content="1280">
 <meta property="og:image:height" content="640">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="TransitTruth — 你的 GPT-4 是真的吗？">
-<meta name="twitter:description" content="行为指纹检测 AI API 中转站是否偷工减料。纯前端、零安装。">
+<meta name="twitter:description" content="本地 transit-truth serve 核验中转站模型真伪；本站为离线演示，不发送 API Key。">
 <meta name="twitter:image" content="https://dafahaha.github.io/transit-truth/docs/banner_1280x640.png">
 <style>
   :root {
@@ -707,38 +707,18 @@
     </div>
   </div>
 
-  <!-- 输入表单 -->
+  <!-- 离线演示面板（本静态页不发送 key、不直连中转站；真实核验走本地 serve） -->
   <div class="card" id="input-card">
-    <h2>📋 开始审计</h2>
-
-    <div class="form-group">
-      <label>API Key <span class="required">*</span></label>
-      <input type="password" id="api-key" placeholder="sk-..." autocomplete="off">
+    <h2>🎬 离线演示（内置种子数据，非真实审计）</h2>
+    <div style="padding:14px;border:1.5px solid var(--border);border-radius:12px;background:var(--bg);font-size:0.9rem;line-height:1.7;">
+      <strong>本 GitHub Pages 页面不会发送你的 API Key，也不会直连任何中转站。</strong>
+      浏览器跨域直连第三方中转端点受 <strong>CORS</strong> 限制（只会得到含糊的
+      <code>Failed to fetch</code>），也不应把 Key 交给目标域。<br>
+      要真实验证"付费的模型是不是货真价实"，请在本机或自托管环境运行本地服务：
+      <code>transit-truth serve</code>（默认 <code>http://127.0.0.1:8766</code>，见上方启动命令与
+      <code>docs/serve.md</code>；Cloudflare Workers/Pages 无法运行 Python 引擎）。
     </div>
-
-    <div class="form-group">
-      <label>Base URL（留空自动检测）</label>
-      <input type="text" id="base-url" placeholder="https://api.openai.com/v1">
-      <div id="auto-detect-result" style="font-size:0.8rem;color:var(--muted);margin-top:4px;"></div>
-    </div>
-
-    <div class="form-group">
-      <label>模型</label>
-      <select id="model-select">
-        <option value="">先输入 API Key 自动加载模型列表...</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label>审计模式</label>
-      <div class="mode-toggle">
-        <button class="mode-btn active" data-mode="quick">⚡ 快速模式<br><small>3探针 · ~10秒</small></button>
-        <button class="mode-btn" data-mode="deep">🔬 深度模式<br><small>10探针 · ~60秒</small></button>
-      </div>
-    </div>
-
-    <div class="btn-row">
-      <button class="btn" id="start-btn" onclick="startAudit()">🚀 开始审计</button>
+    <div class="btn-row" style="margin-top:14px;">
       <button class="btn btn-demo" id="demo-btn" onclick="runDemo()">🎬 先看演示（无需 Key）</button>
       <button class="btn btn-demo" id="verify-demo-btn" onclick="runVerifyDemo()">🔍 模型真实性核验演示</button>
     </div>
@@ -902,20 +882,21 @@
     <strong>⚠️ 免责声明：</strong>
     本工具仅供用户验证<strong>自己使用</strong>的服务。审计结果基于有限样本，<strong>不构成对任何服务的最终评价</strong>。
     Token 差异率包含 chat template 开销，<strong>不等同于造假</strong>。模型指纹为概率性判断，仅当<strong>高置信</strong>（后验概率 &gt; 0.9 且 95% 置信区间下界 &gt; 0.7）时才构成模型降级证据；低置信或 `insufficient_evidence`（证据不足）一律不构成证据。
-    API Key 仅在浏览器本地使用，<strong>不会发送到任何第三方服务器</strong>。
+    本站为离线演示，<strong>不发送任何 API Key、不直连中转站</strong>；真实模型身份核验在本地/自托管 `transit-truth serve` 进行，Key 仅存于本次会话内存，不进日志、不进可分享报告。
   </div>
 
 </div>
 
 <footer>
   <p>TransitTruth · 开源审计工具 · <a href="https://github.com/dafahaha/transit-truth" target="_blank">GitHub</a></p>
-  <p style="margin-top:4px;">纯前端运行 · 你的 API Key 永远不会离开你的浏览器</p>
+  <p style="margin-top:4px;">本站为离线演示，不发送 API Key；真实核验运行本地 <code>transit-truth serve</code></p>
 </footer>
 
 <script type="module">
 // ============================================================
-// TransitTruth 纯前端版本
-// 所有 API 请求直接从浏览器发出，不需要后端
+// TransitTruth 离线演示脚本（内置种子数据；不直连中转站、不发送 Key）
+// 真实模型身份核验由本地/自托管 `transit-truth serve` 的服务端发探针，
+// 浏览器跨域直连受 CORS 限制，本站只做门面/引导/离线演示。
 // ============================================================
 
 import { getEncoding } from 'https://esm.sh/js-tiktoken@1.0.12';
@@ -1297,72 +1278,16 @@ async function runVerifyDemo() {
   );
 }
 
-async function startAudit() {
-  const apiKey = document.getElementById('api-key').value.trim();
-  const baseUrl = document.getElementById('base-url').value.trim();
-  const model = document.getElementById('model-select').value;
-
-  if (!apiKey) { alert('请输入 API Key'); return; }
-  if (!baseUrl) { alert('请输入 Base URL（或等待自动检测）'); return; }
-  if (!model) { alert('请选择模型'); return; }
-
-  const btn = document.getElementById('start-btn');
-  const progressContainer = document.getElementById('progress-container');
-  const resultCard = document.getElementById('result-card');
-
-  btn.disabled = true;
-  btn.textContent = '审计中...';
-  resultCard.classList.add('hidden');
-  progressContainer.style.display = 'block';
-
-  const probeCount = currentMode === 'quick' ? 3 : 10;
-  const startTime = Date.now();
-
-  try {
-    auditResult = {
-      model,
-      base_url: baseUrl,
-      relay_name: detectRelayName(baseUrl),
-      mode: currentMode,
-      timestamp: new Date().toISOString(),
-      checks: [],
-      token_comparison: null,
-      fingerprint: null,
-      latency: null,
-    };
-
-    // 1. Token 验证
-    updateProgress(10, '正在进行 Token 计数验证...');
-    await runTokenCheck(apiKey, baseUrl, model);
-
-    // 2. 模型指纹
-    updateProgress(30, '正在运行模型指纹探针...');
-    await runFingerprint(apiKey, baseUrl, model, probeCount);
-
-    // 3. 延迟和协议检测
-    updateProgress(70, '正在检测延迟和协议...');
-    await runLatencyProtocolCheck(apiKey, baseUrl, model);
-
-    // 4. 计算总分
-    updateProgress(90, '正在计算审计结果...');
-    calculateFinalScore();
-
-    auditResult.duration_ms = Date.now() - startTime;
-
-    // 显示结果
-    updateProgress(100, '审计完成！');
-    setTimeout(() => {
-      progressContainer.style.display = 'none';
-      showResult();
-    }, 500);
-
-  } catch (e) {
-    progressContainer.style.display = 'none';
-    alert(`审计失败: ${e.message}`);
-  } finally {
-    btn.disabled = false;
-    btn.textContent = '🚀 开始审计';
-  }
+// 真实模型身份核验不在浏览器直连（CORS 限制，且不应把 Key 交给目标域）。
+// 本静态页只做离线演示；真实核验请在本机/自托管运行 `transit-truth serve`。
+// 该函数保留仅为兼容旧调用，绝不发起任何网络请求、绝不发送 Bearer。
+function startAudit() {
+  alert(
+    '本静态页面不直连中转站、不发送 API Key。\n\n' +
+    '真实模型身份核验请在本机或自托管环境运行：\n' +
+    '  transit-truth serve   (默认 http://127.0.0.1:8766)\n\n' +
+    '浏览器跨域直连受 CORS 限制；详见 docs/serve.md。'
+  );
 }
 
 // ─── Token 验证 ─────────────────────────────────────────────
@@ -1962,7 +1887,7 @@ function generateGitHubIssueUrl() {
     `- 协议通过率: ${(auditResult.latency.protocol_pass_rate * 100).toFixed(0)}%\n\n` +
     `### 原始 JSON\n` +
     `\`\`\`json\n${JSON.stringify(auditResult, null, 2).substring(0, 3000)}\n\`\`\`\n\n` +
-    `---\n*由 TransitTruth 纯前端版本自动生成*`);
+    `---\n*TransitTruth 离线演示导出（真实核验走本地 transit-truth serve）*`);
   return `https://github.com/dafahaha/transit-truth/issues/new?title=${title}&body=${body}&labels=audit-result`;
 }
 

@@ -244,10 +244,13 @@ class AsyncAPIClient:
                         "latency_ms": latency_ms,
                     }
 
-                    # 不可重试的错误（401、400、404等）
+                    # 不可重试的错误（401、400、404等）。只记录状态码与模型，
+                    # 绝不把上游响应体写日志：错误页可能回显请求里的 key，落盘即泄漏。
                     if not self._is_retryable_status(response.status_code):
                         logger.warning(
-                            f"Non-retryable error {response.status_code} for model={model}: {response.text[:100]}"
+                            "Non-retryable error %s for model=%s (body not logged)",
+                            response.status_code,
+                            model,
                         )
                         self._stats["failed"] += 1
                         return {

@@ -24,8 +24,10 @@ import asyncio
 import copy
 import ipaddress
 import logging
+import math
 import os
 import re
+from importlib import resources
 from pathlib import Path
 from typing import Any, Optional
 from urllib.parse import urlsplit
@@ -43,6 +45,36 @@ logger = logging.getLogger(__name__)
 # Repository root: backend/app/verify/serve.py -> 4 parents up.
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 DEFAULT_STATIC_DIR = _REPO_ROOT / "webapp"
+
+
+def _resolve_static_dir(explicit: Optional[Path]) -> Path:
+    """Three-tier static UI resolution:
+    1. explicit injection (tests);
+    2. ``TRANSIT_TRUTH_WEBAPP_DIR`` env (Docker / custom);
+    3. repository-root ``webapp/`` checkout (dev);
+    4. bundled package resource shipped inside the installed wheel
+       (``app.verify/webapp``) when running from a plain ``pip install``.
+    """
+    if explicit:
+        return Path(explicit)
+    env_dir = os.environ.get("TRANSIT_TRUTH_WEBAPP_DIR")
+    if env_dir and (Path(env_dir) / "index.html").exists():
+        return Path(env_dir)
+    # Dev checkout: walk up from this file to a sibling ``webapp/`` with index.html.
+    cur = Path(__file__).resolve()
+    for parent in cur.parents:
+        candidate = parent / "webapp"
+        if (candidate / "index.html").exists():
+            return candidate
+    # Installed wheel: bundled resource inside the package.
+    try:
+        bundled = resources.files("app.verify") / "webapp"
+        if bundled.joinpath("index.html").is_file():
+            return Path(str(bundled))
+    except (FileNotFoundError, ModuleNotFoundError, TypeError):
+        pass
+    return DEFAULT_STATIC_DIR
+
 
 # Field names that may carry a secret under different spellings. Matched
 # case-insensitively; any such key is dropped rather than echoed.
@@ -163,17 +195,36 @@ def _content_type_ok(request: Request) -> bool:
 
 
 def _origin_mismatch(request: Request) -> bool:
-    """True when an explicit Origin does not match the request Host (cross-site)."""
+    """True when an explicit Origin does not match the request Host (cross-site).
+
+    Compares hostname (userinfo ignored by urlsplit) AND explicit port; a
+    missing port on either side is treated as matching only when the other is
+    also absent, so a different port is a mismatch.
+    """
     origin = request.headers.get("origin")
     if not origin:
         return False
     try:
-        o_host = urlsplit(origin).hostname or ""
+        o = urlsplit(origin)
+        o_host, o_port = (o.hostname or "").lower(), o.port
     except ValueError:
         return True
     host = request.headers.get("host", "")
-    h_host = urlsplit(f"//{host}").hostname or host.split(":", 1)[0]
-    return o_host.lower() != h_host.lower()
+    h = urlsplit(f"//{host}")
+    h_host, h_port = (h.hostname or host.split(":", 1)[0]).lower(), h.port
+    if o_host != h_host:
+        return True
+    # Port differs (explicit vs absent, or two different ports) = cross-origin.
+    if o_port != h_port:
+        return True
+    return False
+
+
+def _host_is_loopback(request: Request) -> bool:
+    """True when the request Host hostname is a loopback name/address."""
+    host = request.headers.get("host", "")
+    hostname = urlsplit(f"//{host}").hostname or host.split(":", 1)[0]
+    return is_loopback_host(hostname)
 
 
 def _catalog() -> list[str]:
@@ -210,11 +261,7 @@ def build_serve_app(
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
 
-    static_dir = (
-        Path(static_dir)
-        if static_dir
-        else Path(os.environ.get("TRANSIT_TRUTH_WEBAPP_DIR", str(DEFAULT_STATIC_DIR)))
-    )
+    static_dir = _resolve_static_dir(static_dir)
     app = FastAPI(title="TransitTruth local verify", version=APP_VERSION)
     semaphore = asyncio.Semaphore(_MAX_CONCURRENT)
     app.state.concurrent_semaphore = semaphore
@@ -222,6 +269,30 @@ def build_serve_app(
     # NOTE: intentionally NO CORS middleware. The UI and API are same-origin;
     # emitting Access-Control-Allow-Origin:* would let any website drive this
     # local port. Do not add one.
+
+    @app.middleware("http")
+    async def request_guard(request: Request, call_next):
+        # Origin same-origin check applies to every route (GET included).
+        if _origin_mismatch(request):
+            return _error(
+                "cross_origin",
+                "Origin does not match this server (same-origin only).",
+                status=403,
+            )
+        if (request.headers.get("sec-fetch-site") or "").lower() == "cross-site":
+            return _error(
+                "cross_site",
+                "Cross-site requests are not allowed.",
+                status=403,
+            )
+        # Host whitelist on loopback binds blocks DNS-rebinding reads on ALL routes.
+        if loopback_only and not _host_is_loopback(request):
+            return _error(
+                "invalid_host",
+                "Refused: request Host is not a loopback address.",
+                status=403,
+            )
+        return await call_next(request)
 
     @app.middleware("http")
     async def security_headers(request: Request, call_next):
@@ -258,31 +329,15 @@ def build_serve_app(
                 status=415,
             )
 
-        # --- Origin / Sec-Fetch-Site: block cross-site browser calls ---------
-        if _origin_mismatch(request):
+        # --- Content-Type: only application/json (415 otherwise) -------------
+        # Origin / Sec-Fetch-Site / Host checks run in the global request_guard
+        # middleware for every route (GET included).
+        if not _content_type_ok(request):
             return _error(
-                "cross_origin",
-                "Origin does not match this server (same-origin only).",
-                status=403,
+                "unsupported_media_type",
+                "Only application/json requests are accepted.",
+                status=415,
             )
-        sec_fetch_site = (request.headers.get("sec-fetch-site") or "").lower()
-        if sec_fetch_site == "cross-site":
-            return _error(
-                "cross_site",
-                "Cross-site requests are not allowed.",
-                status=403,
-            )
-
-        # --- Host whitelist on loopback binds (DNS-rebinding / Host attack) ---
-        if loopback_only:
-            host = request.headers.get("host", "")
-            hostname = urlsplit(f"//{host}").hostname or host.split(":", 1)[0]
-            if not is_loopback_host(hostname):
-                return _error(
-                    "invalid_host",
-                    "Refused: request Host is not a loopback address.",
-                    status=403,
-                )
 
         # --- Parse body (non-JSON / malformed -> clean 400, not a 500 HTML) ---
         try:
@@ -320,6 +375,23 @@ def build_serve_app(
                 return float(val)
             except (TypeError, ValueError):
                 return default
+
+        # --- Reject non-finite (NaN / Infinity) knob values before clamping ---
+        for name in _CLAMPS:
+            if name not in body or body[name] is None:
+                continue
+            try:
+                raw = float(body[name])
+            except (TypeError, ValueError):
+                return _error(
+                    "invalid_parameter", f"{name} must be a number.", status=400
+                )
+            if not math.isfinite(raw):
+                return _error(
+                    "invalid_parameter",
+                    f"{name} must be a finite number (NaN/Infinity rejected).",
+                    status=400,
+                )
 
         # --- Clamp bounded knobs; out-of-range -> clean 400 -------------------
         params: dict[str, float] = {

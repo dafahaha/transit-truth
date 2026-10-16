@@ -278,7 +278,7 @@ transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
 | **IRIS**（arXiv:2607.20860） | 预算化黑盒审计模型替换与路由稀释，并估计稀释比例 ε̂ | 已覆盖本仓库"ε-稀释预算化检验"的核心思想 |
 | **KBF**（arXiv:2605.29524） | 知识边界指纹，可检出 5~10% 流量掺假 | 覆盖 ε-稀释场景 |
 | **truthprobe**（GitHub+PyPI） | 已上线 LLM 审计 CLI | 与 `verify` 同定位 |
-| **token-difr**（PyPI） | 用参考 provider 的 token log-prob 比对生成 token 序列是否货真价实 | tokenizer/log-prob 路线，比我们自报 token 计数更强 |
+| **token-difr**（PyPI） | 用参考 provider 返回的 token log-prob 比对生成序列是否一致 | log-prob 路线，需参考 provider 返回 logprobs，与自报 token 计数是不同信号 |
 | **TokensQC**（tokensqc.com） | 免费在线 AI API 质检：协议一致性 / 模型身份 / 延迟探针 | 同定位在线工具 |
 | **Ztest 真测**（ztest.ai） | 独立第三方中转站模型真伪检测 + 可信度排行 | 与"红黑榜"方向直接撞车 |
 | **Ofox Model Verify**（ofox.ai/verify） | AI 网关自带免费"模型验真"：身份 + 拒答指纹探针 | 同定位在线工具 |

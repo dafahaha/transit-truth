@@ -490,3 +490,129 @@ def test_concurrency_cap_returns_429():
         assert resp.json()["error"]["code"] == "too_many_requests"
     finally:
         sem._value = original
+
+
+# ── v0.5.2: non-finite rejection, Host guard on all routes, Origin port ──────
+
+
+def test_nan_parameter_rejected_400(client):
+    resp = client.post(
+        "/api/verify",
+        json={
+            "base_url": "http://127.0.0.1/v1",
+            "claimed_model": "gpt-4o-mini",
+            "max_requests": "NaN",
+        },
+    )
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["error"]["code"] == "invalid_parameter"
+
+
+def test_infinity_parameter_rejected_400(client):
+    resp = client.post(
+        "/api/verify",
+        json={
+            "base_url": "http://127.0.0.1/v1",
+            "claimed_model": "gpt-4o-mini",
+            "timeout": "Infinity",
+        },
+    )
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["error"]["code"] == "invalid_parameter"
+
+
+def test_host_whitelist_blocks_get_routes(loopback_client):
+    # DNS-rebinding Host on a GET (static UI) must be refused, not just POST.
+    for path in ("/", "/api/catalog"):
+        resp = loopback_client.get(path, headers={"Host": "evil.com"})
+        assert resp.status_code == 403, (path, resp.text)
+        assert resp.json()["error"]["code"] == "invalid_host"
+
+
+def test_loopback_host_allowed_on_get(loopback_client):
+    resp = loopback_client.get("/", headers={"Host": "127.0.0.1:8766"})
+    assert resp.status_code == 200
+
+
+def test_origin_port_mismatch_rejected(client):
+    # Same host, different declared port -> cross-origin 403.
+    resp = client.post(
+        "/api/verify",
+        json={"base_url": "x", "claimed_model": "y"},
+        headers={"Origin": "http://testserver:9999"},
+    )
+    assert resp.status_code == 403
+    assert resp.json()["error"]["code"] == "cross_origin"
+
+
+def test_bundled_webapp_resource_present():
+    # The wheel bundles app.verify/webapp/index.html as the installed fallback.
+    from importlib import resources
+
+    bundled = resources.files("app.verify") / "webapp" / "index.html"
+    assert bundled.is_file(), "bundled webapp/index.html missing from package"
+
+
+def test_static_resolver_finds_index_without_env(monkeypatch):
+    monkeypatch.delenv("TRANSIT_TRUTH_WEBAPP_DIR", raising=False)
+    from app.verify.serve import _resolve_static_dir
+
+    d = _resolve_static_dir(None)
+    assert (d / "index.html").exists()
+
+
+# ── v0.5.2: non-retryable upstream error body must not leak the key to logs ────
+
+
+def test_non_retryable_error_body_not_logged(caplog):
+    import logging
+
+    from app.utils.http_client import AsyncAPIClient
+
+    # Local stub returning 401 with the marker echoed in the error body.
+    stub = FastAPI()
+
+    @stub.post("/v1/chat/completions")
+    async def _unauthorized(request: Request):
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse(
+            status_code=401,
+            content={"error": f"invalid credentials {MARKER}"},
+        )
+
+    sock = socket.socket()
+    sock.bind(("127.0.0.1", 0))
+    port = sock.getsockname()[1]
+    server = uvicorn.Server(
+        uvicorn.Config(stub, host="127.0.0.1", port=port, log_level="error")
+    )
+    threading.Thread(
+        target=lambda: asyncio.run(server.serve(sockets=[sock])), daemon=True
+    ).start()
+    for _ in range(50):
+        if server.started:
+            break
+        time.sleep(0.1)
+
+    caplog.set_level(logging.WARNING, logger="app.utils.http_client")
+
+    async def _run():
+        async with AsyncAPIClient(
+            api_key=MARKER,
+            base_url=f"http://127.0.0.1:{port}/v1",
+            ssrf_guard=False,
+        ) as client:
+            return await client.chat_completion(
+                "gpt-4o-mini", [{"role": "user", "content": "hi"}]
+            )
+
+    try:
+        result = asyncio.run(_run())
+    finally:
+        server.should_exit = True
+
+    # Marker must appear neither in logs nor in the returned report body.
+    for record in caplog.records:
+        assert MARKER not in record.getMessage()
+    assert MARKER not in json.dumps(result)

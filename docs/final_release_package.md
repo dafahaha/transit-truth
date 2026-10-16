@@ -1,5 +1,7 @@
 # TransitTruth 多平台推广文案合集
 
+> ⚠️ **历史草稿说明（v0.5.2）**：本文件是旧版"纯前端浏览器演示"时期的历史/营销草稿，其中"零安装 / 纯前端 / Key 不经服务器"等表述已过时。当前**模型身份核验（测中转站真假）必须在本地/自托管运行 `transit-truth serve`**（浏览器跨域直连受 CORS 限制，GitHub Pages 不能在线实测）；测试数与口径以 README.md 为准。
+
 > 最后更新：2026-09-15
 > 项目地址：https://github.com/dafahaha/transit-truth
 > 在线Demo：https://dafahaha.github.io/transit-truth/
@@ -543,7 +545,7 @@ TransitTruth:
 - [ ] 在线Demo可正常访问和使用
 - [ ] 排行榜功能正常（12条数据，筛选/排序/搜索）
 - [ ] 多渠道贡献功能正常（5种方式）
-- [ ] 全套 pytest 通过（249 passed / 7 skipped）
+- [ ] 全套 pytest 通过（292 passed / 7 skipped）
 - [ ] 15个API端点正常
 - [ ] CLI工具正常（audit/list/export/benchmark/balance）
 - [ ] Topics已设置（ai, llm, openai, api, security, fingerprint, audit, gpt）

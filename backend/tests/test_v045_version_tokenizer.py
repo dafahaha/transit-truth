@@ -48,7 +48,7 @@ def test_shipped_version_sources_agree():
         "app.__version__": __version__,
     }
     assert len(set(versions.values())) == 1, versions
-    assert versions["root pyproject.toml"] == "0.5.1", versions
+    assert versions["root pyproject.toml"] == "0.5.2", versions
 
 
 def _gpt_min_baseline():

@@ -88,6 +88,9 @@ loopback；因此容器内若只绑 `127.0.0.1`，宿主转发会 ECONNREFUSED�
 docker compose -f docker-compose.serve.yml up -d --build
 ```
 
+> ⚠️ **不要用裸 `docker run -p 8766:8766`**：该写法把端口发布到宿主**所有接口（0.0.0.0）**，局域网可直达，等于把本机变成公开探针代理。手动映射必须显式绑回环：
+> `docker run -p 127.0.0.1:8766:8766 ...`（只监听本机）；公开 VPS 再由 Caddy/Nginx 加 TLS，且务必不记录 key。
+
 Caddy 示例（把 `verify.example.com` 换成你的域名，Caddy 自动签证书）：
 
 ```caddy

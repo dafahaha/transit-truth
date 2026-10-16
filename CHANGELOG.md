@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.2] - 2026-10-17
+
+### Fixed — 复审收口（技术片无 P0/P1/P2，仅 P3；产品片 1 P1 + 3 P2）
+- **P1 根 index.html 门面与 CORS 边界自相矛盾**：移除/禁用"输入真实 key 直连中转站审计"的旧入口（`startAudit()` 不再发起任何网络请求、不发送 Bearer），首屏以 `transit-truth serve` 为主角；离线演示明确标注"内置种子数据、非真实审计、不发送 key"；改写 meta/og/twitter description、免责声明、页脚、脚本注释与分享落款，删除"纯前端/零安装/Key 不经过服务器/30 秒"等误导表述。
+- **P2-A wheel 未打包 webapp（pip 装后 serve 首页 500）**：三级静态目录解析（`TRANSIT_TRUTH_WEBAPP_DIR` → 仓库根 webapp 开发态 → 已安装包内 `app.verify/webapp` 资源），并把 `webapp/*.html` 纳入 wheel package-data；干净 venv 安装后 `GET /` 200、`POST /api/verify` 正常，data 参考目录镜像打包未破坏。
+- **P2-B 英文 README**：Quickstart 改为"PyPI 暂未发布、从源码安装"，与中文一致（临时稿由维护者外科式提交，不入库工作区 README.en.md）。
+- **P2-C 陈旧内部文档**：`final_release_package / blog_post / deployment_guide / promotion_guide / user_coverage_and_contributors` 顶部加"已被取代/以 README 为准"横幅；`final_release_package.md` 测试数 249→292。
+
+### Security / P3
+- 非重试上游错误只记 status/异常类型，**不再把响应体写日志**（避免错误页回显 key 落盘），加测试断言标记 key 不进日志/报告。
+- serve 参数拒绝非有限值（NaN / Infinity），越界/非有限返回干净 400 `invalid_parameter`。
+- Host 白名单对**所有路由（含 GET / 与 /api/catalog）**生效，防 DNS rebinding 读取；Origin 同源校验忽略 userinfo、核对端口（端口不同即 cross-origin）。
+- `docs/serve.md` 警告：裸 `docker run -p 8766:8766` 发布会到全接口，必须 `127.0.0.1:8766:8766`。
+- 竞品表 token-difr 措辞去比较化；ofox.ai/verify 复核存活，链接保留。
+
+### 版本 / 测试
+- 版本四源统一 **0.5.2**，版本一致性测试断言同步。
+- 新增 NaN/Infinity 400、GET 路由 Host 白名单、Origin 端口校验、打包资源存在、上游错误体不泄漏 key 等回归；计数以提交树 worktree 实测为准（只增不减）。
+
 ## [0.5.1] - 2026-10-17
 
 ### Security — 安全加固（两片全新独立审批：技术片 1 P1 + 3 P2，产品片 5 P2）
@@ -253,7 +272,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker support
 - README, LICENSE, .gitignore
 
-[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.2...HEAD
+[0.5.2]: https://github.com/dafahaha/transit-truth/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/dafahaha/transit-truth/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/dafahaha/transit-truth/compare/v0.4.7...v0.5.0
 [0.4.7]: https://github.com/dafahaha/transit-truth/compare/v0.4.6...v0.4.7
