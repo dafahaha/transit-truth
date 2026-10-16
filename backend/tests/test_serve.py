@@ -616,3 +616,35 @@ def test_non_retryable_error_body_not_logged(caplog):
     for record in caplog.records:
         assert MARKER not in record.getMessage()
     assert MARKER not in json.dumps(result)
+
+
+# ── v0.5.3: invalid present-but-bad knob -> 400; missing -> default ──────────
+
+
+def test_invalid_present_max_requests_returns_400(client):
+    resp = client.post(
+        "/api/verify",
+        json={"base_url": "x", "claimed_model": "y", "max_requests": "abc"},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "invalid_parameter"
+
+
+def test_invalid_present_timeout_returns_400(client):
+    resp = client.post(
+        "/api/verify",
+        json={"base_url": "x", "claimed_model": "y", "timeout": "xyz"},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "invalid_parameter"
+
+
+def test_missing_knobs_use_defaults_not_400(client):
+    # Absent knobs fall back to defaults; must NOT be rejected as invalid.
+    resp = client.post(
+        "/api/verify",
+        json={"base_url": "x", "claimed_model": "y"},
+    )
+    # Reaches upstream/field validation, never a knob invalid_parameter 400.
+    assert resp.json()["error"]["code"] != "invalid_parameter"
+    assert resp.status_code != 400

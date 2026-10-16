@@ -212,13 +212,25 @@ transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
 
 ## 使用方法
 
-1. 打开Web界面或在线Demo
-2. 输入中转站的API Key、Base URL、模型名称
-3. （可选）输入官方API Key用于精确对比
-4. 选择检测模式：快速（3探针，~10秒）/ 深度（10探针，~60秒）
-5. 点击"开始审计"
-6. 查看审计结果、行为指纹分布图、详细报告
-7. （可选）提交审计结果到社区贡献队列（进入人工审核，审核通过后才计入排行榜）
+当前无状态模型身份核验（测中转站真假）有两个入口：
+
+**1. 本地 Web UI（推荐，浏览器点选）**
+
+```bash
+transit-truth serve                 # 默认 http://127.0.0.1:8766
+transit-truth serve --open          # 自动打开浏览器
+```
+
+填写中转站 `base_url`、声称模型（可从参考目录选择或手填）、可选 API Key，采样数/超时可在高级项折叠设置，点"开始核验"得到三态报告（pass / suspicious / insufficient_evidence）。Key 仅存于本次会话内存，不落盘、不进日志、不进可分享报告。
+
+**2. CLI（一行命令）**
+
+```bash
+export TRANSIT_TRUTH_API_KEY=你的key
+transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
+```
+
+> 真实核验必须在本地/自托管 `serve`（或 CLI）进行：浏览器跨域直连中转站端点受 CORS 限制，GitHub Pages 只能托管离线演示/引导，不能在线实测。详见 [docs/serve.md](docs/serve.md)。
 
 ## 功能特性
 
@@ -403,4 +415,4 @@ MIT License
 
 **如果你觉得这个工具有用，请给个Star ⭐，让更多人看到。**
 
-> "你用的GPT-4是真的吗？30秒测出答案。"
+> "你用的 GPT-4 是真的吗？本地 `transit-truth serve` 发探针比对行为指纹与 tokenizer，给出 fail-closed 的三态证据。"

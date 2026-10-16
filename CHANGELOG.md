@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.3] - 2026-10-17
+
+### Fixed — 复审收口（技术片无 P0/P1、1 P2；产品片 2 P1 + 3 P2；同一根因：删旧表单未同步清理 JS）
+- **P1 根 index.html 模块加载即抛错、门面功能全挂**：删除指向已删 `api-key`/`base-url` 元素的空监听与 `loadModels`，彻底移除不可达的真实 key 直连死代码（三处 `chat/completions` fetch、旧 `startAudit` 网络分支）；显式 `window.runDemo/runVerifyDemo` 及全部按钮依赖函数导出；模块顶层不再出现对缺失元素的裸 `getElementById`。
+- **P1 CONTRIBUTING.md**：在线 Demo 段改为"Pages 仅离线演示（内置种子、不发 Key）；真实核验用本地 `transit-truth serve`（CORS）"；删除失效 404 的 Gitee 镜像与不实 Vercel/Netlify 说法；测试数改为提交树权威值。
+
+### P3 — serve.py 加固
+- Content-Type 检查去重；字段存在但非法（`max_requests="abc"`、`timeout="xyz"`）返回 400 `invalid_parameter`，缺失才回落默认值。
+- 并发上限改非阻塞 `wait_for` acquire（2s 宽限），满员即 429 `too_many_requests`，无请求被无限排队。
+
+### 测试 / 版本
+- 新增根页静态守卫（每个 `getElementById` 的 id 必须存在、`runVerifyDemo` 已挂 window、无 `chat/completions` 直连 fetch/真实 key 表单）与非法参数/缺失默认回归；版本四源统一 0.5.3。
+
 ## [0.5.2] - 2026-10-17
 
 ### Fixed — 复审收口（技术片无 P0/P1/P2，仅 P3；产品片 1 P1 + 3 P2）
@@ -272,7 +285,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker support
 - README, LICENSE, .gitignore
 
-[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.3...HEAD
+[0.5.3]: https://github.com/dafahaha/transit-truth/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/dafahaha/transit-truth/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/dafahaha/transit-truth/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/dafahaha/transit-truth/compare/v0.4.7...v0.5.0

@@ -322,14 +322,6 @@ def build_serve_app(
     @app.post("/api/verify")
     async def verify(request: Request):
         # --- Content-Type: only application/json (415 otherwise) -------------
-        if not _content_type_ok(request):
-            return _error(
-                "unsupported_media_type",
-                "Only application/json requests are accepted.",
-                status=415,
-            )
-
-        # --- Content-Type: only application/json (415 otherwise) -------------
         # Origin / Sec-Fetch-Site / Host checks run in the global request_guard
         # middleware for every route (GET included).
         if not _content_type_ok(request):
@@ -409,14 +401,19 @@ def build_serve_app(
                     status=400,
                 )
 
-        # --- Concurrency cap: do not let the local port become a probe battery -
-        if semaphore.locked():
+        # --- Concurrency cap: non-blocking acquire, short grace, then 429 ----
+        # No request is queued indefinitely; if all 4 slots are busy we fail
+        # fast with 429 rather than letting callers pile up behind a lock.
+        try:
+            acquired = await asyncio.wait_for(semaphore.acquire(), timeout=2.0)
+        except asyncio.TimeoutError:
+            acquired = False
+        if not acquired:
             return _error(
                 "too_many_requests",
                 "Server busy (max 4 concurrent verifications). Retry shortly.",
                 status=429,
             )
-        await semaphore.acquire()
         try:
             report = await verify_endpoint(
                 base_url=base_url,
