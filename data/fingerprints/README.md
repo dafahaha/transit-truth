@@ -3,13 +3,13 @@
 These are reference fingerprints for the verifier, in the same on-disk format as
 `data/baselines/*.json` (consumed by `StatisticalAnalyzer.load_real_baselines`).
 
-## Coverage (honest status, 2026-10-14)
+## Coverage (honest status, 2026-10-15)
 
 | Model | Tokenizer fingerprint | Behavioral | How it was produced |
 |---|---|---|---|
 | `qwen2.5-0.5b-instruct` | **real** | not captured | Real prompt-token counts measured with the Qwen2.5-0.5B-Instruct tokenizer (downloaded via `HF_ENDPOINT=https://hf-mirror.com`). |
 | `deepseek-r1-distill-qwen-1.5b` | **real (derived)** | not captured | Built on the Qwen2 tokenizer; counts equal Qwen's. Tokenizer repo was not separately re-downloaded (mirror refused repeated connections). Tokenizer probes alone cannot distinguish it from Qwen. |
-| `glm-4-9b-chat` | **pending** | not captured | Model catalogued in `reference_server.CATALOG_TOKENIZERS`, but the GLM tokenizer could not be downloaded at build time (hf-mirror connection refused). It runs the reference-server in explicitly-labeled stub mode. |
+| `glm-4-9b-chat` | **real** | not captured | Real prompt-token counts measured with transformers AutoTokenizer / ChatGLM4Tokenizer (HF_ENDPOINT=https://hf-mirror.com, encode with add_special_tokens=False). This model has no tokenizer.json for the tokenizers library, so reference_server still cannot load it live and stays in labeled stub mode; the on-disk fingerprint is the authoritative reference. |
 
 ## What is NOT here
 
