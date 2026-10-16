@@ -1,4 +1,4 @@
-# 贡献指南 (Contributing to TransitTruth)
+﻿# 贡献指南 (Contributing to TransitTruth)
 
 感谢你对 TransitTruth 的兴趣！本文档 outlines 如何为项目做贡献。
 
@@ -28,11 +28,11 @@
 |---|---|---|---|
 | **GitHub PR** | 技术用户 | ⭐⭐⭐ | 提交代码、文档、基准数据 |
 | **GitHub Issue** | 有GitHub账号的用户 | ⭐⭐ | 提交审计结果、报告Bug |
-| **在线表单** | 所有用户 | ⭐ | 在在线Demo中一键贡献审计结果 |
-| **邮件提交** | 所有用户 | ⭐ | 把审计结果JSON发到指定邮箱 |
+| **本地核验后贡献** | 所有用户 | ⭐ | 本地 `transit-truth serve` 核验后导出/分享结果 |
+| **邮件提交** | 所有用户 | ⭐ | 把核验结果JSON发到指定邮箱 |
 | **社区提交** | 社区活跃用户 | ⭐ | 在微信群/QQ群/评论区提交 |
 | **API 提交** | 高级用户 | ⭐⭐⭐ | 通过REST API批量提交 |
-| **Gitee** | 国内用户 | ⭐⭐ | 通过Gitee镜像仓库提交 |
+| ~~Gitee~~ | （已失效 404，未提供镜像） | — | 历史镜像已下线，走 GitHub Issue / 邮件 |
 
 ### 渠道1：GitHub PR（代码/文档/数据贡献）
 
@@ -63,15 +63,22 @@ git push origin feature/your-feature
 3. 填写审计结果信息
 4. 提交 Issue
 
-### 渠道3：在线表单（最简单，推荐普通用户）
+### 渠道3：本地运行后贡献（推荐普通用户）
 
-1. 打开 [在线Demo](https://dafahaha.github.io/transit-truth/)
-2. 输入 API Key，运行审计
-3. 审计完成后，点击"一键贡献"按钮
+GitHub Pages 仅是离线演示（内置种子数据，不发送 Key、不直连中转站），不能在线实测。真实模型身份核验请在本地/自托管运行：
+
+```bash
+transit-truth serve            # 默认 http://127.0.0.1:8766，浏览器点选
+# 或 CLI
+transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
+```
+
+1. 用本地 `serve`（或 CLI）完成一次核验，得到三态报告
+2. 导出结果 JSON，或在报告页点"分享/导出"
+3. 通过下方渠道（邮件 / GitHub Issue / 社区）提交结果
 4. 填写贡献者信息（可匿名）
-5. 提交！
 
-**不需要 GitHub 账号，不需要安装任何东西，浏览器里就能完成。**
+> Key 仅存于本次会话内存，不落盘、不进日志、不进可分享报告。
 
 ### 渠道4：邮件提交（零门槛）
 
@@ -102,11 +109,9 @@ async def batch_contribute(audit_results: list[dict], api_key: str):
         return response.json()
 ```
 
-### 渠道7：Gitee（国内用户）
+### 渠道7：镜像仓库（当前未维护）
 
-1. 打开 [Gitee 镜像仓库](https://gitee.com/dafahaha/transit-truth)
-2. 提交 Issue 或 PR
-3. 我们会定期同步 Gitee 的贡献到 GitHub 主仓库
+历史上的 Gitee 镜像链接已失效（404），目前未提供国内镜像；请直接通过 GitHub Issue / 邮件 / 社区渠道提交。
 
 ---
 
@@ -117,8 +122,8 @@ async def batch_contribute(audit_results: list[dict], api_key: str):
 | 类型 | 定义 | 贡献方式 | 信誉权重 |
 |---|---|---|---|
 | **💻 代码贡献者** (Code) | 提交代码、修复Bug、开发新功能 | GitHub PR | ⭐⭐⭐⭐⭐ |
-| **📊 基准数据贡献者** (Data) | 提交模型基准数据（50+样本） | GitHub PR / 在线表单 | ⭐⭐⭐⭐ |
-| **🔍 审计结果贡献者** (Audit) | 提交中转站审计结果 | 在线表单 / 邮件 / 社区 | ⭐⭐⭐ |
+| **📊 基准数据贡献者** (Data) | 提交模型基准数据（50+样本） | GitHub PR / 邮件 | ⭐⭐⭐⭐ |
+| **🔍 审计结果贡献者** (Audit) | 提交中转站核验结果 | 本地核验 / 邮件 / 社区 | ⭐⭐⭐ |
 | **📝 文档贡献者** (Doc) | 写文档、教程、翻译 | GitHub PR | ⭐⭐⭐⭐ |
 | **🌐 社区贡献者** (Community) | 回答问题、组织活动、推广项目 | 社区活动 | ⭐⭐⭐ |
 
@@ -186,31 +191,24 @@ async def batch_contribute(audit_results: list[dict], api_key: str):
 
 ### 问题：我没有 GitHub 账号，怎么办？
 
-**答案**：用在线表单或邮件提交，完全不需要 GitHub 账号！
+**答案**：用邮件或社区渠道提交，不需要 GitHub 账号！
 
-1. **在线表单**（推荐）：打开 [在线Demo](https://dafahaha.github.io/transit-truth/)，审计完成后点击"一键贡献"
-2. **邮件提交**：把审计结果 JSON 发到 `contribute@transit-truth.xxx`
+1. **本地核验**：`transit-truth serve`（浏览器点选）或 CLI
+2. **邮件提交**：把核验结果 JSON 发到 `contribute@transit-truth.xxx`
 3. **社区提交**：在微信群/QQ群/知乎评论区发结果
 
 ### 问题：我访问 GitHub 不稳定，怎么办？
 
-**答案**：用国内镜像平台！
-
-1. **Gitee 镜像**：https://gitee.com/dafahaha/transit-truth
-2. **在线Demo**：部署在 Vercel/Netlify，国内可访问
-3. **离线版本**：下载 `index.html` 文件，本地双击打开
+**答案**：当前未提供国内镜像（历史 Gitee 镜像链接已失效 404）。可直接下载仓库到本地，用 `transit-truth serve` 在本机完成核验，再通过邮件/社区提交结果。
 
 ### 问题：我不会用命令行，怎么办？
 
-**答案**：用在线Demo，纯图形界面，零安装！
+**答案**：本地运行 `transit-truth serve` 后用浏览器点选即可，无需命令行操作；真正的模型身份核验必须走本地/自托管 serve（浏览器跨域直连受 CORS 限制，Pages 仅为离线演示）。
 
-1. 打开 [在线Demo](https://dafahaha.github.io/transit-truth/)
-2. 输入 API Key
-3. 点击"开始审计"
-4. 查看结果
-5. 点击"一键贡献"
-
-**全程不需要输入任何命令，不需要安装任何软件。**
+1. 安装后运行 `transit-truth serve`，浏览器打开 http://127.0.0.1:8766
+2. 填写 base_url 与声称模型，可选 API Key
+3. 点"开始核验"查看三态结果
+4. 导出/分享报告，或通过邮件/社区提交
 
 ---
 
@@ -302,9 +300,9 @@ python analyze_baseline.py --input data/baselines/gpt-4o.json
 
 审计结果是排行榜的数据来源。提交审计结果：
 
-1. 用在线Demo或CLI运行审计
+1. 用本地 `transit-truth serve`（或 CLI）完成一次核验
 2. 导出结果 JSON
-3. 通过在线表单/邮件/GitHub Issue提交
+3. 通过邮件 / GitHub Issue / 社区渠道提交
 
 **审计结果质量要求：**
 - 使用深度模式（10+探针）
@@ -348,7 +346,7 @@ python analyze_baseline.py --input data/baselines/gpt-4o.json
 
 ## PR 流程
 
-1. 确保代码通过所有测试（`pytest`，当前 249 passed / 7 skipped）
+1. 确保代码通过所有测试（`pytest`，当前 308 passed / 7 skipped）
 2. 如有需要，更新文档
 3. 完整填写 PR 模板
 4. 积极响应 review 反馈
