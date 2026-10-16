@@ -135,6 +135,25 @@ async function loadCatalog() {
   } catch (_) { /* catalog is advisory */ }
 }
 
+// F1: HTML-escape every server-provided value before it reaches innerHTML.
+// Neutralize & < > " ' backtick and $ (template interpolation / attribute
+// breakout). A served report must never inject a live DOM node (e.g. an
+// <img onerror=...> returned as a probe response or error message).
+const ESC_MAP = {
+  "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;",
+  "'": "&#39;", "`": "&#96;", "$": "&#36;",
+};
+function esc(v) {
+  return String(v === null || v === undefined ? "" : v).replace(/[&<>"'`$]/g, c => ESC_MAP[c]);
+}
+
+// Verdict is used as a CSS class; whitelist it instead of interpolating raw.
+const VERDICT_CLASSES = new Set(["pass", "suspicious", "insufficient_evidence", "error"]);
+function verdictClass(rep) {
+  const v = rep && rep.error ? "error" : (rep && rep.verdict) || "insufficient_evidence";
+  return VERDICT_CLASSES.has(v) ? v : "insufficient_evidence";
+}
+
 function fmt(v) {
   if (v === null || v === undefined) return "—";
   if (Array.isArray(v)) return v.map(x => typeof x === "number" ? x.toFixed(3) : x).join(" / ");
@@ -144,24 +163,27 @@ function fmt(v) {
 
 function renderReport(rep) {
   const el = $("result");
+  const cls = verdictClass(rep);
   const v = rep.verdict || "insufficient_evidence";
-  const cls = rep.error ? "error" : v;
   let stats = rep.statistics || {};
+  const errMsg = (rep.error && rep.error.message) || "";
   let html = `<div class="verdict ${cls}">
-    <div class="v-big">${rep.error ? "核验出错" : v}</div>
-    <div class="muted">置信度：${rep.confidence || "low"} · 声称模型：${rep.claimed_model || "—"}</div>
-    <p>${rep.evidence_reason || (rep.error && rep.error.message) || ""}</p>`;
-  if (rep.error) html += `<div class="muted">错误码：${rep.error.code || "—"}</div>`;
+    <div class="v-big">${rep.error ? "核验出错" : esc(v)}</div>
+    <div class="muted">置信度：${esc(rep.confidence || "low")} · 声称模型：${esc(rep.claimed_model || "—")}</div>
+    <p>${esc(rep.evidence_reason || errMsg)}</p>`;
+  if (rep.error) html += `<div class="muted">错误码：${esc(rep.error.code || "—")}</div>`;
   html += `<div class="safe">✓ 本报告不含 API Key，可安全复制分享。</div></div>`;
 
   if (!rep.error) {
+    const tc = stats.tokenizer_consistency || {};
     html += `<div class="card"><h2 style="font-size:16px;margin-top:0">统计</h2><table>
-      <tr><th>匹配参考模型</th><td>${fmt(stats.matched_reference_model)}</td></tr>
-      <tr><th>后验概率 posterior</th><td>${fmt(stats.posterior)}</td></tr>
-      <tr><th>似然比 LR</th><td>${fmt(stats.likelihood_ratio)}</td></tr>
-      <tr><th>95% CI</th><td>${fmt(stats.posterior_ci_95)}</td></tr>
-      <tr><th>卡方 p</th><td>${fmt(stats.chi2_pvalue)}</td></tr>
-      <tr><th>tokenizer 一致性</th><td>${fmt(stats.tokenizer_consistency && stats.tokenizer_consistency.verdict)}${stats.tokenizer_consistency && stats.tokenizer_consistency.score != null ? " (score=" + stats.tokenizer_consistency.score + ")" : ""}</td></tr>
+      <tr><th>匹配参考模型</th><td>${esc(fmt(stats.matched_reference_model))}</td></tr>
+      <tr><th>后验概率 posterior</th><td>${esc(fmt(stats.posterior))}</td></tr>
+      <tr><th>似然比 LR</th><td>${esc(fmt(stats.likelihood_ratio))}</td></tr>
+      <tr><th>95% CI</th><td>${esc(fmt(stats.posterior_ci_95))}</td></tr>
+      <tr><th>KS p</th><td>${esc(fmt(stats.ks_pvalue))}</td></tr>
+      <tr><th>卡方 p</th><td>${esc(fmt(stats.chi2_pvalue))}</td></tr>
+      <tr><th>tokenizer 一致性</th><td>${esc(fmt(tc.verdict))}${tc.score != null ? " (score=" + esc(tc.score) + ")" : ""}</td></tr>
     </table>`;
 
     const tok = (rep.observations && rep.observations.tokenizer) || {};
@@ -169,7 +191,7 @@ function renderReport(rep) {
     if (tokKeys.length) {
       html += `<h2 style="font-size:16px">Tokenizer 计数（自报，弱信号）</h2><table>
         <tr><th>探针</th><th>观测 prompt_tokens</th></tr>`;
-      tokKeys.forEach(k => html += `<tr><td>${k}</td><td>${fmt(tok[k])}</td></tr>`);
+      tokKeys.forEach(k => html += `<tr><td>${esc(k)}</td><td>${esc(fmt(tok[k]))}</td></tr>`);
       html += `</table>`;
     }
 
@@ -178,14 +200,14 @@ function renderReport(rep) {
     if (behKeys.length) {
       html += `<h2 style="font-size:16px">行为响应（主判据）</h2><table>
         <tr><th>探针</th><th>观测响应（重复）</th></tr>`;
-      behKeys.forEach(k => html += `<tr><td>${k}</td><td>${(beh[k]||[]).join(" · ")}</td></tr>`);
+      behKeys.forEach(k => html += `<tr><td>${esc(k)}</td><td>${esc((beh[k] || []).join(" · "))}</td></tr>`);
       html += `</table>`;
     }
 
     ["deterministic_replay_risk", "thin_evidence", "non_cooperation"].forEach(flag => {
       const f = stats[flag];
       if (f && f.flag) {
-        html += `<div class="flag"><strong>${flag}</strong>：${f.reason || ""}</div>`;
+        html += `<div class="flag"><strong>${esc(flag)}</strong>：${esc(f.reason || "")}</div>`;
       }
     });
     html += `</div>`;
@@ -217,7 +239,7 @@ $("form").addEventListener("submit", async (e) => {
     renderReport(rep);
   } catch (err) {
     $("result").innerHTML = `<div class="verdict error"><div class="v-big">无法连接本地服务</div>
-      <p class="muted">${err.message}</p></div>`;
+      <p class="muted">${esc(err.message)}</p></div>`;
   } finally {
     btn.disabled = false; btn.textContent = "开始核验";
   }

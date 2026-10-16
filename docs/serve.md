@@ -27,6 +27,22 @@ transit-truth serve
 - 报告页顶部明示"本报告不含 key，可安全分享"。
 - 默认只监听 `127.0.0.1`（本机回环，局域网都不可达）。
 
+## 请求防护（v0.5.1）
+
+- **Content-Type**：`POST /api/verify` 只接受 `application/json`（允许 `; charset=` 后缀），
+  其余（如跨站免预检的 `text/plain` 简单请求）返回 415。
+- **同源校验**：带 `Origin` 头时其 host 必须等于请求 `Host`，否则 403；
+  `Sec-Fetch-Site: cross-site` 直接 403；无 Origin/Sec-Fetch 的 curl/CLI 放行。
+- **Host 白名单（回环绑定）**：回环模式下请求 Host 必须是 `localhost/127.x/::1`，
+  拒绝任意 Host（防 DNS rebinding 把 attacker.com 指到 127.0.0.1 后读响应）；
+  `--allow-public` 放开 Host 白名单但保留 Origin 同源校验。
+- **参数钳制**：`max_requests` 1–200、`behavioral_samples` 1–20、`timeout` 1–120s、
+  `total_timeout` 1–300s，越界返回干净 400。
+- **并发上限**：同时最多 4 个核验，超出返回 429，避免本地端口被当代理刷。
+- **安全响应头**：`X-Content-Type-Options: nosniff`、`X-Frame-Options: DENY`、
+  `Referrer-Policy: no-referrer`、CSP（`connect-src 'self'`、`frame-ancestors 'none'`）。
+- 出站 httpx/httpcore 日志压到 warning，确保 access/调试日志不含 key。
+
 ## 命令参数
 
 ```
@@ -36,7 +52,7 @@ transit-truth serve [--host 127.0.0.1] [--port 8766] [--allow-public]
 
 | 参数 | 默认 | 说明 |
 |---|---|---|
-| `--host` | `127.0.0.1` | 绑定地址。写 `0.0.0.0` 必须显式带 `--allow-public`，否则拒绝启动 |
+| `--host` | `127.0.0.1` | 绑定地址。仅 `127.0.0.0/8`、`::1`、`localhost` 可免 flag；`0.0.0.0`/`::`/RFC1918/公网 IP/其它主机名必须显式带 `--allow-public` |
 | `--port` | `8766` | 监听端口 |
 | `--allow-public` | 关 | 允许绑定 `0.0.0.0`；启动时打印醒目风险警告 |
 | `--allow-local` | 关 | 放行回环/私网目标，仅用于对接本地参考服务器自测 |
@@ -60,8 +76,13 @@ transit-truth serve [--host 127.0.0.1] [--port 8766] [--allow-public]
 
 ## Docker（VPS 自用）
 
-`Dockerfile.serve` 只装后端依赖、拷贝 `backend/` 与 `webapp/`，以非 root 运行；compose
-服务把容器端口映射到宿主机 `127.0.0.1:8766`（仅本机可达），再由 Caddy/Nginx 加 TLS：
+`Dockerfile.serve` 只装后端依赖、拷贝 `backend/` 与 `webapp/`，以非 root 运行。
+
+**网络命名空间说明（F4）**：Docker 是把宿主端口转发到容器的 **eth0**，而不是容器自己的
+loopback；因此容器内若只绑 `127.0.0.1`，宿主转发会 ECONNREFUSED。镜像内因此绑
+`0.0.0.0`（仅在容器私有命名空间内）并带 `--allow-public`；**安全边界在宿主侧**——
+`docker-compose.serve.yml` 只把端口映射到宿主 `127.0.0.1:8766`（绝不发布
+`0.0.0.0:8766`），局域网仍不可达。公开 VPS 再由 Caddy/Nginx 加 TLS：
 
 ```bash
 docker compose -f docker-compose.serve.yml up -d --build

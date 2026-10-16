@@ -1,9 +1,13 @@
 # Dedicated image for the local/self-hosted verify web UI (`transit-truth serve`).
 # Keeps the legacy app.main dashboard image (Dockerfile) untouched.
 #
-# The container binds 127.0.0.1 INSIDE the namespace; compose maps that to the
-# host's 127.0.0.1 so it never reaches the LAN directly. Put a TLS reverse proxy
-# (Caddy/Nginx) in front if exposing on a VPS, and read docs/serve.md first.
+# Network note (v0.5.1 F4): Docker publishes a host port to the container's
+# ETH0 address, NOT to the container's own loopback. Binding 127.0.0.1 INSIDE
+# the namespace makes the published port ECONNREFUSED (the bridge never reaches
+# container loopback). So the container listens on 0.0.0.0 *inside its private
+# namespace*; the security boundary lives on the HOST side: docker-compose maps
+# only 127.0.0.1:8766:8766 (never 0.0.0.0:8766), so the LAN cannot reach it.
+# For a public VPS put Caddy/Nginx + TLS in front; read docs/serve.md first.
 
 FROM python:3.11-slim
 
@@ -26,5 +30,8 @@ ENV TRANSIT_TRUTH_WEBAPP_DIR=/app/webapp
 
 EXPOSE 8766
 
-# Loopback inside the container; compose publishes only host 127.0.0.1:8766.
-CMD ["python", "-m", "app.cli", "serve", "--host", "127.0.0.1", "--port", "8766"]
+# Bind all interfaces INSIDE the private container namespace (bridge requires
+# eth0); --allow-public acknowledges this in-namespace bind. Exposure to the
+# outside world is controlled exclusively by the host port mapping in
+# docker-compose.serve.yml (127.0.0.1 only).
+CMD ["python", "-m", "app.cli", "serve", "--host", "0.0.0.0", "--port", "8766", "--allow-public"]

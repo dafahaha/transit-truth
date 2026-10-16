@@ -7,6 +7,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-10-17
+
+### Security — 安全加固（两片全新独立审批：技术片 1 P1 + 3 P2，产品片 5 P2）
+- **P1 F1 XSS / HTML 注入**：`webapp/index.html` 的 `renderReport` 原用 `innerHTML` 模板串把服务端返回的 `claimed_model / evidence_reason / error.message / error.code / confidence / matched_reference_model / tokenizer 探针 key-value / behavioral 响应串 / 各 flag.reason / catch 的 err.message` 原样插值（审批用 jsdom 实测 13 个 `onerror` 注入节点进入活 DOM）。修复：新增 `esc()`（转义 `& < > " ' ` $`，连 `$`/反引号一起中和模板插值），所有动态值一律经 `esc()` 后再插值；verdict 用作 CSS class 时只走 `VERDICT_CLASSES` 白名单（pass/suspicious/insufficient_evidence/error），不把原始字符串拼进 class。回归：Python 静态守卫（CI 可跑，页面须含 `esc()`/白名单，renderReport 内服务端字段插值均被 `esc()` 包裹，删 `esc` 即失败）+ 零依赖 Node 本地脚本 `scripts/webapp_esc.test.mjs`（不引入联网硬依赖）。
+- **P2 F2 Origin/Host/Content-Type 校验**：`POST /api/verify` 仅接受 `application/json`（允许 `; charset=` 后缀），其余（含跨站免预检的 `text/plain` 简单请求）→ 415 `unsupported_media_type`；带 `Origin` 时 host 必须等于请求 `Host`（同源）否则 403 `cross_origin`；`Sec-Fetch-Site: cross-site` → 403 `cross_site`；回环绑定（`loopback_only=True`，默认）下 Host hostname 必须是回环（localhost/127.x/::1），拒绝任意 Host（防 DNS rebinding 把 attacker.com 指到 127.0.0.1 后读响应）→ 403 `invalid_host`；`--allow-public` 放开 Host 白名单但保留 Origin 同源校验；无 Origin 且无 Sec-Fetch 的 curl/CLI 放行。
+- **P2 F3 绑定门控绕过**：原只拒字面 `0.0.0.0`，`192.168.x`/`::`/RFC1918/公网 IP/其它主机名会无 flag 静默启动。改为导出 `is_loopback_host()`（仅 127.0.0.0/8、`::1`、`localhost` 视为回环；去括号 IPv6、去 :port），非回环且无 `--allow-public` → exit 2；`cmd_serve` 据 `--allow-public` 决定 `loopback_only`。
+- **P2 F4 Docker 容器内绑定错误**：容器内绑 127.0.0.1 时 docker bridge 只到容器 eth0，宿主 `127.0.0.1:8766:8766` 转发会 ECONNREFUSED。改为容器内 `serve --host 0.0.0.0 --port 8766 --allow-public`（仅私有命名空间内），安全边界在宿主侧 compose 的 `127.0.0.1:8766:8766`（绝不发布 0.0.0.0）；Dockerfile/compose/docs 写清网络命名空间区别，公开 VPS 须 Caddy/TLS。本机未实跑 docker（逻辑修正，环境无 docker）。
+
+### Fixed — 产品片 P2 / 文档诚实性
+- **F5 README 叙事矛盾**：旧"零安装在线 Demo / 所有请求直接从浏览器、不需要后端 / Key 不经服务器"与新 CORS 边界冲突。改写为清楚区分：根 `index.html` 的浏览器侧**离线演示/内置演示数据**（无 key、受 CDN 限制）仍然有效；**新的模型身份核验（测中转站真假）必须本地/自托管 `transit-truth serve`**，因为浏览器跨域直连中转端点被 CORS 拦截，在 Pages 填 key 只会得到含糊 `Failed to fetch`。清理重复"零安装/直接浏览器实测"措辞，榜单种子行从 `verified/真实审计/官方API基准` 改为"演示种子（估算，非实测）"。
+- **F6 tokenizer 口径改精确**：`tokenizer 匹配但无行为参考` → 仅同族、封顶 `insufficient_evidence`（绝不翻 pass）；`tokenizer 不匹配（错族）` → 记 `mismatch` 并升级 `suspicious`（置空 posterior/LR/CI/卡方以免自相矛盾）。
+- **F7 竞品表订正两处误判**：bazaarlink.ai 实为多模型聚合 API 网关/计费路由（非"84 项规则 Probe 检测器"），移出检测器对比表；tosea.ai 实为 PDF/论文转幻灯片生成器（非随机数行为指纹工具），删除该行。
+- **2504.04715 措辞**：改为"Berkeley 用 TEE 可信执行环境给出模型完整性密码学证明（形式化/硬件路线，非商业端点实测统计）"，不再表述为"商业现场实测"。
+
+### P3
+- 参数钳制：`max_requests` 1–200、`behavioral_samples` 1–20、`timeout` 1–120s、`total_timeout` 1–300s，越界返回干净 400 `invalid_parameter`。
+- 并发上限 `asyncio.Semaphore(4)`，超出返回 429 `too_many_requests`，避免本地端口被当代理刷。
+- 安全响应头：`X-Content-Type-Options: nosniff`、`X-Frame-Options: DENY`、`Referrer-Policy: no-referrer`、CSP（`connect-src 'self'`、`frame-ancestors 'none'`，保留内联脚本/样式以免破页）。
+- 出站 httpx/httpcore 日志压到 WARNING，确保 access/调试日志不含 key；FastAPI version 改从 `config.APP_VERSION` 读（去掉硬编码 0.5.0）；webapp 统计表补 `ks_pvalue` 行。
+
+### 版本 / 测试
+- 版本四源统一 **0.5.1**（root `pyproject.toml`、`backend/pyproject.toml`、`config.APP_VERSION`、`app.__version__`），版本一致性测试断言同步。
+- 新增 F1 XSS 静态守卫、F2 四态守卫、F3 `is_loopback_host` 单测+门控、P3 钳制/安全头/并发回归，提交树实测 **292 passed / 7 skipped**（只增不减）。
+
 ## [0.5.0] - 2026-10-16
 
 ### Added — 本地 Web 工具（`transit-truth serve`，打开网页就能测）
@@ -229,7 +253,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker support
 - README, LICENSE, .gitignore
 
-[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.1...HEAD
+[0.5.1]: https://github.com/dafahaha/transit-truth/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/dafahaha/transit-truth/compare/v0.4.7...v0.5.0
 [0.4.7]: https://github.com/dafahaha/transit-truth/compare/v0.4.6...v0.4.7
 [0.4.6]: https://github.com/dafahaha/transit-truth/compare/v0.4.5...v0.4.6

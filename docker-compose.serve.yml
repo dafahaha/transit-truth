@@ -1,5 +1,7 @@
-# Self-hosted verify web UI service. Publishes ONLY on the host loopback so the
-# port never reaches the LAN; put Caddy/Nginx + TLS in front for a public VPS.
+# Self-hosted verify web UI service. The container listens on 0.0.0.0 inside its
+# private namespace (docker bridge reaches eth0, not container loopback), but we
+# publish ONLY on the host loopback so the port never reaches the LAN. Put
+# Caddy/Nginx + TLS in front for a public VPS.
 # Usage: docker compose -f docker-compose.serve.yml up -d --build
 services:
   transit-truth-serve:

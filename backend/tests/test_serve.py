@@ -21,7 +21,7 @@ import uvicorn
 from fastapi import FastAPI, Request
 from fastapi.testclient import TestClient
 
-from app.verify.serve import build_serve_app, sanitize_report
+from app.verify.serve import build_serve_app, is_loopback_host, sanitize_report
 
 MARKER = "sk-VERIFY-SECRET-MARKER-9f3c"
 
@@ -114,8 +114,18 @@ def _start_server(mode: str) -> tuple[str, uvicorn.Server]:
 @pytest.fixture(scope="module")
 def client():
     # allow_local=True only so tests can hit the loopback stub; production keeps
-    # the public SSRF guard on.
-    app = build_serve_app(allow_local=True)
+    # the public SSRF guard on. loopback_only=False because TestClient sends
+    # Host: testserver (not a loopback literal); the Host whitelist is covered
+    # separately against a loopback_only=True app.
+    app = build_serve_app(allow_local=True, loopback_only=False)
+    with TestClient(app) as c:
+        yield c
+
+
+@pytest.fixture(scope="module")
+def loopback_client():
+    # Host whitelist active: only loopback Host names are accepted.
+    app = build_serve_app(allow_local=True, loopback_only=True)
     with TestClient(app) as c:
         yield c
 
@@ -298,3 +308,185 @@ def test_cli_serve_defaults_and_public_gate(monkeypatch):
     cli.main()
     assert captured["host"] == "0.0.0.0"
     assert captured["allow_public"] is True
+
+
+# ── F2: Content-Type / Origin / Sec-Fetch-Site / Host guards ─────────────────
+
+
+# Only application/json is accepted; text/plain simple cross-site -> 415.
+def test_text_plain_rejected_415(client):
+    resp = client.post(
+        "/api/verify",
+        content="hello",
+        headers={"Content-Type": "text/plain"},
+    )
+    assert resp.status_code == 415, resp.text
+    assert resp.json()["error"]["code"] == "unsupported_media_type"
+
+
+def test_charset_suffix_application_json_accepted(client):
+    # ; charset=utf-8 is still application/json -> not rejected by the type gate.
+    resp = client.post(
+        "/api/verify",
+        json={"base_url": "x", "claimed_model": "y"},
+        headers={"Content-Type": "application/json; charset=utf-8"},
+    )
+    # Reaches field validation (400 missing/invalid target), not 415.
+    assert resp.status_code != 415
+
+
+def test_foreign_origin_rejected_403(client):
+    resp = client.post(
+        "/api/verify",
+        json={"base_url": "x", "claimed_model": "y"},
+        headers={"Origin": "https://evil.example"},
+    )
+    assert resp.status_code == 403, resp.text
+    assert resp.json()["error"]["code"] == "cross_origin"
+
+
+def test_cross_site_sec_fetch_rejected_403(client):
+    resp = client.post(
+        "/api/verify",
+        json={"base_url": "x", "claimed_model": "y"},
+        headers={"Sec-Fetch-Site": "cross-site"},
+    )
+    assert resp.status_code == 403, resp.text
+    assert resp.json()["error"]["code"] == "cross_site"
+
+
+def test_same_origin_origin_not_rejected(client):
+    # Origin host matches the request Host (testserver) -> allowed through the
+    # origin gate (fails later on validation, not 403).
+    resp = client.post(
+        "/api/verify",
+        json={"base_url": "x", "claimed_model": "y"},
+        headers={"Origin": "http://testserver"},
+    )
+    assert resp.status_code != 403
+
+
+def test_loopback_binding_rejects_non_loopback_host(loopback_client):
+    # DNS-rebinding / Host attack: Host: evil.com on a loopback-only bind -> 403.
+    resp = loopback_client.post(
+        "/api/verify",
+        json={"base_url": "x", "claimed_model": "y"},
+        headers={"Host": "evil.com"},
+    )
+    assert resp.status_code == 403, resp.text
+    assert resp.json()["error"]["code"] == "invalid_host"
+
+
+def test_loopback_binding_accepts_loopback_host(loopback_client):
+    resp = loopback_client.post(
+        "/api/verify",
+        json={"base_url": "x", "claimed_model": "y"},
+        headers={"Host": "127.0.0.1:8766"},
+    )
+    # Passes Host whitelist; rejected later only for the bogus target/fields.
+    assert resp.status_code != 403
+
+
+# ── F3: is_loopback_host helper + CLI bind gate ──────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "host,expected",
+    [
+        ("127.0.0.1", True),
+        ("127.5.6.7", True),
+        ("localhost", True),
+        ("LOCALHOST", True),
+        ("::1", True),
+        ("[::1]", True),
+        ("127.0.0.1:8766", True),
+        ("0.0.0.0", False),
+        ("::", False),
+        ("192.168.1.5", False),
+        ("10.0.0.1", False),
+        ("172.16.0.2", False),
+        ("8.8.8.8", False),
+        ("evil.com", False),
+        ("server.local", False),
+    ],
+)
+def test_is_loopback_host(host, expected):
+    assert is_loopback_host(host) is expected
+
+
+def test_cli_rejects_lan_ip_without_flag(monkeypatch):
+    from types import SimpleNamespace
+
+    from app import cli
+
+    original_serve = cli.cmd_serve
+    for host in ("192.168.1.5", "::", "server.local"):
+        ns = SimpleNamespace(
+            host=host, port=8766, allow_public=False, allow_local=False, open=False
+        )
+        with pytest.raises(SystemExit) as exc:
+            original_serve(ns)
+        assert exc.value.code == 2
+
+
+def test_cli_accepts_lan_ip_with_flag(monkeypatch):
+    from app import cli
+
+    captured = {}
+
+    def fake_serve(args):
+        captured["host"] = args.host
+        captured["allow_public"] = args.allow_public
+
+    monkeypatch.setattr(cli, "cmd_serve", fake_serve)
+    monkeypatch.setattr(
+        "sys.argv",
+        ["transit-truth", "serve", "--host", "192.168.1.5", "--allow-public"],
+    )
+    cli.main()
+    assert captured["host"] == "192.168.1.5"
+    assert captured["allow_public"] is True
+
+
+# ── P3: parameter clamp, security headers, concurrency cap ────────────────────
+
+
+def test_out_of_range_parameter_returns_400(client):
+    resp = client.post(
+        "/api/verify",
+        json={
+            "base_url": "http://127.0.0.1/v1",
+            "claimed_model": "gpt-4o-mini",
+            "max_requests": 99999,
+        },
+    )
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["error"]["code"] == "invalid_parameter"
+
+
+def test_security_headers_present(client):
+    for resp in (client.get("/"), client.post("/api/verify", json={})):
+        h = {k.lower(): v for k, v in resp.headers.items()}
+        assert h.get("x-content-type-options") == "nosniff"
+        assert h.get("x-frame-options") == "DENY"
+        assert h.get("referrer-policy") == "no-referrer"
+        csp = h.get("content-security-policy", "")
+        assert "connect-src 'self'" in csp
+        assert "frame-ancestors 'none'" in csp
+
+
+def test_concurrency_cap_returns_429():
+    app = build_serve_app(allow_local=True, loopback_only=False)
+    sem = app.state.concurrent_semaphore
+    original = sem._value  # drain by flipping the internal counter
+    try:
+        sem._value = 0
+        with TestClient(app) as c:
+            resp = c.post(
+                "/api/verify",
+                json={"base_url": "x", "claimed_model": "y"},
+            )
+        assert resp.status_code == 429, resp.text
+        assert resp.json()["error"]["code"] == "too_many_requests"
+    finally:
+        sem._value = original

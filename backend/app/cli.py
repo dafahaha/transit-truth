@@ -415,25 +415,30 @@ def cmd_serve(args):
     """
     import uvicorn
 
-    from .verify.serve import build_serve_app
+    from .verify.serve import build_serve_app, is_loopback_host
 
     host = args.host
-    if host == "0.0.0.0" and not args.allow_public:
+    # F3: only loopback literals/names may bind without the public gate. This
+    # covers 0.0.0.0, ::, RFC1918, public IPs, and arbitrary hostnames.
+    if not is_loopback_host(host) and not args.allow_public:
         print(
             Colors.red(
-                "❌ Refusing to bind 0.0.0.0 without --allow-public. "
-                "Local verification binds 127.0.0.1 by default; exposing the "
-                "port on a public interface turns this machine into a probe "
-                "proxy and must be deliberate. Re-run with --allow-public after "
-                "reading docs/serve.md."
+                f"❌ Refusing to bind non-loopback host '{host}' without "
+                "--allow-public. Local verification binds 127.0.0.1 by default; "
+                "exposing the port on a non-loopback interface turns this machine "
+                "into a probe proxy and must be deliberate. Re-run with "
+                "--allow-public after reading docs/serve.md."
             ),
             file=sys.stderr,
         )
         sys.exit(2)
 
-    app = build_serve_app(allow_local=args.allow_local)
+    app = build_serve_app(
+        allow_local=args.allow_local,
+        loopback_only=not args.allow_public,
+    )
 
-    display_host = "127.0.0.1" if host == "0.0.0.0" else host
+    display_host = "127.0.0.1" if not is_loopback_host(host) else host
     url = f"http://{display_host}:{args.port}/"
     banner = [
         f"TransitTruth local web UI: {url}",

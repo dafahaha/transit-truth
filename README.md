@@ -106,7 +106,7 @@ TransitTruth 是一个开源的 **AI API 安全审计平台**，基于学术前�
 
 ## 为什么需要这个？
 
-通过中转站（relay）使用 LLM API 时，用户无法在技术上确认"应答的模型就是付费的那个"。由于大模型单价更高，中转站有经济动机用更小/更便宜的模型顶替旗舰模型，同时按旗舰计费。已有学术审计在商业端点上记录了此类模型替换与静默降级现象（见 [arXiv:2504.04715](https://arxiv.org/abs/2504.04715)）。Token 计数虚高、费率不透明等问题也让自验证变得有必要。
+通过中转站（relay）使用 LLM API 时，用户无法在技术上确认"应答的模型就是付费的那个"。由于大模型单价更高，中转站有经济动机用更小/更便宜的模型顶替旗舰模型，同时按旗舰计费。学术界已从工程与硬件路径提出对策：[arXiv:2504.04715](https://arxiv.org/abs/2504.04715)（Berkeley）主张用 **TEE（可信执行环境）**给出模型完整性的密码学证明（形式化/硬件路线，非商业端点实测统计），作为"官方 attestation 终局"的一类方案；本仓库则走轻量黑盒概率辅助路线。Token 计数虚高、费率不透明等问题也让自验证变得有必要。
 
 但普通用户没有工具能核查自己用的中转站是否"参水分"。TransitTruth 就是为了给用户一个低成本、可复现的核查手段。
 
@@ -147,15 +147,21 @@ TransitTruth 是一个开源的 **AI API 安全审计平台**，基于学术前�
 
 ## 快速开始
 
-### 🚀 零安装在线Demo（推荐）
+### 🎬 离线演示（根 index.html，无需 Key）
 
-打开根目录 [index.html](index.html)（GitHub Pages: https://dafahaha.github.io/transit-truth/），两种体验方式：
-- **🎬 先看演示（无需 Key）**：一键体验完整审计流程，看到"声称 gpt-4o 实际降级"的典型场景
-- 输入自己的 API Key：对你正在使用的中转站进行真实审计
+打开根目录 [index.html](index.html)（GitHub Pages: https://dafahaha.github.io/transit-truth/）可以**先看演示**：一键体验完整审计流程，看到"声称 gpt-4o 实际降级"的典型场景。这是**离线/内置演示数据**，不连接任何真实中转站。
 
-所有请求直接从浏览器发出，**不需要后端服务器，不需要安装任何东西，API Key 不会经过任何服务器**。
+> 注：根 `index.html` 在浏览器端用 `js-tiktoken` 做 token 计数，该运行时经 **esm.sh CDN**（`https://esm.sh/js-tiktoken`）加载。因此纯前端演示在**离线 / 无公网**环境下受限——离线时只能看内置演示数据。演示（无需 Key）部分不依赖该 CDN。
 
-> 注：根 `index.html` 在浏览器端用 `js-tiktoken` 做 token 计数，该运行时经 **esm.sh CDN**（`https://esm.sh/js-tiktoken`）加载。因此纯前端审计在**离线 / 无公网**环境下受限——离线时只能看内置演示数据，真实 token 计数审计需要能访问 esm.sh。演示（无需 Key）部分不依赖该 CDN。
+### 🖥️ 真实模型身份核验（必须本地/自托管 `transit-truth serve`）
+
+**注意：本 Pages 静态页不能直接测真实中转站。** 浏览器受 **CORS** 限制无法跨域直连第三方中转端点，在网页里填自己的 key 直接请求只会得到含糊的 `Failed to fetch`，且浏览器也不应把 key 交给目标域。要真实验证"声称的模型是不是货真价实"，请在本机或 VPS 跑本地服务（服务端发探针，页面只做表单+渲染）：
+
+```bash
+transit-truth serve            # 默认 http://127.0.0.1:8766，加 --open 自动开浏览器
+```
+
+Key 仅本次会话内存使用，不落盘/不进日志/不进分享报告；详见 [docs/serve.md](docs/serve.md)。
 
 > 注：`standalone/index.html` 现为跳转到根 `index.html` 的重定向页。
 
@@ -227,7 +233,7 @@ transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
 - [x] **生产级弹性机制**（指数退避重试+限流检测+断路器模式+详细日志）
 - [x] **模型参考数据**（14个模型的公开数据：价格/ELO/智能指数/延迟）
 - [x] **Web UI**（4个Tab，步骤式表单，进度条，苹果风格设计）
-- [x] **纯前端在线Demo**（零安装，浏览器即用）
+- [x] **浏览器离线演示**（零安装，内置演示数据，非真实端点实测）
 - [x] **CLI工具**（一行命令审计+余额查询）
 - [x] **HTML报告生成**（可分享的审计报告）
 - [x] **审计结果分享卡片**（1200x630 PNG，一键下载分享社交媒体）
@@ -235,7 +241,7 @@ transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
 - [x] **持续监控+告警**（4种告警检测，4种告警通道）
 - [x] **真实基准数据库**（gpt-4o-mini、gpt-4o，各50样本）
 - [x] **灵活配置管理**（14个环境变量，支持自定义探针数量/超时/重试等）
-- [x] **测试**：实测 **260 passed / 7 skipped**（v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.2 诚实性/抗回放、v0.4.3 饥饿式样本绕过回归、v0.4.4 覆盖率门+tokenizer 口径、v0.4.5 版本一致性+tokenizer 严格匹配回归、v0.4.6 单字段容错+stdout 单一 JSON 契约+负 verdict 自洽回归、v0.4.7 非 JSON 200 响应体容错+tokenizer 不确定带不升级 pass 回归、v0.5.0 本地 Web serve 端点+key 不落盘/不进日志/脱敏+公共绑定门控回归）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
+- [x] **测试**：实测 **292 passed / 7 skipped**（v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.2 诚实性/抗回放、v0.4.3 饥饿式样本绕过回归、v0.4.4 覆盖率门+tokenizer 口径、v0.4.5 版本一致性+tokenizer 严格匹配回归、v0.4.6 单字段容错+stdout 单一 JSON 契约+负 verdict 自洽回归、v0.4.7 非 JSON 200 响应体容错+tokenizer 不确定带不升级 pass 回归、v0.5.0 本地 Web serve 端点+key 不落盘/不进日志/脱敏+公共绑定门控回归、v0.5.1 serve XSS 转义+Origin/Host/Content-Type 守卫+绑定门控+Docker 修正回归）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
 - [x] **CI/CD**（GitHub Actions，Python 3.10/3.11/3.12矩阵）
 
 ### 🚧 开发中
@@ -257,7 +263,7 @@ transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
 1. **同家族细粒度区分**：在两个标称同家族端点（gpt-4o vs gpt-4o-mini）上展示行为画像可被区分（最强 TVD=0.90）；这是 tokenizer 指纹做不到的。我们**不**声称这是"首个"此类研究，也不声称已在独立 held-out 数据上验证泛化。
 2. **工程化全功能平台**：不只是指纹工具，而是完整的API安全审计平台
 3. **中文社区优先**：面向中文用户，解决国内中转站乱象
-4. **零门槛在线Demo**：纯前端实现，浏览器即用
+4. **零门槛离线演示**：根 index.html 浏览器即用（内置演示数据；真实模型身份核验走本地 `transit-truth serve`）
 
 ### 相关工作与已上线竞品（诚实对标）
 
@@ -272,13 +278,13 @@ transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
 | **IRIS**（arXiv:2607.20860） | 预算化黑盒审计模型替换与路由稀释，并估计稀释比例 ε̂ | 已覆盖本仓库"ε-稀释预算化检验"的核心思想 |
 | **KBF**（arXiv:2605.29524） | 知识边界指纹，可检出 5~10% 流量掺假 | 覆盖 ε-稀释场景 |
 | **truthprobe**（GitHub+PyPI） | 已上线 LLM 审计 CLI | 与 `verify` 同定位 |
-| **BazaarLink Probe**（bazaarlink.ai） | 84 项规则检查 + 行为证据身份判定，专做中转站降智/掺假/偷换检测 | 同赛道产品化检测器 |
-| **Tosea.ai**（浏览器端工具，GitHub 开源） | 随机数行为指纹校验 LLM API 真伪，纯前端不出 key | 与本仓库"行为探针"思路几乎一致 |
 | **token-difr**（PyPI） | 用参考 provider 的 token log-prob 比对生成 token 序列是否货真价实 | tokenizer/log-prob 路线，比我们自报 token 计数更强 |
 | **TokensQC**（tokensqc.com） | 免费在线 AI API 质检：协议一致性 / 模型身份 / 延迟探针 | 同定位在线工具 |
 | **Ztest 真测**（ztest.ai） | 独立第三方中转站模型真伪检测 + 可信度排行 | 与"红黑榜"方向直接撞车 |
 | **Ofox Model Verify**（ofox.ai/verify） | AI 网关自带免费"模型验真"：身份 + 拒答指纹探针 | 同定位在线工具 |
 | **大模型照妖镜**（llmtest.cn） | 纯前端（基于 GitHub 开源项目），多维度检测套壳 | 同定位在线工具 |
+
+> **勘误（v0.5.1）**：早先表中误把 bazaarlink.ai 列为"84 项规则 Probe 检测器"、把 tosea.ai 列为"随机数行为指纹工具"。经复核：**BazaarLink（bazaarlink.ai）实为多模型聚合 API 网关/计费路由**（OpenAI/Anthropic/Google 等单 endpoint 聚合），并非模型真伪检测器，故移出检测器对比表；**Tosea.ai 实为 PDF/论文转幻灯片的生成工具**，与 LLM 身份核验无关，已删除该行。
 
 我们的真实身位（二次工程集成，**非方法论创新**）：
 - **三态 fail-closed JSON 报告契约**（`pass / suspicious / insufficient_evidence`，证据不足绝不硬判）；
@@ -287,7 +293,7 @@ transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
 
 > **关于"预算化 ε-稀释检验"**：`backend/app/verify/sequential.py` 的样本量/检出力计算是闭式工程估算工具，用于回答"给定预算 N 与稀释 ε，能否检出掺假"。方法层面 IRIS（arXiv:2607.20860）已做过预算化审计与 ε 估计，我们此处只是一个实用辅助计算器，**不声称方法论原创**。
 >
-> **指纹库覆盖现状（诚实标注）**：`data/fingerprints/` 当前仅 **Qwen2.5-0.5B-Instruct 一个模型的真实 tokenizer 计数 PoC**（7 个探针，无行为分布）；GLM tokenizer 因镜像限流 pending；DeepSeek-R1-Distill-Qwen 派生自 Qwen2 tokenizer（计数相同，tokenizer 无法区分两者）。GPT/Claude/Gemini 闭源指纹需用户自配 key 采集。**因此对开源目录的 verify 只能输出 tokenizer 家族一致性，不得输出 `pass`**——无行为参考时结论封顶 `insufficient_evidence`。
+> **指纹库覆盖现状（诚实标注）**：`data/fingerprints/` 当前仅 **Qwen2.5-0.5B-Instruct 一个模型的真实 tokenizer 计数 PoC**（7 个探针，无行为分布）；GLM tokenizer 因镜像限流 pending；DeepSeek-R1-Distill-Qwen 派生自 Qwen2 tokenizer（计数相同，tokenizer 无法区分两者）。GPT/Claude/Gemini 闭源指纹需用户自配 key 采集。tokenizer 信号分两种情形：① **tokenizer 匹配但无行为参考**——只能说明同族，**不得输出 `pass`**，结论封顶 `insufficient_evidence`；② **tokenizer 不匹配（错族）**——会计 `mismatch` 并升级为 `suspicious`（覆盖行为统计结果，同时置空 posterior/LR/CI/卡方以免自相矛盾）。
 
 ## 真实基准数据
 
@@ -325,7 +331,7 @@ transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
 
 ```
 transit-truth/
-├── index.html                  # 权威纯前端 Demo（GitHub Pages 入口，零安装）
+├── index.html                  # 浏览器离线演示（GitHub Pages 入口；真实核验走 webapp/ + serve）
 ├── web/                        # Web 资源
 ├── standalone/index.html       # 跳转页（重定向到根 index.html）
 ├── backend/                    # Python 后端（FastAPI）

@@ -2274,18 +2274,18 @@ window.copyShareCard = copyShareCard;
 // ════════════════════════════════════════════════════════════
 
 const RANKING_DATA = [
-  { relay: "OpenAI 官方", base_url: "https://api.openai.com/v1", model: "gpt-4o", overall_score: 98, trust_level: "high", token_inflation_pct: 0.5, avg_latency_ms: 850, contributor: "@dafahaha", status: "verified", notes: "官方API基准" },
-  { relay: "OpenAI 官方", base_url: "https://api.openai.com/v1", model: "gpt-4o-mini", overall_score: 97, trust_level: "high", token_inflation_pct: 0.3, avg_latency_ms: 420, contributor: "@dafahaha", status: "verified", notes: "官方API基准" },
-  { relay: "wolfai", base_url: "https://wolfai.top/v1", model: "gpt-4o-mini", overall_score: 80.4, trust_level: "critical", token_inflation_pct: 76.1, avg_latency_ms: 1976, contributor: "@dafahaha", status: "verified", notes: "真实审计 2026-09-15" },
-  { relay: "wolfai", base_url: "https://wolfai.top/v1", model: "gpt-4o", overall_score: 58, trust_level: "low", token_inflation_pct: 76.1, avg_latency_ms: 1161, contributor: "@dafahaha", status: "preliminary", notes: "真实审计，需更多验证" },
-  { relay: "API2D", base_url: "https://openai.api2d.net/v1", model: "gpt-4o", overall_score: 82, trust_level: "medium", token_inflation_pct: 5.2, avg_latency_ms: 1200, contributor: "@community", status: "preliminary", notes: "基于公开信息估算" },
-  { relay: "OhMyGPT", base_url: "https://api.ohmygpt.com/v1", model: "gpt-4o", overall_score: 75, trust_level: "medium", token_inflation_pct: 8.5, avg_latency_ms: 1500, contributor: "@community", status: "preliminary", notes: "基于公开信息估算" },
-  { relay: "BetterAPI", base_url: "https://api.betterapi.net/v1", model: "gpt-4o", overall_score: 78, trust_level: "medium", token_inflation_pct: 6.0, avg_latency_ms: 1100, contributor: "@community", status: "preliminary", notes: "基于公开信息估算" },
-  { relay: "AIHub", base_url: "https://aihubmix.com/v1", model: "gpt-4o", overall_score: 70, trust_level: "medium", token_inflation_pct: 12.0, avg_latency_ms: 1800, contributor: "@community", status: "preliminary", notes: "基于公开信息估算" },
-  { relay: "GeekAPI", base_url: "https://api.geekapi.net/v1", model: "gpt-4o", overall_score: 72, trust_level: "medium", token_inflation_pct: 10.0, avg_latency_ms: 1600, contributor: "@community", status: "preliminary", notes: "基于公开信息估算" },
-  { relay: "CloseAI", base_url: "https://api.closeai-asia.com/v1", model: "gpt-4o", overall_score: 68, trust_level: "medium", token_inflation_pct: 15.0, avg_latency_ms: 2000, contributor: "@community", status: "preliminary", notes: "基于公开信息估算" },
-  { relay: "Anthropic 官方", base_url: "https://api.anthropic.com/v1", model: "claude-3-5-sonnet", overall_score: 96, trust_level: "high", token_inflation_pct: 1.0, avg_latency_ms: 1200, contributor: "@dafahaha", status: "verified", notes: "官方API基准" },
-  { relay: "Google 官方", base_url: "https://generativelanguage.googleapis.com/v1beta", model: "gemini-1.5-pro", overall_score: 95, trust_level: "high", token_inflation_pct: 0.8, avg_latency_ms: 1400, contributor: "@dafahaha", status: "verified", notes: "官方API基准" },
+  { relay: "OpenAI 官方", base_url: "https://api.openai.com/v1", model: "gpt-4o", overall_score: 98, trust_level: "high", token_inflation_pct: 0.5, avg_latency_ms: 850, contributor: "@demo", status: "preliminary", notes: "演示种子（基于公开信息估算，非实测审计）" },
+  { relay: "OpenAI 官方", base_url: "https://api.openai.com/v1", model: "gpt-4o-mini", overall_score: 97, trust_level: "high", token_inflation_pct: 0.3, avg_latency_ms: 420, contributor: "@demo", status: "preliminary", notes: "演示种子（基于公开信息估算，非实测审计）" },
+  { relay: "wolfai", base_url: "https://wolfai.top/v1", model: "gpt-4o-mini", overall_score: 80.4, trust_level: "critical", token_inflation_pct: 76.1, avg_latency_ms: 1976, contributor: "@demo", status: "preliminary", notes: "演示种子（基于公开信息估算，非实测审计）" },
+  { relay: "wolfai", base_url: "https://wolfai.top/v1", model: "gpt-4o", overall_score: 58, trust_level: "low", token_inflation_pct: 76.1, avg_latency_ms: 1161, contributor: "@demo", status: "preliminary", notes: "演示种子（基于公开信息估算，非实测审计）" },
+  { relay: "API2D", base_url: "https://openai.api2d.net/v1", model: "gpt-4o", overall_score: 82, trust_level: "medium", token_inflation_pct: 5.2, avg_latency_ms: 1200, contributor: "@community", status: "preliminary", notes: "演示种子（基于公开信息估算）" },
+  { relay: "OhMyGPT", base_url: "https://api.ohmygpt.com/v1", model: "gpt-4o", overall_score: 75, trust_level: "medium", token_inflation_pct: 8.5, avg_latency_ms: 1500, contributor: "@community", status: "preliminary", notes: "演示种子（基于公开信息估算）" },
+  { relay: "BetterAPI", base_url: "https://api.betterapi.net/v1", model: "gpt-4o", overall_score: 78, trust_level: "medium", token_inflation_pct: 6.0, avg_latency_ms: 1100, contributor: "@community", status: "preliminary", notes: "演示种子（基于公开信息估算）" },
+  { relay: "AIHub", base_url: "https://aihubmix.com/v1", model: "gpt-4o", overall_score: 70, trust_level: "medium", token_inflation_pct: 12.0, avg_latency_ms: 1800, contributor: "@community", status: "preliminary", notes: "演示种子（基于公开信息估算）" },
+  { relay: "GeekAPI", base_url: "https://api.geekapi.net/v1", model: "gpt-4o", overall_score: 72, trust_level: "medium", token_inflation_pct: 10.0, avg_latency_ms: 1600, contributor: "@community", status: "preliminary", notes: "演示种子（基于公开信息估算）" },
+  { relay: "CloseAI", base_url: "https://api.closeai-asia.com/v1", model: "gpt-4o", overall_score: 68, trust_level: "medium", token_inflation_pct: 15.0, avg_latency_ms: 2000, contributor: "@community", status: "preliminary", notes: "演示种子（基于公开信息估算）" },
+  { relay: "Anthropic 官方", base_url: "https://api.anthropic.com/v1", model: "claude-3-5-sonnet", overall_score: 96, trust_level: "high", token_inflation_pct: 1.0, avg_latency_ms: 1200, contributor: "@demo", status: "preliminary", notes: "演示种子（基于公开信息估算，非实测审计）" },
+  { relay: "Google 官方", base_url: "https://generativelanguage.googleapis.com/v1beta", model: "gemini-1.5-pro", overall_score: 95, trust_level: "high", token_inflation_pct: 0.8, avg_latency_ms: 1400, contributor: "@demo", status: "preliminary", notes: "演示种子（基于公开信息估算，非实测审计）" },
 ];
 
 let rankingSortKey = 'overall_score';
@@ -2318,7 +2318,7 @@ function renderRanking() {
   const avgScore = data.length > 0 ? (data.reduce((s, d) => s + d.overall_score, 0) / data.length).toFixed(1) : 0;
   document.getElementById('ranking-summary').innerHTML = `
     <div class="ranking-stat"><div class="value">${data.length}</div><div class="label">审计条目</div></div>
-    <div class="ranking-stat"><div class="value">${verified}</div><div class="label">已验证</div></div>
+    <div class="ranking-stat"><div class="value">${verified}</div><div class="label">演示样本</div></div>
     <div class="ranking-stat"><div class="value">${avgScore}</div><div class="label">平均信任分</div></div>
     <div class="ranking-stat"><div class="value">${new Set(data.map(d => d.relay)).size}</div><div class="label">中转站</div></div>
   `;
