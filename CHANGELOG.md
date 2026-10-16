@@ -25,7 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### 版本 / 测试
 - 版本四源统一 **0.5.0**（root `pyproject.toml`、`backend/pyproject.toml`、`config.APP_VERSION`、`app.__version__`），版本一致性测试断言同步。
-- 新增 serve 回归 11 个（静态页可达；诚实 pass / 错配非 pass / 无 key insufficient；标记 key 不泄漏到响应/页/日志；非 JSON/缺字段/非对象返回干净 JSON 错误；无通配 CORS；脱敏函数单测；CLI 默认回环与 `--allow-public` 门控），全套 **261 passed / 7 skipped**（只增不减）。
+- 新增 serve 回归 11 个（静态页可达；诚实 pass / 错配非 pass / 无 key insufficient；标记 key 不泄漏到响应/页/日志；非 JSON/缺字段/非对象返回干净 JSON 错误；无通配 CORS；脱敏函数单测；CLI 默认回环与 `--allow-public` 门控），全套 **260 passed / 7 skipped**（只增不减）。
 
 ## [0.4.7] - 2026-10-14
 
