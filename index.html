@@ -899,8 +899,6 @@
 // 浏览器跨域直连受 CORS 限制，本站只做门面/引导/离线演示。
 // ============================================================
 
-import { getEncoding } from 'https://esm.sh/js-tiktoken@1.0.12';
-
 // Escape a string before interpolating it into innerHTML. Strings coming from a
 // relay (model ids, model echo) are attacker-controlled and must not be treated
 // as raw HTML (DOM XSS defense, complements the DOM-built model dropdown).
@@ -991,16 +989,6 @@ function getModelReference(modelName) {
 // ─── 全局状态 ──────────────────────────────────────────────
 let currentMode = 'quick';
 let auditResult = null;
-let enc = null;
-
-// 初始化 tiktoken
-(async () => {
-  try {
-    enc = getEncoding('cl100k_base');
-  } catch (e) {
-    console.warn('tiktoken 加载失败，将使用估算模式', e);
-  }
-})();
 
 // ─── 模式切换 ──────────────────────────────────────────────
 document.querySelectorAll('.mode-btn').forEach(btn => {

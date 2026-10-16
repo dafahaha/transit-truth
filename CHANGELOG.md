@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.4] - 2026-10-17
+
+### Fixed — 小修硬化（技术片 APPROVE 无 P0/P1/P2；产品片 2 P2）
+- **P2-1 根 index.html 外链静态 import 单点故障**：移除顶层 `import { getEncoding } from 'https://esm.sh/js-tiktoken@1.0.12'` 及无读取者的 `enc`/tiktoken 初始化死代码；模块图自包含、无外链 CDN，CDN 不可达不再 reject 整模块图。
+- **P2-2 测试计数回填**：README 中/英计数统一为提交树权威值；补 v0.5.3/v0.5.4 变更列举。
+
+### P3 — 硬化
+- 整数旋钮（`max_requests`/`behavioral_samples`）对浮点串/非整串返回 400 `invalid_parameter`（与"缺失→默认"区分）。
+- `webapp/index.html` loading 占位用 `esc()` 转义用户自输入的 `total_timeout.value`。
+- CI 静态守卫增强：断言无顶层外链静态 import、每个 inline `onclick` 处理函数均已挂 window；`actions/checkout` v4→v5（消除 Node20 弃用警告）。
+
+### 版本
+- 版本四源统一 0.5.4，版本一致性测试同步。
+
 ## [0.5.3] - 2026-10-17
 
 ### Fixed — 复审收口（技术片无 P0/P1、1 P2；产品片 2 P1 + 3 P2；同一根因：删旧表单未同步清理 JS）
@@ -285,7 +299,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker support
 - README, LICENSE, .gitignore
 
-[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.3...HEAD
+[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.4...HEAD
+[0.5.4]: https://github.com/dafahaha/transit-truth/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/dafahaha/transit-truth/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/dafahaha/transit-truth/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/dafahaha/transit-truth/compare/v0.5.0...v0.5.1

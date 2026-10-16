@@ -219,7 +219,7 @@ $("form").addEventListener("submit", async (e) => {
   e.preventDefault();
   const btn = $("go");
   btn.disabled = true; btn.textContent = "核验中…";
-  $("result").innerHTML = `<div class="card muted">正在发探针电池（最多 ${$("total_timeout").value}s）…</div>`;
+  $("result").innerHTML = `<div class="card muted">正在发探针电池（最多 ${esc($("total_timeout").value)}s）…</div>`;
   const payload = {
     base_url: $("base_url").value.trim(),
     claimed_model: $("claimed_model").value.trim(),

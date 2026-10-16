@@ -648,3 +648,24 @@ def test_missing_knobs_use_defaults_not_400(client):
     # Reaches upstream/field validation, never a knob invalid_parameter 400.
     assert resp.json()["error"]["code"] != "invalid_parameter"
     assert resp.status_code != 400
+
+
+# ── v0.5.4: integer knobs reject non-integer (float) values ─────────────────
+
+
+def test_integer_knob_rejects_float_string(client):
+    resp = client.post(
+        "/api/verify",
+        json={"base_url": "x", "claimed_model": "y", "max_requests": "12.5"},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "invalid_parameter"
+
+
+def test_integer_knob_rejects_float_number(client):
+    resp = client.post(
+        "/api/verify",
+        json={"base_url": "x", "claimed_model": "y", "behavioral_samples": 2.5},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "invalid_parameter"

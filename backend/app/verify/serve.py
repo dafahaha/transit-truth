@@ -384,6 +384,13 @@ def build_serve_app(
                     f"{name} must be a finite number (NaN/Infinity rejected).",
                     status=400,
                 )
+            # Integer knobs must be whole numbers: reject "12.5"/12.5/non-integer.
+            if name in ("max_requests", "behavioral_samples") and raw != int(raw):
+                return _error(
+                    "invalid_parameter",
+                    f"{name} must be a whole integer.",
+                    status=400,
+                )
 
         # --- Clamp bounded knobs; out-of-range -> clean 400 -------------------
         params: dict[str, float] = {
