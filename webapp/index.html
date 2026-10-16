@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TransitTruth · 本地中转站验真</title>
+<style>
+  :root {
+    --bg: #0f1419; --panel: #1a2129; --panel2: #222b35; --text: #e6edf3;
+    --muted: #9aa7b4; --line: #2e3a46; --accent: #4ea1ff;
+    --pass: #3fb950; --susp: #d29922; --insuf: #8b949e; --err: #f85149;
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text);
+    font-family: -apple-system, "Segoe UI", "Microsoft YaHei", Roboto, sans-serif;
+    line-height:1.6; }
+  .wrap { max-width: 860px; margin:0 auto; padding: 28px 18px 80px; }
+  header h1 { font-size: 26px; margin: 0 0 6px; }
+  header .sub { color: var(--muted); font-size: 15px; }
+  .hero { background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:18px 20px; margin:18px 0; }
+  .hero h2 { font-size:17px; margin:0 0 8px; }
+  .hero ol { margin:6px 0 0 20px; padding:0; color:var(--muted); }
+  .hero li { margin:4px 0; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px;
+    padding:18px 20px; margin:16px 0; }
+  label { display:block; font-size:13px; color:var(--muted); margin:12px 0 4px; }
+  input, select { width:100%; background:var(--panel2); color:var(--text);
+    border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-size:15px; }
+  input:focus { outline:2px solid var(--accent); border-color:transparent; }
+  .row { display:flex; gap:12px; flex-wrap:wrap; }
+  .row > div { flex:1 1 180px; }
+  details { margin-top:10px; }
+  summary { cursor:pointer; color:var(--accent); font-size:14px; }
+  button { background:var(--accent); color:#06121f; border:0; border-radius:8px;
+    padding:12px 22px; font-size:16px; font-weight:600; cursor:pointer; margin-top:16px; }
+  button:disabled { opacity:.55; cursor:wait; }
+  .note { font-size:12.5px; color:var(--muted); margin-top:8px; }
+  .verdict { border-radius:12px; padding:18px 20px; margin:16px 0; border:1px solid var(--line); }
+  .verdict.pass { border-color:var(--pass); background:rgba(63,185,80,.08); }
+  .verdict.suspicious { border-color:var(--susp); background:rgba(210,153,34,.08); }
+  .verdict.insufficient_evidence { border-color:var(--insuf); background:rgba(139,148,158,.08); }
+  .verdict.error { border-color:var(--err); background:rgba(248,81,73,.08); }
+  .v-big { font-size:22px; font-weight:700; }
+  .pass .v-big { color:var(--pass); } .suspicious .v-big { color:var(--susp); }
+  .insufficient_evidence .v-big { color:var(--insuf); } .error .v-big { color:var(--err); }
+  table { width:100%; border-collapse:collapse; margin:10px 0; font-size:14px; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); }
+  th { color:var(--muted); font-weight:500; }
+  .flag { background:var(--panel2); border-left:3px solid var(--susp);
+    padding:10px 12px; border-radius:6px; margin:8px 0; font-size:14px; }
+  .muted { color:var(--muted); }
+  .safe { color:var(--pass); font-size:13px; margin-top:10px; }
+  code { background:var(--panel2); padding:2px 6px; border-radius:5px; font-size:13px; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>🔍 TransitTruth · 本地中转站验真</h1>
+    <div class="sub">打开网页就能测：声称的模型是不是货真价实。概率性辅助证据，不是密码学证明。</div>
+  </header>
+
+  <section class="hero">
+    <h2>5 秒看懂</h2>
+    <ol>
+      <li>填入中转站 <code>base_url</code> 和你<strong>声称的模型名</strong>（如 <code>gpt-4o-mini</code>）。</li>
+      <li>可选填 API Key（仅本浏览器会话内存使用，<strong>不落盘 / 不上传 / 不进日志 / 不进分享报告</strong>）。</li>
+      <li>点「开始核验」，本地服务端发探针 → tokenizer 计数 + 行为分布 → 三态 fail-closed 结论。</li>
+    </ol>
+    <div class="note">
+      浏览器无法直连中转端点（受 CORS 限制），真实测试必须运行本地/自托管
+      <code>transit-truth serve</code>；本页由本地服务同源托管，后端在服务端发探针。
+      静态 GitHub Pages 只能做门面/引导，不能在线实测。
+    </div>
+  </section>
+
+  <section class="card">
+    <form id="form">
+      <label for="base_url">中转站 base_url（OpenAI 兼容，含 /v1）</label>
+      <input id="base_url" name="base_url" placeholder="https://api.example.com/v1" required>
+
+      <label for="claimed_model">声称的模型（可从参考目录选，也可手填）</label>
+      <input id="claimed_model" name="claimed_model" list="catalog" placeholder="gpt-4o-mini" required>
+      <datalist id="catalog"></datalist>
+
+      <label for="api_key">API Key（可选；仅本地内存，不落盘/不上传/不进日志/不进分享报告）</label>
+      <input id="api_key" name="api_key" type="password" autocomplete="off"
+             placeholder="sk-...（留空则读服务端环境变量 TRANSIT_TRUTH_API_KEY）">
+
+      <details>
+        <summary>高级：采样与超时（一般不用改）</summary>
+        <div class="row">
+          <div><label>最大请求数</label><input id="max_requests" type="number" value="20" min="5" max="50"></div>
+          <div><label>每行为探针重复次数</label><input id="behavioral_samples" type="number" value="3" min="1" max="10"></div>
+          <div><label>单请求超时(秒)</label><input id="timeout" type="number" value="30" min="5" max="120"></div>
+          <div><label>整电池墙钟超时(秒)</label><input id="total_timeout" type="number" value="90" min="10" max="300"></div>
+        </div>
+      </details>
+
+      <button id="go" type="submit">开始核验</button>
+      <div class="note">结论三态：<span style="color:var(--pass)">pass（行为证据支持）</span> ·
+        <span style="color:var(--susp)">suspicious（与参考显著不符）</span> ·
+        <span style="color:var(--insuf)">insufficient_evidence（证据不足，不硬判）</span>。</div>
+    </form>
+  </section>
+
+  <section id="result"></section>
+
+  <section class="card">
+    <h2 style="font-size:16px;margin-top:0">工作原理</h2>
+    <p class="muted" style="font-size:14px">
+      本地服务端向目标发有界探针电池（5 个 tokenizer 计数探针 + 4 个行为探针×重复），
+      对比本地参考分布：tokenizer 计数是<strong>弱信号</strong>（不同家族可高度趋同），
+      <strong>行为分布才是主判据</strong>（卡方 + KS + 贝叶斯更新，给后验/LR/95%CI）。
+      公开基线在 temperature=0 下可被确定性回放，报告显式标注
+      <code>deterministic_replay_risk</code>；官方密码学 attestation 才是终局。
+    </p>
+  </section>
+</div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+
+async function loadCatalog() {
+  try {
+    const r = await fetch("/api/catalog");
+    const data = await r.json();
+    const dl = $("catalog");
+    (data.models || []).forEach(m => {
+      const o = document.createElement("option");
+      o.value = m; dl.appendChild(o);
+    });
+  } catch (_) { /* catalog is advisory */ }
+}
+
+function fmt(v) {
+  if (v === null || v === undefined) return "—";
+  if (Array.isArray(v)) return v.map(x => typeof x === "number" ? x.toFixed(3) : x).join(" / ");
+  if (typeof v === "number") return Number.isInteger(v) ? String(v) : v.toFixed(3);
+  return String(v);
+}
+
+function renderReport(rep) {
+  const el = $("result");
+  const v = rep.verdict || "insufficient_evidence";
+  const cls = rep.error ? "error" : v;
+  let stats = rep.statistics || {};
+  let html = `<div class="verdict ${cls}">
+    <div class="v-big">${rep.error ? "核验出错" : v}</div>
+    <div class="muted">置信度：${rep.confidence || "low"} · 声称模型：${rep.claimed_model || "—"}</div>
+    <p>${rep.evidence_reason || (rep.error && rep.error.message) || ""}</p>`;
+  if (rep.error) html += `<div class="muted">错误码：${rep.error.code || "—"}</div>`;
+  html += `<div class="safe">✓ 本报告不含 API Key，可安全复制分享。</div></div>`;
+
+  if (!rep.error) {
+    html += `<div class="card"><h2 style="font-size:16px;margin-top:0">统计</h2><table>
+      <tr><th>匹配参考模型</th><td>${fmt(stats.matched_reference_model)}</td></tr>
+      <tr><th>后验概率 posterior</th><td>${fmt(stats.posterior)}</td></tr>
+      <tr><th>似然比 LR</th><td>${fmt(stats.likelihood_ratio)}</td></tr>
+      <tr><th>95% CI</th><td>${fmt(stats.posterior_ci_95)}</td></tr>
+      <tr><th>卡方 p</th><td>${fmt(stats.chi2_pvalue)}</td></tr>
+      <tr><th>tokenizer 一致性</th><td>${fmt(stats.tokenizer_consistency && stats.tokenizer_consistency.verdict)}${stats.tokenizer_consistency && stats.tokenizer_consistency.score != null ? " (score=" + stats.tokenizer_consistency.score + ")" : ""}</td></tr>
+    </table>`;
+
+    const tok = (rep.observations && rep.observations.tokenizer) || {};
+    const tokKeys = Object.keys(tok);
+    if (tokKeys.length) {
+      html += `<h2 style="font-size:16px">Tokenizer 计数（自报，弱信号）</h2><table>
+        <tr><th>探针</th><th>观测 prompt_tokens</th></tr>`;
+      tokKeys.forEach(k => html += `<tr><td>${k}</td><td>${fmt(tok[k])}</td></tr>`);
+      html += `</table>`;
+    }
+
+    const beh = (rep.observations && rep.observations.behavioral) || {};
+    const behKeys = Object.keys(beh);
+    if (behKeys.length) {
+      html += `<h2 style="font-size:16px">行为响应（主判据）</h2><table>
+        <tr><th>探针</th><th>观测响应（重复）</th></tr>`;
+      behKeys.forEach(k => html += `<tr><td>${k}</td><td>${(beh[k]||[]).join(" · ")}</td></tr>`);
+      html += `</table>`;
+    }
+
+    ["deterministic_replay_risk", "thin_evidence", "non_cooperation"].forEach(flag => {
+      const f = stats[flag];
+      if (f && f.flag) {
+        html += `<div class="flag"><strong>${flag}</strong>：${f.reason || ""}</div>`;
+      }
+    });
+    html += `</div>`;
+  }
+  el.innerHTML = html;
+}
+
+$("form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = $("go");
+  btn.disabled = true; btn.textContent = "核验中…";
+  $("result").innerHTML = `<div class="card muted">正在发探针电池（最多 ${$("total_timeout").value}s）…</div>`;
+  const payload = {
+    base_url: $("base_url").value.trim(),
+    claimed_model: $("claimed_model").value.trim(),
+    max_requests: parseInt($("max_requests").value, 10),
+    behavioral_samples: parseInt($("behavioral_samples").value, 10),
+    timeout: parseFloat($("timeout").value),
+    total_timeout: parseFloat($("total_timeout").value),
+  };
+  const key = $("api_key").value.trim();
+  if (key) payload.api_key = key;
+  try {
+    const r = await fetch("/api/verify", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify(payload),
+    });
+    const rep = await r.json();
+    renderReport(rep);
+  } catch (err) {
+    $("result").innerHTML = `<div class="verdict error"><div class="v-big">无法连接本地服务</div>
+      <p class="muted">${err.message}</p></div>`;
+  } finally {
+    btn.disabled = false; btn.textContent = "开始核验";
+  }
+});
+
+loadCatalog();
+</script>
+</body>
+</html>

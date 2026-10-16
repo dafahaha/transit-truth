@@ -406,6 +406,59 @@ def cmd_reference_server(args):
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
 
 
+def cmd_serve(args):
+    """Run the local single-page web UI (``transit-truth serve``).
+
+    Defaults to 127.0.0.1 only. Binding 0.0.0.0 requires the explicit
+    ``--allow-public`` gate; a public host turns this box into a probe proxy
+    and must never be run with a logged-in key.
+    """
+    import uvicorn
+
+    from .verify.serve import build_serve_app
+
+    host = args.host
+    if host == "0.0.0.0" and not args.allow_public:
+        print(
+            Colors.red(
+                "❌ Refusing to bind 0.0.0.0 without --allow-public. "
+                "Local verification binds 127.0.0.1 by default; exposing the "
+                "port on a public interface turns this machine into a probe "
+                "proxy and must be deliberate. Re-run with --allow-public after "
+                "reading docs/serve.md."
+            ),
+            file=sys.stderr,
+        )
+        sys.exit(2)
+
+    app = build_serve_app(allow_local=args.allow_local)
+
+    display_host = "127.0.0.1" if host == "0.0.0.0" else host
+    url = f"http://{display_host}:{args.port}/"
+    banner = [
+        f"TransitTruth local web UI: {url}",
+        "Key stays in browser memory for this session; it is never written to "
+        "disk, logged, or included in the shareable report.",
+    ]
+    if args.allow_public:
+        banner.append(
+            Colors.yellow(
+                "⚠ PUBLIC BIND ENABLED (--allow-public): this port is reachable on "
+                "your network. Do NOT log in with a real key on an untrusted "
+                "network; the box can be used as a probe proxy by anyone who "
+                "reaches the port."
+            )
+        )
+    print("\n".join(banner), file=sys.stderr)
+
+    if args.open:
+        import webbrowser
+
+        webbrowser.open(url)
+
+    uvicorn.run(app, host=host, port=args.port, log_level="warning")
+
+
 def main():
     # Check for quick mode: first argument starts with "sk-"
     if len(sys.argv) > 1 and sys.argv[1].startswith("sk-"):
@@ -619,6 +672,34 @@ Environment variables:
     ref_parser.add_argument("--host", default="127.0.0.1")
     ref_parser.add_argument("--port", type=int, default=8765)
     ref_parser.set_defaults(func=cmd_reference_server)
+
+    # Serve: local single-page web UI (binds 127.0.0.1 by default)
+    serve_parser = subparsers.add_parser(
+        "serve",
+        help="Run the local web UI: open http://127.0.0.1:8766 in a browser",
+    )
+    serve_parser.add_argument(
+        "--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1)"
+    )
+    serve_parser.add_argument(
+        "--port", type=int, default=8766, help="Port (default: 8766)"
+    )
+    serve_parser.add_argument(
+        "--allow-public",
+        action="store_true",
+        help="Permit binding 0.0.0.0 (public on your network); loud warning applies",
+    )
+    serve_parser.add_argument(
+        "--allow-local",
+        action="store_true",
+        help="Allow loopback/private targets for self-test against the local reference server",
+    )
+    serve_parser.add_argument(
+        "--open",
+        action="store_true",
+        help="Open the default browser automatically after the server starts",
+    )
+    serve_parser.set_defaults(func=cmd_serve)
 
     args = parser.parse_args()
     if not args.command:

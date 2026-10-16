@@ -1,0 +1,15 @@
+# Self-hosted verify web UI service. Publishes ONLY on the host loopback so the
+# port never reaches the LAN; put Caddy/Nginx + TLS in front for a public VPS.
+# Usage: docker compose -f docker-compose.serve.yml up -d --build
+services:
+  transit-truth-serve:
+    build:
+      context: .
+      dockerfile: Dockerfile.serve
+    ports:
+      # Bind host 127.0.0.1 explicitly; do NOT publish 0.0.0.0:8766.
+      - "127.0.0.1:8766:8766"
+    restart: unless-stopped
+    environment:
+      # Optional: server-side fallback key (still never logged/echoed).
+      # - TRANSIT_TRUTH_API_KEY=sk-...

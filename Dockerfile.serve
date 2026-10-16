@@ -1,0 +1,30 @@
+# Dedicated image for the local/self-hosted verify web UI (`transit-truth serve`).
+# Keeps the legacy app.main dashboard image (Dockerfile) untouched.
+#
+# The container binds 127.0.0.1 INSIDE the namespace; compose maps that to the
+# host's 127.0.0.1 so it never reaches the LAN directly. Put a TLS reverse proxy
+# (Caddy/Nginx) in front if exposing on a VPS, and read docs/serve.md first.
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY backend/requirements.txt /app/backend/requirements.txt
+RUN pip install --no-cache-dir -r /app/backend/requirements.txt
+
+# Preserve the repo layout: serve.py resolves webapp/ from repo root, and the
+# app package lives under backend/.
+COPY backend/ /app/backend/
+COPY webapp/ /app/webapp/
+
+# Unprivileged user; the verifier is stateless and writes nothing to disk.
+RUN useradd -m appuser && chown -R appuser:appuser /app
+USER appuser
+
+ENV PYTHONPATH=/app/backend
+ENV TRANSIT_TRUTH_WEBAPP_DIR=/app/webapp
+
+EXPOSE 8766
+
+# Loopback inside the container; compose publishes only host 127.0.0.1:8766.
+CMD ["python", "-m", "app.cli", "serve", "--host", "127.0.0.1", "--port", "8766"]

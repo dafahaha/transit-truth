@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-16
+
+### Added — 本地 Web 工具（`transit-truth serve`，打开网页就能测）
+- **本地单页 Web UI**：新增 `backend/app/verify/serve.py`（FastAPI `build_serve_app()`）与受 git 跟踪的自包含静态目录 `webapp/`（不用被忽略的 `web/`）。`POST /api/verify` 在服务端 `await verify_endpoint`，返回脱敏后的三态报告；`GET /api/catalog` 暴露可用参考模型；`GET /` 托管单页 UI（表单 base_url / 声称模型（目录下拉+手填）/ 可选 password Key / 折叠高级采样超时），报告页渲染大号三态横幅、统计（posterior/LR/95%CI/卡方/tokenizer 一致性）、逐探针证据与 `deterministic_replay_risk / thin_evidence / non_cooperation` 标记，并标注"报告不含 key，可安全分享"。
+- **CLI `serve` 子命令**：`transit-truth serve [--host 127.0.0.1] [--port 8766] [--allow-public] [--allow-local] [--open]`，默认绑回环，URL 提示走 stderr，`--open` 打开浏览器。
+
+### Security — key 安全红线（回归测试守住）
+- **Key 只在内存**：绝不写盘、绝不进日志（含 uvicorn access log）、绝不出现在响应/可分享报告；serve 层 `sanitize_report` 做 defense-in-depth：递归剥除 `api_key/authorization/bearer/key` 等字段并打码 `sk-...`/`Bearer ...`（含嵌在说明串里的形态），且深拷贝不污染输入。
+- **同源、无通配 CORS**：UI 与 API 同进程，不发 `Access-Control-Allow-Origin: *`；SSRF 守卫保留（默认拦截回环/内网/元数据，`allow_local` 仅供算子自测，不暴露给请求体）。
+- **公共绑定门控**：默认 127.0.0.1；绑 `0.0.0.0` 必须显式 `--allow-public` 并打印醒目风险警告（公开托管=探针代理，勿带真实 key）。
+- 测试用标记 key `sk-VERIFY-SECRET-MARKER` 断言它在响应 JSON、静态页、服务端日志均不出现。
+
+### Docs / 部署（诚实边界）
+- `docs/serve.md`：本地运行、网络模型、key 安全、为何 Pages 不能直连（CORS）、故障排查；Docker `Dockerfile.serve` + `docker-compose.serve.yml`（仅映射宿主 `127.0.0.1:8766`）、VPS + Caddy/TLS 说明；明确 **Cloudflare Workers/Pages 无法运行 Python 引擎**，静态站点只能做门面，未实现纯 JS 代理即不声称支持。一键脚本 `scripts/serve.sh` / `scripts/serve.ps1`。
+- 根 `index.html` Pages 门面升级：首屏"5 秒看懂" + `transit-truth serve` CTA + 工作原理 + 诚实 CORS 边界，保留现有离线 demo，截图/GIF 仅留明确占位。
+
+### 版本 / 测试
+- 版本四源统一 **0.5.0**（root `pyproject.toml`、`backend/pyproject.toml`、`config.APP_VERSION`、`app.__version__`），版本一致性测试断言同步。
+- 新增 serve 回归 11 个（静态页可达；诚实 pass / 错配非 pass / 无 key insufficient；标记 key 不泄漏到响应/页/日志；非 JSON/缺字段/非对象返回干净 JSON 错误；无通配 CORS；脱敏函数单测；CLI 默认回环与 `--allow-public` 门控），全套 **261 passed / 7 skipped**（只增不减）。
+
 ## [0.4.7] - 2026-10-14
 
 ### Fixed — v0.4.6 收尾（全新审批：产品片无 P0/P1/P2；技术片无 P0/P1、1 P2 + 2 P3）
@@ -209,7 +229,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker support
 - README, LICENSE, .gitignore
 
-[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.4.7...HEAD
+[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/dafahaha/transit-truth/compare/v0.4.7...v0.5.0
 [0.4.7]: https://github.com/dafahaha/transit-truth/compare/v0.4.6...v0.4.7
 [0.4.6]: https://github.com/dafahaha/transit-truth/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/dafahaha/transit-truth/compare/v0.4.4...v0.4.5

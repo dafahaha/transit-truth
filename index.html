@@ -666,11 +666,46 @@
 
 <header>
   <h1>🔍 TransitTruth</h1>
-  <p>AI API 中转站验真器 — 30秒检测你的中转站有没有偷工减料</p>
-  <span class="badge badge-green">✓ 纯前端运行 · API Key 不经过任何服务器</span>
+  <p>AI API 中转站验真器 — 检测你付费的模型是不是货真价实</p>
+  <span class="badge badge-green">✓ 下方为离线演示 / 引导 · 真实核验请在本机跑 <code>transit-truth serve</code></span>
 </header>
 
 <div class="container">
+
+  <!-- v0.5.0 本地 Web 门面：5 秒看懂 + CTA + 诚实 CORS 边界 -->
+  <div class="card" id="serve-hero" style="background:linear-gradient(180deg,#fff,#f5f5f7);">
+    <h2>🚀 本地一键开测：打开网页就能验真</h2>
+    <div style="font-size:0.95rem;color:var(--text);margin:12px 0;">
+      <strong>5 秒看懂：</strong>
+      <ol style="margin:8px 0 0 22px;line-height:1.9;">
+        <li>本机安装后运行 <code>transit-truth serve</code>，浏览器打开 <code>http://127.0.0.1:8766</code>。</li>
+        <li>填中转站 <code>base_url</code> 与声称模型（如 <code>gpt-4o-mini</code>），可选填 Key（仅本地内存，不落盘/不进日志/不进分享报告）。</li>
+        <li>本地服务端发探针电池 → tokenizer 计数（弱信号）+ 行为分布（主判据）→ 三态 fail-closed 结论。</li>
+      </ol>
+    </div>
+    <div class="btn-row" style="margin-top:16px;">
+      <button class="btn" onclick="document.getElementById('serve-cmd').scrollIntoView()">▶ 查看启动命令</button>
+    </div>
+    <div id="serve-cmd" style="background:#1d1d1f;color:#f5f5f7;border-radius:12px;padding:16px 18px;margin:14px 0;font-family:Menlo,Consolas,monospace;font-size:0.9rem;line-height:1.9;overflow-x:auto;">
+      pip install .<br>
+      transit-truth serve &nbsp;<span style="color:#86868b"># 默认 http://127.0.0.1:8766，加 --open 自动开浏览器</span>
+    </div>
+    <p style="font-size:0.875rem;color:var(--muted);">
+      工作原理：服务端向目标发有界探针，对比本地参考分布；行为分布（卡方 + KS + 贝叶斯后验 / LR / 95%CI）才是主判据，
+      tokenizer 计数只是可被公开模仿的弱信号；三态 <span style="color:var(--green)">pass（行为支持）</span> /
+      <span style="color:var(--orange)">suspicious（显著不符）</span> /
+      <span style="color:var(--muted)">insufficient_evidence（证据不足，不硬判）</span>。
+    </p>
+    <div style="border-left:3px solid var(--orange);background:rgba(255,149,0,0.08);padding:12px 14px;border-radius:8px;font-size:0.875rem;color:var(--text);margin-top:12px;">
+      <strong>为什么这个静态网页不能直接测：</strong>浏览器直连第三方中转站受 <strong>CORS</strong> 限制，且不应把 Key 交给目标域。
+      本 GitHub Pages 页面只是门面 / 引导 / 离线演示；实时后端必须跑在能执行 Python 的本机、VPS 或 Docker 容器里
+      （见 <code>docs/serve.md</code>；Cloudflare Workers/Pages 无法运行 Python 引擎）。
+    </div>
+    <!-- 截图占位：UI 截图/GIF 统一在后续补全，先留明确占位，不伪造。 -->
+    <div style="margin-top:14px;padding:28px;border:1.5px dashed var(--border);border-radius:12px;text-align:center;color:var(--muted);font-size:0.875rem;">
+      [ 截图 / GIF 占位：本地 Web 核验界面 · 待补全 ]
+    </div>
+  </div>
 
   <!-- 输入表单 -->
   <div class="card" id="input-card">
