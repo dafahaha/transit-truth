@@ -331,22 +331,43 @@ async def verify_endpoint(
     if baseline_found and not real_behavioral_evidence:
         if report["verdict"] == "pass":
             report["verdict"] = "insufficient_evidence"
+        # Label the evidence kind regardless of verdict; the reason rewrite below
+        # is gated because a suspicious mismatch must keep its own reason.
+        if behavioral_reference_probes:
+            # (b) The reference DOES carry a behavioral distribution, but this
+            # run obtained zero overlap: the endpoint may be rate-limited or
+            # starved the behavioral probes. This is NOT a tokenizer-only
+            # reference, so label/reason it differently and fail closed.
+            report["statistics"]["behavioral_evidence"] = "no_behavioral_observations"
+            reason_kind = "no_behavioral_observations"
+        else:
+            # (a) Reference itself has no behavioral distribution at all.
+            report["statistics"]["behavioral_evidence"] = "none_tokenizer_only"
+            reason_kind = "none_tokenizer_only"
         # A tokenizer-family mismatch already raised verdict to suspicious with a
         # mismatch-specific reason; do NOT overwrite it with the family-consistent
         # (match) wording, or the report reads "suspicious" while the body claims
         # family-consistent. Only the match/no-behavioral path rewrites the reason.
         if report["verdict"] != "suspicious":
-            report["evidence_reason"] = (
-                "Reference fingerprint has no behavioral distribution "
-                "(tokenizer-only catalog). Tokenizer prompt-token counts are "
-                "self-reported by the endpoint and fully public, so they alone "
-                "cannot certify model identity. Tokenizer match alone is "
-                "necessary but not sufficient: result is insufficient_evidence, "
-                "not a certification; collect a behavioral reference (e.g. Zenodo "
-                "165-model fingerprint dataset, CC-BY-4.0) or verify against a "
-                "baseline with behavioral data before trusting."
-            )
-        report["statistics"]["behavioral_evidence"] = "none_tokenizer_only"
+            if reason_kind == "no_behavioral_observations":
+                report["evidence_reason"] = (
+                    "Reference carries a behavioral distribution, but this run "
+                    "obtained no matching behavioral observation (the endpoint may "
+                    "be rate-limited or the behavioral probes were starved). Fail "
+                    "closed: insufficient_evidence; retry or check network/rate "
+                    "limits before trusting."
+                )
+            else:
+                report["evidence_reason"] = (
+                    "Reference fingerprint has no behavioral distribution "
+                    "(tokenizer-only catalog). Tokenizer prompt-token counts are "
+                    "self-reported by the endpoint and fully public, so they alone "
+                    "cannot certify model identity. Tokenizer match alone is "
+                    "necessary but not sufficient: result is insufficient_evidence, "
+                    "not a certification; collect a behavioral reference (e.g. Zenodo "
+                    "165-model fingerprint dataset, CC-BY-4.0) or verify against a "
+                    "baseline with behavioral data before trusting."
+                )
         report["statistics"]["certification"] = "not_certified_tokenizer_only"
 
     # -- Deterministic-replay honesty (v0.4.2) -----------------------------

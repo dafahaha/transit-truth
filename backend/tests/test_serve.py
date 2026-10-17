@@ -723,3 +723,63 @@ def test_malformed_host_port_rejected_fail_closed():
     assert _host_is_loopback(_R("127.0.0.1:abc")) is False
     # With no Origin the Origin check short-circuits; a malformed Host still
     # fails the loopback whitelist above (never a 500).
+
+
+# ── v0.5.6: error-code friendly coverage + IPv6 loopback host ────────────────
+
+
+def test_webapp_error_friendly_covers_all_server_codes():
+    # Every server-visible error.code must have a friendly Chinese message in the
+    # web UI; adding a code without one fails this test instead of falling back
+    # to the generic footer.
+    import re
+    from pathlib import Path
+
+    from app.verify.serve import USER_VISIBLE_ERROR_CODES
+
+    root = Path(__file__).resolve().parents[2]
+    html = (root / "webapp" / "index.html").read_text(encoding="utf-8")
+    block = html[
+        html.index("const ERR_FRIENDLY = {") : html.index(
+            "};", html.index("const ERR_FRIENDLY = {")
+        )
+    ]
+    mapped = set(re.findall(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:", block, re.MULTILINE))
+    missing = sorted(USER_VISIBLE_ERROR_CODES - mapped)
+    assert not missing, f"server error codes missing friendly mapping: {missing}"
+
+
+def test_host_loopback_accepts_ipv6_loopback():
+    from app.verify.serve import _host_is_loopback
+
+    class _H:
+        def __init__(self, host):
+            self._h = {"host": host}
+
+        def get(self, name, default=None):
+            return self._h.get(name, default)
+
+    class _R:
+        def __init__(self, host):
+            self.headers = _H(host)
+
+    for host in ("[::1]:8766", "[::1]", "::1"):
+        assert _host_is_loopback(_R(host)), host
+
+
+def test_host_loopback_rejects_non_loopback_ipv6():
+    from app.verify.serve import _host_is_loopback
+
+    class _H:
+        def __init__(self, host):
+            self._h = {"host": host}
+
+        def get(self, name, default=None):
+            return self._h.get(name, default)
+
+    class _R:
+        def __init__(self, host):
+            self.headers = _H(host)
+
+    for host in ("::", "2001:db8::1", "2001:db8::1:8766"):
+        assert not _host_is_loopback(_R(host)), host

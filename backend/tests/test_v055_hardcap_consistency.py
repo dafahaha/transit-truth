@@ -127,3 +127,62 @@ async def test_tokenizer_mismatch_suspicious_reason_not_family_consistent(monkey
     assert (
         "disagree" in low or "different model family" in low or "mismatch" in low
     ), blob
+
+
+class _TokenizerOnlyBaseline:
+    """Fake reference with tokenizer counts but NO behavioral distribution.
+
+    Carries every ``BaselineDistribution`` field so the real analyzer's
+    analyze() never AttributeErrors; behavioral_distributions is empty so the
+    hard-cap branch (a) executes.
+    """
+
+    model_family = "fake"
+    model_name = "fake-tokenizer-only"
+    tokenizer_distributions: dict = {"tok-whitespace": [43, 43, 43]}
+    behavioral_distributions: dict = {}
+    latency_distribution: list = []
+    sample_size = 0
+    collected_at = ""
+
+
+@pytest.mark.asyncio
+async def test_tokenizer_only_baseline_hardcap_executes(monkeypatch):
+    """P3-1: force the hard-cap branch with a tokenizer-only (no behavioral
+    distribution) reference. The old unconditional reason-overwrite would
+    clobber the mismatch reason; this test must FAIL if that regression returns.
+    """
+    monkeypatch.setattr("app.utils.http_client.MAX_RETRIES", 0)
+    # Keep the real analyzer (analyze() runs normally) but force baseline
+    # resolution to a tokenizer-only reference so hard-cap branch (a) executes.
+    from app.verify.reference import load_reference_analyzer
+
+    real = load_reference_analyzer()
+    monkeypatch.setattr(
+        real, "_resolve_baseline", lambda claimed_model: _TokenizerOnlyBaseline()
+    )
+    monkeypatch.setattr(
+        "app.verify.core.load_reference_analyzer", lambda reference_dirs=None: real
+    )
+    url, server = _start()
+    try:
+        report = await asyncio.wait_for(
+            verify_endpoint(
+                base_url=url,
+                claimed_model="gpt-4o-mini",
+                api_key="sk-test",
+                allow_local=True,
+            ),
+            timeout=40,
+        )
+    finally:
+        server.should_exit = True
+
+    blob = json.dumps(report, indent=2)
+    # Hard-cap branch (a) labels the tokenizer-only evidence kind explicitly.
+    assert report["statistics"]["behavioral_evidence"] == "none_tokenizer_only", blob
+    # The tokenizer-only reason must never carry family-consistent wording.
+    reason = report["evidence_reason"] or ""
+    assert "family-consistent" not in reason.lower(), blob
+    assert "family consistent" not in reason.lower(), blob
+    assert report["statistics"]["certification"] == "not_certified_tokenizer_only", blob

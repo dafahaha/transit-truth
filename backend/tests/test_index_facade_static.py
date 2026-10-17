@@ -80,30 +80,69 @@ def test_no_top_level_external_static_import(page_text: str) -> None:
 
 
 def test_no_external_script_src(page_text: str) -> None:
-    # No remote <script src="https://...">; the facade must be self-contained.
+    # No remote <script src>; the facade must be self-contained. Catch
+    # http(s), single/double quotes, and protocol-relative (//...) URLs,
+    # including unquoted src=//...
     import re
 
     remote_scripts = re.findall(
-        r'<script[^>]+src=["\']https?://[^"\']+["\']',
+        r'<script[^>]+src=["\']?https?://[^"\'>\s]+',
+        page_text,
+    )
+    protocol_relative = re.findall(
+        r'<script[^>]+src=["\']?//[^"\'>\s]+',
         page_text,
     )
     assert not remote_scripts, f"external remote script src found: {remote_scripts}"
+    assert (
+        not protocol_relative
+    ), f"protocol-relative external script src found: {protocol_relative}"
 
 
-def test_all_inline_handlers_exported_on_window(page_text: str) -> None:
-    # Every inline handler (onclick/onchange/oninput/onsubmit/...) must map to a
-    # function exported on window; extract EVERY called function (a single
-    # attribute may call several) and verify each one is exported.
+def test_all_inline_handlers_defined_and_exported(page_text: str) -> None:
+    # Every inline handler (onclick/onchange/oninput/onsubmit/...) must call a
+    # function that is BOTH defined in the script AND exported on window. A
+    # call to an undefined function, or a defined-but-unexported function, fails.
     import re
 
     handlers = re.findall(r'\son\w+="([^"]+)"', page_text)
     called = set()
     for attr in handlers:
         called.update(re.findall(r"([A-Za-z_$][\w$]*)\s*\(", attr))
-    # Only user-defined functions matter; DOM methods (getElementById,
-    # scrollIntoView, ...) and globals are not exported on window.
     defined = set(re.findall(r"function\s+([A-Za-z_$][\w$]*)\s*\(", page_text))
+    # Safe DOM methods / built-ins called inline need not be exported on window.
+    builtins = {
+        "getElementById",
+        "querySelector",
+        "querySelectorAll",
+        "scrollIntoView",
+        "addEventListener",
+        "preventDefault",
+        "focus",
+        "blur",
+        "click",
+        "open",
+        "close",
+        "alert",
+        "confirm",
+        "parseInt",
+        "parseFloat",
+        "String",
+        "Number",
+        "Array",
+        "Object",
+        "JSON",
+        "Math",
+        "console",
+        "fetch",
+        "setTimeout",
+        "setInterval",
+        "encodeURIComponent",
+        "decodeURIComponent",
+    }
+    undefined = sorted(fn for fn in called if fn not in defined and fn not in builtins)
     unexported = sorted(
         fn for fn in called if fn in defined and f"window.{fn} = {fn};" not in page_text
     )
+    assert not undefined, f"inline handlers call undefined functions: {undefined}"
     assert not unexported, f"inline handlers not exported on window: {unexported}"

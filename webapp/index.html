@@ -162,19 +162,24 @@ function fmt(v) {
 }
 
 // Human-readable Chinese guidance per server error code; the raw code stays as a
-// secondary detail. Server-supplied strings are still passed through esc().
+// secondary detail. Every code the server can return to /api/verify must have
+// an entry here; the Python-side test asserts full coverage against the
+// authoritative set so a new code without a friendly message fails CI.
 const ERR_FRIENDLY = {
-  missing_api_key: "未提供 API Key：本次访问目标端点需要 Key，请在表单填入后重试。",
-  timeout: "请求超时：目标端点在限定时间内未响应，请稍后重试或适当调大超时。",
-  connection_refused: "连接被拒绝：无法连到目标端点，请检查地址是否正确、目标是否在线。",
+  missing_api_key: "未提供 API Key：访问目标端点需要 Key，请在表单填入后重试。",
+  battery_timeout: "探针整体超时：目标端点在限定时间内未完成全部探针，请稍后重试或适当调大超时。",
+  transport_error: "网络/连接失败：无法连到目标端点，请检查地址是否正确、目标是否在线。",
+  no_observations: "未取得任何有效观测：目标未返回可用响应，可能被限速或拒绝，请稍后重试。",
   invalid_endpoint: "端点地址无效：请检查 base_url（通常以 /v1 结尾）是否可访问。",
   invalid_parameter: "请求参数无效：请检查采样数、超时等表单数值是否合法。",
-  unsupported_media_type: "请求格式不被支持（仅接受 JSON）。",
+  invalid_json: "请求体不是合法 JSON，请检查提交内容。",
+  missing_field: "缺少必填字段：请确认已填写 base_url 和声称模型。",
+  unsupported_media_type: "请求格式不被支持（仅接受 application/json）。",
   cross_origin: "跨站请求被拒绝：本服务仅允许同源访问。",
   cross_site: "跨站请求被拒绝：本服务仅允许同源访问。",
   invalid_host: "请求 Host 不在回环地址，已拒绝。",
   too_many_requests: "本地服务当前繁忙（并发已达上限），请稍后重试。",
-  upstream_error: "目标端点返回错误，本次核验未能完成。",
+  verify_failed: "核验未能完成：服务端处理时出错，请稍后重试。",
 };
 function friendlyError(code) {
   return ERR_FRIENDLY[code] || "核验未能完成，请查看下方错误码。";

@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.6] - 2026-10-17
+
+### Fixed — P2 必修（两片同指）
+- **错误码映射对齐**：webapp `ERR_FRIENDLY` 删掉死键（`timeout`/`connection_refused`/`upstream_error`），补齐服务端实际发出的全部码（`battery_timeout`、`transport_error`、`no_observations`、`invalid_json`、`missing_field`、`verify_failed` 等），每个码配中文人话，原始码作次要信息；新增权威码表常量 `USER_VISIBLE_ERROR_CODES` 与 CI 覆盖守卫，新增码不补映射即失败。
+
+### P3 — 硬化
+- hard-cap 回归测试覆盖 tokenizer-only 基线真正执行 hard-cap 分支（旧无条件覆盖逻辑变异时该测试必失败）。
+- core.py 区分两类"无行为证据"：参考本身无行为分布（`none_tokenizer_only`）vs 参考有分布但本次未取得观测（`no_observations`，可能被限速/饥饿），标签与理由失真修正，verdict 仍 fail-closed。
+- 根页守卫扩面：inline handler 调用未定义函数也失败；拦截单引号 `import 'https://'`、单引号/协议相对 `<script src>`、`src=//...`。
+- serve.py Host 守卫放行 `[::1]`/`[::1]:port`/裸 `::1`，仍拒绝 `::` 展开与非环回 IPv6（不放宽 SSRF）。
+
+### 版本
+- 版本四源统一 0.5.6，版本一致性测试同步。
+
 ## [0.5.5] - 2026-10-17
 
 ### Fixed — P2 必修（产品片）
@@ -317,7 +331,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker support
 - README, LICENSE, .gitignore
 
-[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.5...HEAD
+[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.6...HEAD
+[0.5.6]: https://github.com/dafahaha/transit-truth/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/dafahaha/transit-truth/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/dafahaha/transit-truth/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/dafahaha/transit-truth/compare/v0.5.2...v0.5.3

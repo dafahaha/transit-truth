@@ -104,6 +104,32 @@ _CLAMPS = {
 # Concurrency cap: the local UI must not be usable as an open proxy battery.
 _MAX_CONCURRENT = 4
 
+# Every error.code the server can return on /api/verify (or in a verify report).
+# The web UI's ERR_FRIENDLY map must cover all of these; a CI test asserts this
+# so a new code without a friendly Chinese message fails instead of silently
+# falling back to the generic footer. `ui_missing` is an internal 500 (never
+# rendered in the UI) and is intentionally exempt.
+USER_VISIBLE_ERROR_CODES = frozenset(
+    {
+        # verify_endpoint report errors (engine layer)
+        "invalid_endpoint",
+        "missing_api_key",
+        "battery_timeout",
+        "transport_error",
+        "no_observations",
+        # request-guard / endpoint errors (serve layer)
+        "cross_origin",
+        "cross_site",
+        "invalid_host",
+        "unsupported_media_type",
+        "invalid_json",
+        "missing_field",
+        "invalid_parameter",
+        "too_many_requests",
+        "verify_failed",
+    }
+)
+
 # Conservative CSP: same-origin only; inline script/style kept because the UI
 # is a single self-contained file; connect-src 'self' blocks direct browser
 # calls to third-party relays; frame-ancestors 'none' blocks clickjacking.
@@ -227,18 +253,21 @@ def _origin_mismatch(request: Request) -> bool:
 def _host_is_loopback(request: Request) -> bool:
     """True when the request Host hostname is a loopback name/address.
 
-    A Host with a non-numeric port (``127.0.0.1:abc``) is malformed and fails
-    closed (treated as non-loopback) rather than being accepted on hostname
-    alone.
+    Bracketed IPv6 literals (``[::1]`` / ``[::1]:8766``) are kept intact before
+    delegation; a naive ``split(':')`` would truncate ``[::1]`` to ``[`` and
+    wrongly reject the IPv6 loopback. A malformed/non-loopback Host simply fails
+    the whitelist (rejected) rather than raising.
     """
     host = request.headers.get("host", "")
-    try:
-        hostpart = host.split("/", 1)[0]
-        name, _, port = hostpart.partition(":")
+    if host.startswith("["):
+        name = host.split("]", 1)[0].lstrip("[")
+    elif ":" in host and not host.startswith("::1"):
+        # Strip :port for IPv4/hostname; reject a non-numeric port outright.
+        name, _, port = host.partition(":")
         if port and not port.isdigit():
             return False
-    except (ValueError, IndexError):
-        return False
+    else:
+        name = host
     return is_loopback_host(name.strip())
 
 
