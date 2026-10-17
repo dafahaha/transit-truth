@@ -9,6 +9,8 @@ TransitTruth is a stateless CLI that probes any OpenAI-compatible endpoint with 
 
 Built for LLM-security researchers, agent developers, and anyone who routes LLM traffic through third-party relays or gateways.
 
+> **Scope note.** The bundled, current path shipped on PyPI/`verify`/`serve` is **stateless model-identity verification** (CLI/SDK + local `serve` browser UI; the key stays in session memory only). Token billing audit (tiktoken token-billing difference detection), latency/availability/error-rate performance monitoring, OpenAI response-format protocol compliance, balance queries/low-balance alerts, continuous monitoring/alert channels, and a community leaderboard/online submissions belong to an **early, standalone legacy web platform (`app.main`, self-hosted separately)** and are **NOT** part of the current `verify`/`serve`/PyPI bundle.
+
 ---
 
 ## Quickstart
@@ -219,9 +221,9 @@ Langfuse score integrations under [`examples/`](examples/).
 
 ## Repository layout beyond the CLI
 
-This repo also ships the broader audit platform it grew out of: a FastAPI web
-UI for relay auditing, a community leaderboard, the collected baseline
-datasets, and an extended technical report.
+This repo also retains the broader audit platform it grew out of. Those
+features are **legacy, self-hosted separately**, and are NOT bundled with the
+current `verify`/`serve`/PyPI model-identity path:
 
 - **Offline browser demo (root `index.html`):**
   https://dafahaha.github.io/transit-truth/ — an offline, built-in
@@ -230,12 +232,19 @@ datasets, and an extended technical report.
   uses `transit-truth serve` / the CLI (see CORS note above).
 - **Run the local verify web UI:** `transit-truth serve` (default
   127.0.0.1:8766; see [docs/serve.md](docs/serve.md)).
-- **Run the legacy web platform:** `cd backend && pip install -r requirements.txt && uvicorn app.main:app --port 8000`
+- **Run the legacy web platform (separate, self-hosted):**
+  `cd backend && pip install -r requirements.txt && uvicorn app.main:app --port 8000`.
+  This legacy platform includes balance-query aggregation, continuous
+  monitoring/alerts, and the community leaderboard; it does NOT ship with
+  `verify`/`serve`/PyPI. **Public-binding risk:** it defaults to loopback;
+  exposing it on a public interface requires explicit `--allow-public` and you
+  are responsible for authentication, exposure, and key hygiene yourself —
+  do not publish it unauthenticated.
 - **Docker:** `docker compose -f docker-compose.serve.yml up -d --build` (host
   loopback only; see [docs/serve.md](docs/serve.md)).
 - **Baseline data:** `data/baselines/` (real n=50 collections),
   `data/fingerprints/` (open-source tokenizer catalog).
-- **Tests:** 330 passed / 7 skipped (the 7 skipped are integration
+- **Tests:** 335 passed / 7 skipped (the 7 skipped are integration
   tests that need a real API key; run them with `pytest -m integration`).
 
 ## Installing from source (before the PyPI release)
@@ -283,4 +292,3 @@ not affiliated with OpenAI, Qwen, or any model provider.
 ## License
 
 MIT — see [LICENSE](LICENSE).
-
