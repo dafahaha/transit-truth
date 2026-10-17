@@ -76,3 +76,29 @@ def test_no_inline_injection_sink_patterns():
     assert "onerror=" not in body.lower()
     assert "<script" not in body.lower()
     assert "javascript:" not in body.lower()
+
+
+def test_bundled_copy_matches_root_and_is_esc_safe():
+    """The installed fallback (app.verify/webapp/index.html) must stay byte-identical
+    to the root webapp copy and carry the same esc()/whitelist guard."""
+    import hashlib
+
+    bundled = REPO / "backend" / "app" / "verify" / "webapp" / "index.html"
+    assert bundled.is_file(), "bundled webapp/index.html missing"
+    root_bytes = PAGE.read_bytes()
+    bundled_bytes = bundled.read_bytes()
+    assert (
+        hashlib.sha256(root_bytes).hexdigest()
+        == hashlib.sha256(bundled_bytes).hexdigest()
+    ), "root and bundled webapp/index.html differ"
+    bhtml = bundled.read_text(encoding="utf-8")
+    assert "function esc(" in bhtml
+    assert "VERDICT_CLASSES" in bhtml
+    bbody = bhtml[
+        bhtml.index("function renderReport(rep) {") : bhtml.index(
+            "el.innerHTML = html;"
+        )
+    ]
+    for interp in re.findall(r"\$\{([^}]*)\}", bbody):
+        if any(ref in interp for ref in _SERVER_REFS):
+            assert "esc(" in interp, f"bundled: server field not escaped: ${{{interp}}}"

@@ -331,14 +331,21 @@ async def verify_endpoint(
     if baseline_found and not real_behavioral_evidence:
         if report["verdict"] == "pass":
             report["verdict"] = "insufficient_evidence"
-        report["evidence_reason"] = (
-            "Reference fingerprint has no behavioral distribution (tokenizer-only "
-            "catalog). Tokenizer prompt-token counts are self-reported by the endpoint "
-            "and fully public, so they alone cannot certify model identity. Result is "
-            "tokenizer-family-consistent but NOT a certification: collect a behavioral "
-            "reference (e.g. Zenodo 165-model fingerprint dataset, CC-BY-4.0) or verify "
-            "against a baseline with behavioral data before trusting."
-        )
+        # A tokenizer-family mismatch already raised verdict to suspicious with a
+        # mismatch-specific reason; do NOT overwrite it with the family-consistent
+        # (match) wording, or the report reads "suspicious" while the body claims
+        # family-consistent. Only the match/no-behavioral path rewrites the reason.
+        if report["verdict"] != "suspicious":
+            report["evidence_reason"] = (
+                "Reference fingerprint has no behavioral distribution "
+                "(tokenizer-only catalog). Tokenizer prompt-token counts are "
+                "self-reported by the endpoint and fully public, so they alone "
+                "cannot certify model identity. Tokenizer match alone is "
+                "necessary but not sufficient: result is insufficient_evidence, "
+                "not a certification; collect a behavioral reference (e.g. Zenodo "
+                "165-model fingerprint dataset, CC-BY-4.0) or verify against a "
+                "baseline with behavioral data before trusting."
+            )
         report["statistics"]["behavioral_evidence"] = "none_tokenizer_only"
         report["statistics"]["certification"] = "not_certified_tokenizer_only"
 

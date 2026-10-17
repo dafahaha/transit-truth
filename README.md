@@ -151,7 +151,7 @@ TransitTruth 是一个开源的 **AI API 安全审计平台**，基于学术前�
 
 打开根目录 [index.html](index.html)（GitHub Pages: https://dafahaha.github.io/transit-truth/）可以**先看演示**：一键体验完整审计流程，看到"声称 gpt-4o 实际降级"的典型场景。这是**离线/内置演示数据**，不连接任何真实中转站。
 
-> 注：根 `index.html` 在浏览器端用 `js-tiktoken` 做 token 计数，该运行时经 **esm.sh CDN**（`https://esm.sh/js-tiktoken`）加载。因此纯前端演示在**离线 / 无公网**环境下受限——离线时只能看内置演示数据。演示（无需 Key）部分不依赖该 CDN。
+> 注：根 `index.html` 是**完全自包含的单页**，不依赖任何 CDN、不加载外部脚本、不发起任何外网请求；离线/无公网环境下也能完整打开。页面只做内置种子的离线演示，不发送 Key、不连接真实中转站。真实 tokenizer 与行为核验由本地 `transit-truth serve`（或 reference-server）在服务端完成。
 
 ### 🖥️ 真实模型身份核验（必须本地/自托管 `transit-truth serve`）
 

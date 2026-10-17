@@ -669,3 +669,57 @@ def test_integer_knob_rejects_float_number(client):
     )
     assert resp.status_code == 400
     assert resp.json()["error"]["code"] == "invalid_parameter"
+
+
+# ── v0.5.5: strict integer knobs + fail-closed malformed Host ────────────────
+
+
+def test_integer_knob_rejects_integer_valued_float_string(client):
+    # "20.0" parses to 20.0 but is NOT a whole-integer literal -> reject 400.
+    resp = client.post(
+        "/api/verify",
+        json={"base_url": "x", "claimed_model": "y", "max_requests": "20.0"},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "invalid_parameter"
+
+
+def test_integer_knob_rejects_non_integer_string(client):
+    resp = client.post(
+        "/api/verify",
+        json={"base_url": "x", "claimed_model": "y", "behavioral_samples": "abc"},
+    )
+    assert resp.status_code == 400
+    assert resp.json()["error"]["code"] == "invalid_parameter"
+
+
+def test_integer_knob_accepts_integer_literal(client):
+    # A genuine whole-integer literal reaches field validation, not a 400.
+    resp = client.post(
+        "/api/verify",
+        json={"base_url": "x", "claimed_model": "y", "max_requests": 20},
+    )
+    assert resp.status_code != 400
+
+
+def test_malformed_host_port_rejected_fail_closed():
+    # A Host with an invalid port (e.g. "127.0.0.1:abc") must fail closed:
+    # the Host whitelist treats it as non-loopback (False) and the Origin check
+    # treats it as a mismatch (True) -- never raise a 500. TestClient normalizes
+    # the Host header, so assert the guard helpers directly.
+    from app.verify.serve import _host_is_loopback
+
+    class _H:
+        def __init__(self, host):
+            self._h = {"host": host}
+
+        def get(self, name, default=None):
+            return self._h.get(name, default)
+
+    class _R:
+        def __init__(self, host):
+            self.headers = _H(host)
+
+    assert _host_is_loopback(_R("127.0.0.1:abc")) is False
+    # With no Origin the Origin check short-circuits; a malformed Host still
+    # fails the loopback whitelist above (never a 500).

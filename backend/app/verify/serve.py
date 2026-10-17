@@ -210,8 +210,12 @@ def _origin_mismatch(request: Request) -> bool:
     except ValueError:
         return True
     host = request.headers.get("host", "")
-    h = urlsplit(f"//{host}")
-    h_host, h_port = (h.hostname or host.split(":", 1)[0]).lower(), h.port
+    try:
+        h = urlsplit(f"//{host}")
+        h_host, h_port = (h.hostname or host.split(":", 1)[0]).lower(), h.port
+    except ValueError:
+        # Malformed Host (e.g. "127.0.0.1:abc") -> fail closed as cross-origin.
+        return True
     if o_host != h_host:
         return True
     # Port differs (explicit vs absent, or two different ports) = cross-origin.
@@ -221,10 +225,21 @@ def _origin_mismatch(request: Request) -> bool:
 
 
 def _host_is_loopback(request: Request) -> bool:
-    """True when the request Host hostname is a loopback name/address."""
+    """True when the request Host hostname is a loopback name/address.
+
+    A Host with a non-numeric port (``127.0.0.1:abc``) is malformed and fails
+    closed (treated as non-loopback) rather than being accepted on hostname
+    alone.
+    """
     host = request.headers.get("host", "")
-    hostname = urlsplit(f"//{host}").hostname or host.split(":", 1)[0]
-    return is_loopback_host(hostname)
+    try:
+        hostpart = host.split("/", 1)[0]
+        name, _, port = hostpart.partition(":")
+        if port and not port.isdigit():
+            return False
+    except (ValueError, IndexError):
+        return False
+    return is_loopback_host(name.strip())
 
 
 def _catalog() -> list[str]:
@@ -384,13 +399,21 @@ def build_serve_app(
                     f"{name} must be a finite number (NaN/Infinity rejected).",
                     status=400,
                 )
-            # Integer knobs must be whole numbers: reject "12.5"/12.5/non-integer.
-            if name in ("max_requests", "behavioral_samples") and raw != int(raw):
-                return _error(
-                    "invalid_parameter",
-                    f"{name} must be a whole integer.",
-                    status=400,
+            # Integer knobs accept ONLY a whole integer (int type or an integer
+            # string "^-?\\d+$"); "20.0"/"12.5"/"2.5"/"abc" are all rejected.
+            if name in ("max_requests", "behavioral_samples"):
+                rawv = body[name]
+                valid_int = (
+                    isinstance(rawv, int)
+                    and not isinstance(rawv, bool)
+                    or (isinstance(rawv, str) and re.fullmatch(r"-?\d+", rawv.strip()))
                 )
+                if not valid_int:
+                    return _error(
+                        "invalid_parameter",
+                        f"{name} must be a whole integer.",
+                        status=400,
+                    )
 
         # --- Clamp bounded knobs; out-of-range -> clean 400 -------------------
         params: dict[str, float] = {

@@ -57,7 +57,8 @@ def test_demo_buttons_present(page_text: str) -> None:
 def test_no_top_level_external_static_import(page_text: str) -> None:
     # A top-level static `import ... from 'https://...'` rejects the whole module
     # graph when the CDN is unreachable; external deps must use dynamic import()
-    # wrapped in try/catch (or be removed).
+    # wrapped in try/catch (or be removed). A bare side-effect
+    # `import 'https://...'` is rejected the same way.
     import re
 
     external_static = re.findall(
@@ -65,20 +66,44 @@ def test_no_top_level_external_static_import(page_text: str) -> None:
         page_text,
         re.MULTILINE,
     )
+    external_side_effect = re.findall(
+        r"^\s*import\s+['\"]https?://",
+        page_text,
+        re.MULTILINE,
+    )
     assert (
         not external_static
     ), f"top-level external static import found: {external_static}"
+    assert (
+        not external_side_effect
+    ), f"bare side-effect external import found: {external_side_effect}"
 
 
-def test_inline_onclick_handlers_exported_on_window(page_text: str) -> None:
-    # Every inline onclick="fn(...)" must map to a function exported on window;
-    # otherwise the button silently does nothing after a future edit.
+def test_no_external_script_src(page_text: str) -> None:
+    # No remote <script src="https://...">; the facade must be self-contained.
     import re
 
-    handlers = set(re.findall(r'onclick="([A-Za-z_$][\w$]*)\s*\(', page_text))
-    unexported = sorted(
-        fn for fn in handlers if f"window.{fn} = {fn};" not in page_text
+    remote_scripts = re.findall(
+        r'<script[^>]+src=["\']https?://[^"\']+["\']',
+        page_text,
     )
-    assert (
-        not unexported
-    ), f"inline onclick handlers not exported on window: {unexported}"
+    assert not remote_scripts, f"external remote script src found: {remote_scripts}"
+
+
+def test_all_inline_handlers_exported_on_window(page_text: str) -> None:
+    # Every inline handler (onclick/onchange/oninput/onsubmit/...) must map to a
+    # function exported on window; extract EVERY called function (a single
+    # attribute may call several) and verify each one is exported.
+    import re
+
+    handlers = re.findall(r'\son\w+="([^"]+)"', page_text)
+    called = set()
+    for attr in handlers:
+        called.update(re.findall(r"([A-Za-z_$][\w$]*)\s*\(", attr))
+    # Only user-defined functions matter; DOM methods (getElementById,
+    # scrollIntoView, ...) and globals are not exported on window.
+    defined = set(re.findall(r"function\s+([A-Za-z_$][\w$]*)\s*\(", page_text))
+    unexported = sorted(
+        fn for fn in called if fn in defined and f"window.{fn} = {fn};" not in page_text
+    )
+    assert not unexported, f"inline handlers not exported on window: {unexported}"

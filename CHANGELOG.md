@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.5] - 2026-10-17
+
+### Fixed — P2 必修（产品片）
+- **P2-4 hard-cap 报告自相矛盾**：tokenizer 错族已把 verdict 升级为 `suspicious` 时，hard-cap 不再用"family-consistent / 匹配但不可认证"文案覆盖 `evidence_reason`；suspicious 保留错族理由，tokenizer 匹配但无行为参考才写 insufficient_evidence 理由，三态文案与 verdict 严格一致。
+- **P2-3 错误页人话**：报告页按服务端错误码渲染中文可读提示（缺 Key / 超时 / 连接被拒 / 无效端点 / 参数非法 / 并发繁忙等），原始错误码作为次要信息；服务端串仍走 `esc()`。
+- **P2-1 README 过时文案订正**：根门面为完全自包含单页，不依赖 CDN、不发外网请求；真实 tokenizer/行为核验由本地 serve 服务端完成。
+- **P2-2 CONTRIBUTING 计数随本轮权威值更新**（临时稿由外科式提交）。
+
+### P3 — 硬化
+- Host 守卫对畸形端口（`127.0.0.1:abc`）fail-closed 返回 403，不再 500。
+- 整数旋钮严格整数串校验：仅 `^-?\d+$`/整数类型接受，`"20.0"`/`"12.5"`/`2.5`/`"abc"` 一律 400；缺失才回落默认。
+- 根页守卫扩面：拦截裸 `import 'https://'`、外链 `<script src>`，并覆盖 onchange/oninput/onsubmit 等全部 inline handler（含单属性多函数）。
+- webapp esc 守卫同时覆盖包内兜底副本，并断言两副本 SHA256 一致。
+- `audit-validation.yml` checkout@v4→v5（与 ci.yml 一致，消除 Node20 警告）。
+
+### 版本
+- 版本四源统一 0.5.5，版本一致性测试同步。
+
 ## [0.5.4] - 2026-10-17
 
 ### Fixed — 小修硬化（技术片 APPROVE 无 P0/P1/P2；产品片 2 P2）
@@ -299,7 +317,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker support
 - README, LICENSE, .gitignore
 
-[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.4...HEAD
+[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.5...HEAD
+[0.5.5]: https://github.com/dafahaha/transit-truth/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/dafahaha/transit-truth/compare/v0.5.3...v0.5.4
 [0.5.3]: https://github.com/dafahaha/transit-truth/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/dafahaha/transit-truth/compare/v0.5.1...v0.5.2
