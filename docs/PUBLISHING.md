@@ -32,7 +32,7 @@ Checking dist\transit_truth-0.4.7.tar.gz: PASSED
 
 Cut a release only after moving the CHANGELOG `[Unreleased]` entry to a dated
 version header, bumping all four sources, and running the test suite
-(`323 passed / 7 skipped` and counting).
+(`330 passed / 7 skipped` and counting).
 
 Package name: `transit-truth` was checked available on PyPI
 (`https://pypi.org/pypi/transit-truth/json` returned 404 at readiness time).
