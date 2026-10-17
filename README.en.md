@@ -235,7 +235,7 @@ datasets, and an extended technical report.
   loopback only; see [docs/serve.md](docs/serve.md)).
 - **Baseline data:** `data/baselines/` (real n=50 collections),
   `data/fingerprints/` (open-source tokenizer catalog).
-- **Tests:** 312 passed / 7 skipped (the 7 skipped are integration
+- **Tests:** 319 passed / 7 skipped (the 7 skipped are integration
   tests that need a real API key; run them with `pytest -m integration`).
 
 ## Installing from source (before the PyPI release)
@@ -283,3 +283,4 @@ not affiliated with OpenAI, Qwen, or any model provider.
 ## License
 
 MIT — see [LICENSE](LICENSE).
+
