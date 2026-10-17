@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "transit-truth"
-version = "0.5.7"
+version = "0.5.8"
 description = "Statelessly verify that the model an OpenAI-compatible endpoint claims to serve is the model it actually serves."
 readme = "README.en.md"
 license = {text = "MIT"}

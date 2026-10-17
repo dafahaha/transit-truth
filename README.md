@@ -96,13 +96,13 @@ Python SDK：`from app.verify import verify_endpoint`（可选 OpenTelemetry/Ope
 
 ## 这是什么？
 
-TransitTruth 是一个开源的 **AI API 安全审计平台**，基于学术前沿的行为指纹技术（参考 [One Token Is Enough, arXiv:2607.10252](https://arxiv.org/abs/2607.10252)），帮助用户验证：
+TransitTruth 是一个开源、无状态、本地可跑的 **中转站模型身份核验**工具：通过 CLI/SDK 与 `transit-truth serve` 本地浏览器界面，用行为指纹 + tokenizer 指纹 + 贝叶斯后验判断"你付费的端点实际返回的是不是所声称的模型"，API Key 只在会话内存、不落盘。
 
-- **🔍 模型身份验证**：你付了GPT-4o的钱，实际用的是GPT-4o还是GPT-4o-mini？还是GPT-3.5？
-- **💰 Token计费审计**：实际用1000 token，中转站收你1500 token的钱？
-- **⚡ 性能监控**：延迟、可用性、错误率是否符合承诺？
-- **📋 协议合规**：响应格式是否符合OpenAI API规范？
-- **🏆 社区排行榜**：全民共建的中转站信誉排行榜
+当前随包（`verify` 无状态核验 / `transit-truth serve` 本地 Web / CLI）主打能力：
+
+- **🔍 模型身份核验**：你付了 GPT-4o 的钱，实际应答的是 GPT-4o、GPT-4o-mini 还是更小的模型？（tokenizer 指纹 + 行为探针 + 卡方/KS 检验 + 贝叶斯后验，三态 fail-closed）
+
+> 说明：💰 Token 计费审计、⚡ 延迟/可用性/错误率性能监控、📋 OpenAI 响应格式协议合规、余额查询/低余额告警、持续监控与告警通道、🏆 社区排行榜/在线投稿，均属于**早期独立 web 平台（legacy `app.main`，需自行部署）**，**不包含**在当前 `verify`/`serve`/PyPI 随包路径中。
 
 ## 为什么需要这个？
 
@@ -239,19 +239,15 @@ transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
 ### ✅ 已实现
 
 #### 当前随包能力（`verify` 无状态核验 / `transit-truth serve` 本地 Web / CLI）
-- [x] **行为指纹验证**（14个行为探针：8英文+6中文，卡方检验+KS检验+贝叶斯更新）
-- [x] **Tokenizer指纹**（8个tokenizer探针）
-- [x] **能力测试**（10个能力探针，模型等级估算）
-- [x] **Token计费审计**（tiktoken精确计算，差异率检测）
-- [x] **延迟与协议检查**（P50/P95/P99，7项协议合规）
-- [x] **统计不确定性量化**（Wilson置信区间+样本量评估+95%可信区间）
-- [x] **生产级弹性机制**（指数退避重试+限流检测+断路器模式+详细日志）
+- [x] **行为指纹验证**（内置行为探针库：卡方检验 + KS 检验 + 贝叶斯更新）
+- [x] **Tokenizer 指纹**（内置 tokenizer 探针库；离线用 o200k 重算基线 token 计数）
+- [x] **统计不确定性量化**（贝叶斯后验 + 95% 可信区间 + 样本充分性评估）
+- [x] **客户端弹性**（指数退避重试 + 请求超时 + 429 限流退避；**无**断路器）
 - [x] **浏览器离线演示**（零安装，内置种子演示数据，非真实端点实测，不发送 Key）
-- [x] **CLI工具**（一行命令审计/核验，无状态输出单一 JSON）
-- [x] **HTML报告生成**（可分享的审计报告）
-- [x] **审计结果分享卡片**（1200x630 PNG，一键下载分享社交媒体）
-- [x] **真实基准数据库**（gpt-4o-mini、gpt-4o，各50样本）
+- [x] **CLI 工具**（`verify` / `reference-server` / `serve`；无状态、单一 JSON 输出）
+- [x] **真实基准数据库**（gpt-4o-mini、gpt-4o，各 50 样本）
 - [x] **本地 `transit-truth serve`**（仅绑 127.0.0.1，Key 仅在会话内存、不落盘/不进日志/不进报告）
+- [x] **`reference-server`**（自托管 OpenAI 兼容参考后端，离线生成/比对参考指纹，不向云付费）
 
 #### 历史 web 平台遗留（legacy `app.main`，需自部署；**不在** `verify`/`serve`/PyPI 随包路径）
 > 以下特性来自早期独立 web 平台子模块，当前 `verify`/`serve` 随包**不包含**余额告警、持续监控、在线排行榜/投稿端点；仅在你自部署 legacy `app.main` 时才存在。
@@ -260,6 +256,11 @@ transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
 - [ ] **Web UI**（4个Tab，步骤式表单，进度条，苹果风格设计）— legacy
 - [ ] **社区排行榜**（全民共建，贡献者信誉系统）— legacy；**当前 serve 无在线排行/投稿端点**
 - [ ] **持续监控+告警**（4种告警检测，4种告警通道）— legacy
+- [ ] **能力测试**（10 个能力探针，模型等级估算）— legacy；verify 有界电池不跑能力探针
+- [ ] **Token 计费审计**（tiktoken 精确计算，差异率检测）— legacy；verify 内 tiktoken 仅用于离线基线 token 计数重算，不对活端点做计费差异检测
+- [ ] **延迟与协议检查**（P50/P95/P99，7 项 OpenAI 响应格式协议合规）— legacy
+- [ ] **HTML 报告生成**（可分享的审计报告）— legacy
+- [ ] **审计结果分享卡片**（1200x630 PNG，一键下载分享社交媒体）— legacy
 - [ ] **灵活配置管理**（legacy web 的 14 个环境变量）— legacy；`serve` 使用自己的少量旋钮（max_requests/behavioral_samples/timeout/total_timeout）
 - [x] **测试**：实测 **330 passed / 7 skipped**（v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.2 诚实性/抗回放、v0.4.3 饥饿式样本绕过回归、v0.4.4 覆盖率门+tokenizer 口径、v0.4.5 版本一致性+tokenizer 严格匹配回归、v0.4.6 单字段容错+stdout 单一 JSON 契约+负 verdict 自洽回归、v0.4.7 非 JSON 200 响应体容错+tokenizer 不确定带不升级 pass 回归、v0.5.0 本地 Web serve 端点+key 不落盘/不进日志/脱敏+公共绑定门控回归、v0.5.1 serve XSS 转义+Origin/Host/Content-Type 守卫+绑定门控+Docker 修正回归、v0.5.2 wheel 打包 webapp+全局 Host/Origin 守卫+NaN/Infinity 拒绝+上游错误体不泄漏 key 回归、v0.5.3 门面模块崩溃修复+非法参数 400+非阻塞 429、v0.5.4 消除外链静态 import+整数旋钮非整 400+CI 守卫/checkout 升级、v0.5.5 hard-cap 理由自洽+错误页人话+守卫扩面+严格整数串+Host fail-closed、v0.5.6 错误码映射对齐+hard-cap 证据标签拆分+IPv6 环回放行+守卫扩面、v0.5.7 hard-cap 两分支变异可失败+双向错误码守卫+静态守卫补盲+弱 pass 强制 low）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
 - [x] **CI/CD**（GitHub Actions，Python 3.10/3.11/3.12矩阵）

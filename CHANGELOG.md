@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.8] - 2026-10-17
+
+### Honesty — 开篇/能力清单诚实分区（产品片 P2）
+- 开篇「这是什么？」改为主打当前唯一随包能力：开源、无状态、本地可跑的中转站模型身份核验（CLI/SDK + `transit-truth serve` 本地浏览器，Key 仅会话内存）；明确计费审计/延迟协议/性能监控/余额告警/社区排行榜属早期独立 web 平台（legacy `app.main`，需自部署），不在 `verify`/`serve`/PyPI 随包路径。
+- 功能清单按代码可达性核查重排：当前随包只保留行为指纹、tokenizer 指纹、统计不确定性（后验+95%CI+样本充分性）、客户端重试/超时/429 退避、离线演示、CLI、基准库、`serve`、`reference-server`；能力测试、Token 计费审计、延迟 P50/P95/P99 与协议合规、HTML 报告、1200x630 分享卡片移入 legacy 分区（verify 路径不实跑）。
+
+### Tests
+- `test_v057_weak_pass.py` 补弱 pass band 边界钉：posterior=0.5（含下界）与 0.69 → low；0.7（排他）、0.89、0.9 保持不动，钉住 `[0.5,0.7)` 边界漂移。
+
+### 版本
+- 版本四源统一 0.5.8，版本一致性测试同步。
+
 ## [0.5.7] - 2026-10-17
 
 ### Fixed — 测试真实守住（技术片 P3-2/P3-3）
@@ -352,7 +364,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker support
 - README, LICENSE, .gitignore
 
-[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.7...HEAD
+[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.8...HEAD
+[0.5.8]: https://github.com/dafahaha/transit-truth/compare/v0.5.7...v0.5.8
 [0.5.7]: https://github.com/dafahaha/transit-truth/compare/v0.5.6...v0.5.7
 [0.5.6]: https://github.com/dafahaha/transit-truth/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/dafahaha/transit-truth/compare/v0.5.4...v0.5.5
