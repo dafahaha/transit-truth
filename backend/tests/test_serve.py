@@ -728,10 +728,13 @@ def test_malformed_host_port_rejected_fail_closed():
 # ── v0.5.6: error-code friendly coverage + IPv6 loopback host ────────────────
 
 
-def test_webapp_error_friendly_covers_all_server_codes():
-    # Every server-visible error.code must have a friendly Chinese message in the
-    # web UI; adding a code without one fails this test instead of falling back
-    # to the generic footer.
+def test_webapp_error_friendly_bidirectional_coverage():
+    # Bidirectional guard:
+    #  (1) every server-visible error.code must have a friendly Chinese message
+    #      in the web UI (adding a code without one fails instead of falling back
+    #      to the generic footer);
+    #  (2) ERR_FRIENDLY must not carry dead keys the server never emits (keeps the
+    #      map honest; stale mappings drift into the UI silently otherwise).
     import re
     from pathlib import Path
 
@@ -745,8 +748,12 @@ def test_webapp_error_friendly_covers_all_server_codes():
         )
     ]
     mapped = set(re.findall(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:", block, re.MULTILINE))
+    # (1) no missing server code
     missing = sorted(USER_VISIBLE_ERROR_CODES - mapped)
     assert not missing, f"server error codes missing friendly mapping: {missing}"
+    # (2) no dead key the server never sends
+    dead = sorted(mapped - USER_VISIBLE_ERROR_CODES)
+    assert not dead, f"ERR_FRIENDLY has dead keys the server never emits: {dead}"
 
 
 def test_host_loopback_accepts_ipv6_loopback():

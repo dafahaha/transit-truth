@@ -191,6 +191,8 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 然后访问 http://localhost:8000
 
+> ⚠️ **公开绑定风险（legacy `app.main`）**：上面的 `--host 0.0.0.0` 会把服务发布到**所有网卡**，任何能访问该端口的人都可触达——默认应只绑 `127.0.0.1`。确需公开暴露时，你必须自行承担鉴权、暴露与被当作探测代理的风险，并显式开启对应公开门控（不要裸 `0.0.0.0` 直接对外）。注意：这是早期 legacy web 平台的启动方式，与当前无状态 `verify` / 本地 `transit-truth serve`（默认仅 `127.0.0.1`、`--allow-public` 才放开）是两条独立路径。
+
 ### 📦 从源码安装（CLI）
 
 <!-- PYPI-FLIP：发布到 PyPI 后，把下面整段替换为 `pip install transit-truth`
@@ -235,24 +237,30 @@ transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
 ## 功能特性
 
 ### ✅ 已实现
+
+#### 当前随包能力（`verify` 无状态核验 / `transit-truth serve` 本地 Web / CLI）
 - [x] **行为指纹验证**（14个行为探针：8英文+6中文，卡方检验+KS检验+贝叶斯更新）
 - [x] **Tokenizer指纹**（8个tokenizer探针）
 - [x] **能力测试**（10个能力探针，模型等级估算）
 - [x] **Token计费审计**（tiktoken精确计算，差异率检测）
 - [x] **延迟与协议检查**（P50/P95/P99，7项协议合规）
-- [x] **余额查询**（多中转站账户余额聚合，低余额自动告警）
 - [x] **统计不确定性量化**（Wilson置信区间+样本量评估+95%可信区间）
 - [x] **生产级弹性机制**（指数退避重试+限流检测+断路器模式+详细日志）
-- [x] **模型参考数据**（14个模型的公开数据：价格/ELO/智能指数/延迟）
-- [x] **Web UI**（4个Tab，步骤式表单，进度条，苹果风格设计）
-- [x] **浏览器离线演示**（零安装，内置演示数据，非真实端点实测）
-- [x] **CLI工具**（一行命令审计+余额查询）
+- [x] **浏览器离线演示**（零安装，内置种子演示数据，非真实端点实测，不发送 Key）
+- [x] **CLI工具**（一行命令审计/核验，无状态输出单一 JSON）
 - [x] **HTML报告生成**（可分享的审计报告）
 - [x] **审计结果分享卡片**（1200x630 PNG，一键下载分享社交媒体）
-- [x] **社区排行榜**（全民共建，贡献者信誉系统）
-- [x] **持续监控+告警**（4种告警检测，4种告警通道）
 - [x] **真实基准数据库**（gpt-4o-mini、gpt-4o，各50样本）
-- [x] **灵活配置管理**（14个环境变量，支持自定义探针数量/超时/重试等）
+- [x] **本地 `transit-truth serve`**（仅绑 127.0.0.1，Key 仅在会话内存、不落盘/不进日志/不进报告）
+
+#### 历史 web 平台遗留（legacy `app.main`，需自部署；**不在** `verify`/`serve`/PyPI 随包路径）
+> 以下特性来自早期独立 web 平台子模块，当前 `verify`/`serve` 随包**不包含**余额告警、持续监控、在线排行榜/投稿端点；仅在你自部署 legacy `app.main` 时才存在。
+- [ ] **余额查询**（多中转站账户余额聚合，低余额自动告警）— legacy
+- [ ] **模型参考数据**（14个模型的公开数据：价格/ELO/智能指数/延迟）— legacy
+- [ ] **Web UI**（4个Tab，步骤式表单，进度条，苹果风格设计）— legacy
+- [ ] **社区排行榜**（全民共建，贡献者信誉系统）— legacy；**当前 serve 无在线排行/投稿端点**
+- [ ] **持续监控+告警**（4种告警检测，4种告警通道）— legacy
+- [ ] **灵活配置管理**（legacy web 的 14 个环境变量）— legacy；`serve` 使用自己的少量旋钮（max_requests/behavioral_samples/timeout/total_timeout）
 - [x] **测试**：实测 **323 passed / 7 skipped**（v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.2 诚实性/抗回放、v0.4.3 饥饿式样本绕过回归、v0.4.4 覆盖率门+tokenizer 口径、v0.4.5 版本一致性+tokenizer 严格匹配回归、v0.4.6 单字段容错+stdout 单一 JSON 契约+负 verdict 自洽回归、v0.4.7 非 JSON 200 响应体容错+tokenizer 不确定带不升级 pass 回归、v0.5.0 本地 Web serve 端点+key 不落盘/不进日志/脱敏+公共绑定门控回归、v0.5.1 serve XSS 转义+Origin/Host/Content-Type 守卫+绑定门控+Docker 修正回归、v0.5.2 wheel 打包 webapp+全局 Host/Origin 守卫+NaN/Infinity 拒绝+上游错误体不泄漏 key 回归、v0.5.3 门面模块崩溃修复+非法参数 400+非阻塞 429、v0.5.4 消除外链静态 import+整数旋钮非整 400+CI 守卫/checkout 升级、v0.5.5 hard-cap 理由自洽+错误页人话+守卫扩面+严格整数串+Host fail-closed、v0.5.6 错误码映射对齐+hard-cap 证据标签拆分+IPv6 环回放行+守卫扩面）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
 - [x] **CI/CD**（GitHub Actions，Python 3.10/3.11/3.12矩阵）
 

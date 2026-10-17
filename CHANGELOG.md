@@ -7,6 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.7] - 2026-10-17
+
+### Fixed — 测试真实守住（技术片 P3-2/P3-3）
+- hard-cap 决策抽取为纯 `_apply_hard_cap` 辅助函数，两证据分支可单测；新增分支 A（tokenizer-only 参考 + 错族 mismatch → 保留错族 reason，不被 family-consistent 覆盖）与分支 B（参考有行为分布但本次零观测 → `no_behavioral_observations`，不得盖 tokenizer-only 认证标签）用例；旧"无条件覆盖 reason / branch-b 误标 tokenizer-only"逻辑在变异下新测试逐条 FAIL。
+- **B（技术片 P3-4）**：branch-b（有分布但零观测）不再误标 `not_certified_tokenizer_only`，改用 `not_certified_no_observations`；内部 JSON 标签准确，UI 不渲染该字段。
+
+### Harden — 守卫
+- 错误码覆盖守卫改为**双向**：既不缺服务端会发的码，也不允许服务端从不发的死键（变异双向均失败）。
+- 根页静态守卫补盲：大小写不敏感（`HTTPS://`、`Src=`）、`=` 周围空格（`src = //x`）、单引号 inline handler（`onclick='fn()'`）；变异验证均被拦截。
+
+### Honesty — 文档边界
+- README「已实现」清单分区：当前随包 `verify`/`serve`/CLI 能力 vs 历史 legacy web 平台（`app.main`，需自部署，不含告警/监控/在线排行后端）。
+- 根页排行榜/贡献标注为内置演示种子，明确 `transit-truth serve` 无在线排行/投稿端点，不上传服务器。
+- README legacy `--host 0.0.0.0` 片段补公开绑定风险提示（默认 127.0.0.1，公开需 `--allow-public` 并自担鉴权/暴露风险）。
+
+### Weak-pass
+- tokenizer match + 行为 inconclusive、后验落在 [0.5, 0.7) 的弱 pass 强制 confidence=low，不得标高；新增对应断言。
+
+### 版本
+- 版本四源统一 0.5.7，版本一致性测试同步。
+
 ## [0.5.6] - 2026-10-17
 
 ### Fixed — P2 必修（两片同指）
@@ -331,7 +352,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker support
 - README, LICENSE, .gitignore
 
-[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.6...HEAD
+[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.7...HEAD
+[0.5.7]: https://github.com/dafahaha/transit-truth/compare/v0.5.6...v0.5.7
 [0.5.6]: https://github.com/dafahaha/transit-truth/compare/v0.5.5...v0.5.6
 [0.5.5]: https://github.com/dafahaha/transit-truth/compare/v0.5.4...v0.5.5
 [0.5.4]: https://github.com/dafahaha/transit-truth/compare/v0.5.3...v0.5.4

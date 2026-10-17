@@ -780,7 +780,7 @@
   <div class="card" id="ranking-card">
     <h2>🏆 中转站排行榜</h2>
     <p style="color:var(--muted);font-size:0.875rem;margin-bottom:16px;">
-      社区共建的 AI API 中转站信誉排行榜。离线演示：审计流程为真实实现，榜单与种子数据为基于公开信息估算的演示数据（各行持续标注"初步数据 / 真实审计"），可复现验证。
+      内置演示种子数据（非在线排行）。离线演示：审计流程为真实实现，下表与种子数据均为基于公开信息估算的演示样本（各行持续标注"初步数据 / 真实审计"），仅用于展示格式；本地 `transit-truth serve` **没有在线排行榜或投稿端点**，本页不向任何服务器上传、也不接收他人投稿。
     </p>
 
     <div class="ranking-summary" id="ranking-summary"></div>
@@ -821,8 +821,7 @@
     </div>
 
     <div class="ranking-note">
-      💡 <strong>如何贡献：</strong>完成审计后点击"🏆 贡献到排行榜"按钮，或在 GitHub 提交 Issue 分享你的审计结果。
-      所有数据均为社区贡献，仅供参考，不构成投资或购买建议。
+      💡 <strong>说明：</strong>本表为页面内置演示种子，本地 `transit-truth serve` 不提供在线排行/投稿端点；下方"贡献"按钮仅演示复制/分享流程，不会把数据提交到任何服务器。演示样本仅供格式展示，不构成投资或购买建议。
     </div>
   </div>
 

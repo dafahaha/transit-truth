@@ -64,12 +64,12 @@ def test_no_top_level_external_static_import(page_text: str) -> None:
     external_static = re.findall(
         r"^\s*import\s+[^\n]*from\s+['\"]https?://",
         page_text,
-        re.MULTILINE,
+        re.MULTILINE | re.IGNORECASE,
     )
     external_side_effect = re.findall(
         r"^\s*import\s+['\"]https?://",
         page_text,
-        re.MULTILINE,
+        re.MULTILINE | re.IGNORECASE,
     )
     assert (
         not external_static
@@ -80,18 +80,22 @@ def test_no_top_level_external_static_import(page_text: str) -> None:
 
 
 def test_no_external_script_src(page_text: str) -> None:
-    # No remote <script src>; the facade must be self-contained. Catch
-    # http(s), single/double quotes, and protocol-relative (//...) URLs,
-    # including unquoted src=//...
+    # No remote <script src>; the facade must be self-contained. Catch:
+    #  * http(s) any scheme casing (HTTPS://, https://)
+    #  * single/double quotes, unquoted
+    #  * optional whitespace around `=` (`src = //x`)
+    #  * protocol-relative (//...) URLs
     import re
 
     remote_scripts = re.findall(
-        r'<script[^>]+src=["\']?https?://[^"\'>\s]+',
+        r'<script[^>]+src\s*=\s*["\']?https?://[^"\'>\s]+',
         page_text,
+        re.IGNORECASE,
     )
     protocol_relative = re.findall(
-        r'<script[^>]+src=["\']?//[^"\'>\s]+',
+        r'<script[^>]+src\s*=\s*["\']?//[^"\'>\s]+',
         page_text,
+        re.IGNORECASE,
     )
     assert not remote_scripts, f"external remote script src found: {remote_scripts}"
     assert (
@@ -105,9 +109,13 @@ def test_all_inline_handlers_defined_and_exported(page_text: str) -> None:
     # call to an undefined function, or a defined-but-unexported function, fails.
     import re
 
-    handlers = re.findall(r'\son\w+="([^"]+)"', page_text)
+    # Capture inline handlers in BOTH quote styles: onclick="fn()" and
+    # onclick='fn()'. A single-quote handler was previously invisible to this
+    # guard and could call an undefined/unexported function unchecked.
+    handlers = re.findall(r'\son\w+=(?:"([^"]+)"|\'([^\']+)\')', page_text)
     called = set()
-    for attr in handlers:
+    for double_q, single_q in handlers:
+        attr = double_q or single_q
         called.update(re.findall(r"([A-Za-z_$][\w$]*)\s*\(", attr))
     defined = set(re.findall(r"function\s+([A-Za-z_$][\w$]*)\s*\(", page_text))
     # Safe DOM methods / built-ins called inline need not be exported on window.

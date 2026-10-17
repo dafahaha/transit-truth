@@ -87,6 +87,75 @@ def _behavioral_degeneracy(
     return out
 
 
+# Reason text reused by the hard-cap helper; kept module-level so unit tests can
+# assert on stable substrings without duplicating the prose.
+_HARD_CAP_TOKENIZER_ONLY_REASON = (
+    "Reference fingerprint has no behavioral distribution (tokenizer-only "
+    "catalog). Tokenizer prompt-token counts are self-reported by the endpoint "
+    "and fully public, so they alone cannot certify model identity. Tokenizer "
+    "match alone is necessary but not sufficient: result is insufficient_evidence, "
+    "not a certification; collect a behavioral reference (e.g. Zenodo 165-model "
+    "fingerprint dataset, CC-BY-4.0) or verify against a baseline with behavioral "
+    "data before trusting."
+)
+_HARD_CAP_NO_OBSERVATIONS_REASON = (
+    "Reference carries a behavioral distribution, but this run obtained no "
+    "matching behavioral observation (the endpoint may be rate-limited or the "
+    "behavioral probes were starved). Fail closed: insufficient_evidence; retry "
+    "or check network/rate limits before trusting."
+)
+
+
+def _apply_hard_cap(report: dict, *, behavioral_reference_probes: set) -> None:
+    """Apply the no-real-behavioral hard cap by mutating ``report`` in place.
+
+    Split into a pure helper so the two evidence-kind branches are unit-testable
+    and a regression that unconditionally overwrites ``evidence_reason`` (or
+    mislabels the starved-distribution case) is caught by a failing test rather
+    than silently shipping a self-contradictory report.
+
+    Branches:
+      (a) ``behavioral_reference_probes`` empty -> tokenizer-only reference;
+          evidence label ``none_tokenizer_only``, certification
+          ``not_certified_tokenizer_only``.
+      (b) probes present but this run got zero overlap -> reference HAS a
+          behavioral distribution but was starved/rate-limited; evidence label
+          ``no_behavioral_observations``; this is NOT a tokenizer-only case, so
+          the certification must NOT carry the tokenizer-only tag.
+
+    A tokenizer-family mismatch already raised ``verdict`` to ``suspicious`` with
+    its own reason; that reason must be preserved (never overwritten here).
+    """
+    if report["verdict"] == "pass":
+        report["verdict"] = "insufficient_evidence"
+
+    if behavioral_reference_probes:
+        # (b) Reference carries a behavioral distribution but this run obtained
+        # zero overlap: do NOT stamp the tokenizer-only certification tag.
+        report["statistics"]["behavioral_evidence"] = "no_behavioral_observations"
+        report["statistics"]["certification"] = "not_certified_no_observations"
+        if report["verdict"] != "suspicious":
+            report["evidence_reason"] = _HARD_CAP_NO_OBSERVATIONS_REASON
+    else:
+        # (a) Reference itself has no behavioral distribution at all.
+        report["statistics"]["behavioral_evidence"] = "none_tokenizer_only"
+        report["statistics"]["certification"] = "not_certified_tokenizer_only"
+        if report["verdict"] != "suspicious":
+            report["evidence_reason"] = _HARD_CAP_TOKENIZER_ONLY_REASON
+
+
+def _cap_weak_pass_confidence(report: dict) -> None:
+    """Cap a weak-pass confidence to ``low`` (product P3-2).
+
+    A tokenizer match over a merely inconclusive behavioral posterior in
+    ``[0.5, 0.7)`` is NOT a high-confidence pass; such a pass must never carry a
+    medium/high confidence label regardless of the analyzer's own level.
+    """
+    post = report["statistics"].get("posterior")
+    if report["verdict"] == "pass" and post is not None and 0.5 <= post < 0.7:
+        report["confidence"] = "low"
+
+
 async def verify_endpoint(
     *,
     base_url: str,
@@ -327,48 +396,11 @@ async def verify_endpoint(
                     "non-degenerate behavioral evidence."
                 )
 
-    # Hard cap: no real behavioral reference => never output pass.
+    # Hard cap: no real behavioral reference => never output pass. The decision
+    # lives in the pure ``_apply_hard_cap`` helper so both evidence-kind branches
+    # are unit-tested and a reason-overwrite / mislabel regression fails a test.
     if baseline_found and not real_behavioral_evidence:
-        if report["verdict"] == "pass":
-            report["verdict"] = "insufficient_evidence"
-        # Label the evidence kind regardless of verdict; the reason rewrite below
-        # is gated because a suspicious mismatch must keep its own reason.
-        if behavioral_reference_probes:
-            # (b) The reference DOES carry a behavioral distribution, but this
-            # run obtained zero overlap: the endpoint may be rate-limited or
-            # starved the behavioral probes. This is NOT a tokenizer-only
-            # reference, so label/reason it differently and fail closed.
-            report["statistics"]["behavioral_evidence"] = "no_behavioral_observations"
-            reason_kind = "no_behavioral_observations"
-        else:
-            # (a) Reference itself has no behavioral distribution at all.
-            report["statistics"]["behavioral_evidence"] = "none_tokenizer_only"
-            reason_kind = "none_tokenizer_only"
-        # A tokenizer-family mismatch already raised verdict to suspicious with a
-        # mismatch-specific reason; do NOT overwrite it with the family-consistent
-        # (match) wording, or the report reads "suspicious" while the body claims
-        # family-consistent. Only the match/no-behavioral path rewrites the reason.
-        if report["verdict"] != "suspicious":
-            if reason_kind == "no_behavioral_observations":
-                report["evidence_reason"] = (
-                    "Reference carries a behavioral distribution, but this run "
-                    "obtained no matching behavioral observation (the endpoint may "
-                    "be rate-limited or the behavioral probes were starved). Fail "
-                    "closed: insufficient_evidence; retry or check network/rate "
-                    "limits before trusting."
-                )
-            else:
-                report["evidence_reason"] = (
-                    "Reference fingerprint has no behavioral distribution "
-                    "(tokenizer-only catalog). Tokenizer prompt-token counts are "
-                    "self-reported by the endpoint and fully public, so they alone "
-                    "cannot certify model identity. Tokenizer match alone is "
-                    "necessary but not sufficient: result is insufficient_evidence, "
-                    "not a certification; collect a behavioral reference (e.g. Zenodo "
-                    "165-model fingerprint dataset, CC-BY-4.0) or verify against a "
-                    "baseline with behavioral data before trusting."
-                )
-        report["statistics"]["certification"] = "not_certified_tokenizer_only"
+        _apply_hard_cap(report, behavioral_reference_probes=behavioral_reference_probes)
 
     # -- Deterministic-replay honesty (v0.4.2) -----------------------------
     # The shipped behavioral baselines are sampled at temperature=0, so they are
@@ -503,5 +535,10 @@ async def verify_endpoint(
             "probe); confidence capped low and Bayesian posterior/LR/CI withheld."
         )
         report["evidence_reason"] = report.get("evidence_reason", "") + caveat
+
+    # Weak-pass honesty (product P3-2): a tokenizer match over a merely
+    # inconclusive behavioral posterior in [0.5, 0.7) is NOT a high-confidence
+    # pass; such a pass must never be labelled medium/high confidence.
+    _cap_weak_pass_confidence(report)
 
     return report
