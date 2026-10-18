@@ -224,7 +224,12 @@ uvicorn app.main:app --reload
 
 ### 运行测试
 
+> **先装 dev 依赖**：从仓库根目录执行 `pip install -e ".[dev]"`（含 pytest、pytest-asyncio 等）。只装 `backend/requirements.txt` 不会带上 pytest-asyncio：缺少它时 async 测试无法运行（当前 pytest 下报 `async def functions are not natively supported` 而失败，旧版 pytest 则会静默跳过），你看到的 passed/skipped 数会与本节基线对不上。
+
 ```bash
+# 仓库根目录：安装可编辑包 + dev 依赖（pytest / pytest-asyncio / ruff 等）
+pip install -e ".[dev]"
+
 cd backend
 # 单元测试（默认）
 python -m pytest tests/ -v
@@ -346,7 +351,7 @@ python analyze_baseline.py --input data/baselines/gpt-4o.json
 
 ## PR 流程
 
-1. 确保代码通过所有测试（`pytest`，当前 335 passed / 7 skipped）
+1. 确保代码通过所有测试（`pytest`，当前 336 passed / 7 skipped）
 2. 如有需要，更新文档
 3. 完整填写 PR 模板
 4. 积极响应 review 反馈

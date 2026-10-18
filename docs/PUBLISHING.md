@@ -32,7 +32,7 @@ Checking dist\transit_truth-0.4.7.tar.gz: PASSED
 
 Cut a release only after moving the CHANGELOG `[Unreleased]` entry to a dated
 version header, bumping all four sources, and running the test suite
-(`335 passed / 7 skipped` and counting).
+(`336 passed / 7 skipped` and counting).
 
 Package name: `transit-truth` was checked available on PyPI
 (`https://pypi.org/pypi/transit-truth/json` returned 404 at readiness time).
@@ -95,8 +95,14 @@ manage). Trigger by pushing the tag that matches the CHANGELOG version.
 
 - [ ] Confirm <https://pypi.org/project/transit-truth/> renders the README
       (long_description = README.en.md).
-- [ ] Edit `README.en.md` / `README.md`: drop the "before the PyPI release"
-      source-install caveat; `pip install transit-truth` is now the primary
-      path.
+- [ ] Edit `README.en.md` / `README.md`: both files contain explicit
+      `PYPI-FLIP` HTML comments. In `README.en.md`, replace the Quickstart
+      install block (currently source install) with `pip install transit-truth`
+      and `pip install "transit-truth[reference]"`, and rename the
+      "Installing from source" section per its `PYPI-FLIP` comment. In
+      `README.md`, replace the "PyPI 上**尚未发布**" block with the pip
+      command. The build's `long_description` is README.en.md, so the English
+      side must be flipped first.
+- [ ] Search both READMEs for `PYPI-FLIP` and resolve every marker.
 - [ ] Create a GitHub Release with the CHANGELOG notes and the same tag.
 - [ ] Announce via `docs/launch_kit.md`.

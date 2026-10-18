@@ -157,6 +157,26 @@ fingerprint against the shipped reference catalog using chi-square /
 KS tests and a Bayesian posterior, and returns a single report. The whole run
 costs under $0.01.
 
+### What the shipped reference data shows
+
+Numbers from the first catalog (gpt-4o / gpt-4o-mini, n=50 per probe, collected
+through a single third-party relay — not the official endpoint):
+
+- On the "pick a random animal" behavioral probe, gpt-4o returned **"Okapi" 76%**
+  of the time (uniform choice would be ~16%).
+- The simple "is the answer Okapi" rule achieves **88% resubstitution accuracy**
+  on the same benchmark sample (Wilson 95% CI [0.80, 0.93]). This is an
+  **in-distribution resubstitution** self-consistency check, **not** held-out
+  accuracy.
+- The strongest behavioral probe (random animal) reaches **TVD = 0.90** — a
+  distribution distance, not a classification accuracy.
+- The end-to-end pipeline self-consistency posterior is **0.913** (95% CrI
+  [0.885, 0.937]) — again measured against the catalog's own in-distribution
+  reference, not on independent held-out data.
+
+These are shipped as reference fingerprints; the tool deliberately does not
+claim held-out generalization or vendor-independent detection.
+
 ## Honest limitations
 
 Read this before trusting any verdict.
@@ -244,7 +264,7 @@ current `verify`/`serve`/PyPI model-identity path:
   loopback only; see [docs/serve.md](docs/serve.md)).
 - **Baseline data:** `data/baselines/` (real n=50 collections),
   `data/fingerprints/` (open-source tokenizer catalog).
-- **Tests:** 335 passed / 7 skipped (the 7 skipped are integration
+- **Tests:** 336 passed / 7 skipped (the 7 skipped are integration
   tests that need a real API key; run them with `pytest -m integration`).
 
 ## Installing from source (before the PyPI release)
