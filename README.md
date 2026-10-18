@@ -47,6 +47,12 @@ transit-truth serve            # 默认 http://127.0.0.1:8766，加 --open 自�
 - Key 仅本次会话内存使用：**不落盘、不进日志、不进可分享报告**；默认只绑 `127.0.0.1`，绑定 `0.0.0.0` 需显式 `--allow-public`。
 - 浏览器受 CORS 限制无法直连中转端点，真实测试由本地服务端发探针；静态 GitHub Pages 只能做门面，不能在线实测。部署（Docker / VPS + Caddy / Cloudflare 边界）见 [docs/serve.md](docs/serve.md)。
 
+**本地 Web UI 实机截图**（本地 `transit-truth serve` 对本地桩后端采集；无真实 Key，报告不含 Key）：
+
+| 首页表单 | pass（行为证据支持） | insufficient_evidence（证据不足，不硬判） | suspicious（与参考显著不符） |
+| --- | --- | --- | --- |
+| ![本地 Web UI 首页](docs/demo_4.png) | ![pass 报告](docs/demo_1.png) | ![insufficient_evidence 报告](docs/demo_2.png) | ![suspicious 报告](docs/demo_3.png) |
+
 **无付费 Key 的自托管参考后端**（用真实 tokenizer 生成参考指纹）。verify 客户端**强制要求一个非空 API key**（本地 reference-server 本身不校验它），所以先设一个 dummy 值：
 
 ```bash
@@ -275,7 +281,7 @@ transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
 
 本项目基于以下学术研究：
 
-- **[One Token Is Enough](https://arxiv.org/abs/2607.10252)** (arXiv:2607.10252, 2026) — 单token输出分布的模型指纹方法，165个模型验证，EER 7.3%
+- **[One Token Is Enough](https://arxiv.org/abs/2607.10252)** (arXiv:2607.10252, 2026) — 在 OpenRouter 165 个模型上做 split-half 生物特征式验真（AUC 0.971；165 genuine / 27060 impostor；8 cell 时 EER 10.6%）；这是模型生物特征验真，**不是替换攻击检出率**
 - **[CoIn](https://arxiv.org/abs/2505.13778)** (arXiv:2505.13778, 2025) — 隐藏推理token计数审计框架，检测token数膨胀（94.7%成功率）
 - **[RAFP](https://arxiv.org/abs/2505.12682)** (arXiv:2505.12682, 2025) — Rare-region 指纹，识别 LLM 谱系，对微调/量化稳健
 - **[Model Provenance Testing](https://arxiv.org/abs/2502.00706)** (arXiv:2502.00706, 2025) — 黑盒模型来源测试
@@ -294,16 +300,14 @@ transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
 |---|---|---|
 | **knowlyr-modelaudit**（PyPI，MIT） | 已上线 CLI+MCP，行为指纹+蒸馏检测 | 与 `verify` SDK/CLI 几乎同定位 |
 | **zing-audit**（PyPI） | local-first CLI，审计偷换/截断上下文/假流式/计费虚高 | 与 CLI 直接同赛道 |
-| **veridrop.org**（开源） | 官网当下口径：已覆盖约 1.08 万家中转站、付费 PRO 套餐不改检测分，贝叶斯加权红黑榜 | 与"排行榜/买徽章"方向**直接撞车且已规模化**——该身位已被占据 |
-| **apiranking.com** | 自研探针周期性轮询，模型真假+费用实测 | 同上 |
-| **IRIS**（arXiv:2607.20860） | 预算化黑盒审计模型替换与路由稀释，并估计稀释比例 ε̂ | 已覆盖本仓库"ε-稀释预算化检验"的核心思想 |
-| **KBF**（arXiv:2605.29524） | 知识边界指纹，可检出 5~10% 流量掺假 | 覆盖 ε-稀释场景 |
-| **truthprobe**（GitHub+PyPI） | 已上线 LLM 审计 CLI | 与 `verify` 同定位 |
-| **token-difr**（PyPI） | 用参考 provider 返回的 token log-prob 比对生成序列是否一致 | log-prob 路线，需参考 provider 返回 logprobs，与自报 token 计数是不同信号 |
-| **TokensQC**（tokensqc.com） | 免费在线 AI API 质检：协议一致性 / 模型身份 / 延迟探针 | 同定位在线工具 |
-| **Ztest 真测**（ztest.ai） | 独立第三方中转站模型真伪检测 + 可信度排行 | 与"红黑榜"方向直接撞车 |
-| **Ofox Model Verify**（ofox.ai/verify） | AI 网关自带免费"模型验真"：身份 + 拒答指纹探针 | 同定位在线工具 |
-| **大模型照妖镜**（llmtest.cn） | 纯前端（基于 GitHub 开源项目），多维度检测套壳 | 同定位在线工具 |
+| **veridrop.org**（开源） | 官网自称覆盖约 11878 家中转站（含付费展示位，非中立实测榜），贝叶斯加权红黑榜 | 与"排行榜/买徽章"方向**直接撞车且已规模化**——该身位已被占据 |
+| **IRIS**（arXiv:2607.20860） | 纯文本自定预算审计，联合检测整流替换与分数稀释并估计 ε；Qwen3 家族内 0.99 AUROC | 已覆盖本仓库"ε-稀释预算化检验"的核心思想 |
+| **KBF**（arXiv:2605.29524） | 知识边界指纹，给出"可检测的被替换流量比例下限"（预算级替身 5–7%；强同档替身 MDR95 需 16–43%）；**这是可检测比例下限，不是错误率** | 覆盖 ε-稀释场景 |
+| **truthprobe**（GitHub+PyPI） | **[DEPRECATED]** PyPI 自述已弃用，后继转 npm `truthprobe-mcp`（`npm install -g truthprobe-mcp`），旧 LLM 审计 CLI 不再维护 | 与 `verify` 同定位（已弃用） |
+| **token-difr**（PyPI） | 基于 **Gumbel-Max 采样核验**（Gumbel-Max sampling verification）比对生成输出，非纯 log-prob 比对 | Gumbel-Max 采样核验路线，与自报 token 计数是不同信号 |
+| **TokensQC**（tokensqc.com） | 在线 AI API 质检：协议一致性 / 模型身份 / 延迟探针（页面含赞助位） | 同定位在线工具 |
+| **Ztest 真测**（ztest.ai） | 中转站模型真伪检测 + 可信度排行（付费榜单，非中立实测） | 与"红黑榜"方向直接撞车 |
+| **大模型照妖镜**（llmtest.cn） | 个人维护的多维度套壳检测（纯前端，基于 GitHub 开源项目） | 同定位在线工具 |
 
 > **勘误（v0.5.1）**：早先表中误把 bazaarlink.ai 列为"84 项规则 Probe 检测器"、把 tosea.ai 列为"随机数行为指纹工具"。经复核：**BazaarLink（bazaarlink.ai）实为多模型聚合 API 网关/计费路由**（OpenAI/Anthropic/Google 等单 endpoint 聚合），并非模型真伪检测器，故移出检测器对比表；**Tosea.ai 实为 PDF/论文转幻灯片的生成工具**，与 LLM 身份核验无关，已删除该行。
 
@@ -344,9 +348,9 @@ transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
 - 行为画像能区分同家族两个标称端点（tokenizer 指纹做不到）
 - 最强探针 TVD=0.90；"是否为 Okapi"规则重代入准确率 88%（Wilson [0.80,0.93]）；TVD≠准确率
 - 管线自洽检验后验 0.913（CrI [0.885,0.937]），为 resubstitution，非 held-out
-- 单次审计成本 < $0.01
+- 单次审计按公开低档定价估算约 < $0.01（实际取决于模型档位与 token 单价，代码内无计价逻辑）
 
-**与前沿工作的关系**：我们的行为画像方法与 [One Token Is Enough](https://arxiv.org/abs/2607.10252)（单 token 输出分布指纹，EER 7.3%）互为补充——它聚焦跨家族谱系识别，我们在同家族两个标称端点上展示了可区分性；官方金标准基线与 held-out 泛化验证属未来工作。
+**与前沿工作的关系**：我们的行为画像方法与 [One Token Is Enough](https://arxiv.org/abs/2607.10252)（OpenRouter 165 模型 split-half 生物特征验真，AUC 0.971；非替换攻击检出率）互为补充——它聚焦模型生物特征验真/谱系识别，我们在同家族两个标称端点上展示了可区分性；官方金标准基线与 held-out 泛化验证属未来工作。
 
 ## 项目结构
 
@@ -367,7 +371,7 @@ transit-truth/
 │   │   ├── tests/             # 离线桩 e2e + 统计/加固/集成测试（计数见顶部"测试"行）
 │   │   └── main.py            # FastAPI 入口
 │   └── requirements.txt
-├── frontend/                   # Web 前端资源
+├── webapp/                     # transit-truth serve 本地 WebUI（随包分发）
 ├── data/
 │   ├── baselines/              # 真实基准数据（经同一中转站采集）
 │   │   ├── gpt-4o-mini.json
@@ -396,7 +400,7 @@ transit-truth/
 我们欢迎所有形式的贡献！
 
 - **提交基准数据**：用`collect_baseline.py`采集你常用模型的基准数据，提交PR
-- **贡献审计结果**：用工具审计你用的中转站，提交后进人工审核队列（`python -m app.moderation list/approve/reject`），审核通过才计入排行榜
+- **分享审计结果**：用工具审计你使用的中转站后，把结果发到 [GitHub Discussions → Show your audit results](https://github.com/dafahaha/transit-truth/discussions)；请勿在公开帖子中粘贴 API Key。本项目没有在线排行榜或投稿端点。
 - **开发新功能**：看GitHub Issues，认领任务
 - **写文档/教程**：帮助更多人用上这个工具
 - **报告Bug**：提交Issue，我们会尽快修复
