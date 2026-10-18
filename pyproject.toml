@@ -51,6 +51,9 @@ dev = [
     "flake8>=6.0.0",
     "mypy>=1.5.0",
     "ruff>=0.1.0",
+    # Pinned to the CI hard-gate versions so local formatting cannot drift.
+    "black==26.10.1",
+    "isort==9.0.2",
 ]
 # `reference-server` loads a REAL local tokenizer (downloaded from HF_ENDPOINT,
 # default hf-mirror.com) for genuine token-count fingerprints. Without this

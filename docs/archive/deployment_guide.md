@@ -1,6 +1,6 @@
 # 部署指南 (Deployment Guide)
 
-> ⚠️ **历史草稿说明（v0.5.2）**：本文件是旧版"纯前端浏览器演示"时期的历史草稿，其中"零安装 / 纯前端 / Key 不经服务器"等表述已过时。当前**模型身份核验（测中转站真假）必须在本地/自托管运行 `transit-truth serve`**（浏览器跨域直连受 CORS 限制，GitHub Pages 不能在线实测）；测试数与口径以 README.md 为准。
+> ⚠️ **已归档（ARCHIVED，v0.5.9）**：本文件是旧版"纯前端浏览器演示"时期的历史草稿，已移入 `docs/archive/` 仅作历史保留，不再维护。其中 Vercel / Netlify 一键部署步骤**不再受当前包支持**，`vercel.json` 已删除。当前**模型身份核验（测中转站真假）必须在本地/自托管运行 `transit-truth serve`**（浏览器跨域直连受 CORS 限制，GitHub Pages 不能在线实测）；测试数与口径以 README.md 为准。
 
 TransitTruth 支持多种部署方式，从一键部署到本地运行，满足不同用户的需求。
 

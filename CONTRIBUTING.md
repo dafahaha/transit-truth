@@ -301,22 +301,20 @@ python analyze_baseline.py --input data/baselines/gpt-4o.json
 - 所有探针使用 temperature=0
 - 包含完整的元数据（模型版本、采集时间、API端点）
 
-### 3. 提交审计结果
+### 3. 分享审计结果
 
-审计结果是排行榜的数据来源。提交审计结果：
+本项目没有在线排行榜或投稿端点，审计结果不会被"收录"到任何榜单。完成一次本地核验后，可把结果 JSON 发到 [GitHub Discussions → Show your audit results](https://github.com/dafahaha/transit-truth/discussions) 交流（请勿在公开帖子中粘贴 API Key）：
 
 1. 用本地 `transit-truth serve`（或 CLI）完成一次核验
 2. 导出结果 JSON
-3. 通过邮件 / GitHub Issue / 社区渠道提交
+3. 在 Discussions 发帖分享，附完整元数据（中转站名称、Base URL、模型、审计时间）
 
-**审计结果质量要求：**
-- 使用深度模式（10+探针）
-- 包含完整的元数据（中转站名称、Base URL、模型、审计时间）
-- 不是明显错误或恶意数据
+**提交参考基线（新模型）：**
+- 按 `collect_baseline.py` 的规范采集并提交新的参考基线 / 指纹，而不是改 `config.py` 硬编码家族
+- 样本量 ≥ 50（推荐 200+）、所有探针 temperature=0、含完整元数据（模型版本、采集时间、API 端点）
 
 ### 4. 改进检测准确率
 
-- 在 `backend/app/config.py` 中添加新模型家族
 - 改进 `backend/app/core/fingerprint.py` 中的指纹分析
 - 改进 `backend/app/core/auditor.py` 中的评分算法
 - 添加新的统计方法到 `backend/app/core/statistical_analyzer.py`

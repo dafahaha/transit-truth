@@ -6,7 +6,8 @@ COPY backend/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY backend/ ./backend/
-COPY frontend/ ./frontend/
+# Legacy static assets for the archived standalone web platform were moved to
+# docs/archive/frontend/; the shipped verify/serve bundle uses webapp/ instead.
 
 # Run as an unprivileged user (S6) to reduce container-escape impact.
 # The app writes its SQLite DB under /app/data, so that dir must be writable.
