@@ -83,7 +83,7 @@ Each probe is a short prompt that elicits a constrained, cheap response. We use 
 
 \textbf{Tokenizer probes (8)} measure deterministic tokenizer behavior---e.g.\ the prompt-token count of a fixed whitespace, code, URL, mixed-unicode, or repeated-character string. Because two same-family models share a tokenizer, these act as a \emph{negative control} that should not discriminate.
 
-\textbf{Behavioral probes (8)} ask the model to produce a ``random'' token under high temperature: pick a number 1--10 or 1--100, roll a die, flip a coin, choose a color, letter, weekday, or animal. Under uniform sampling the output should be near-uniform; systematic deviation is the fingerprint.
+\textbf{Behavioral probes (8)} ask the model to produce a ``random'' token: pick a number 1--10 or 1--100, roll a die, flip a coin, choose a color, letter, weekday, or animal. We collect at temperature 0; under uniform sampling the output would be near-uniform, and systematic deviation from uniformity is the fingerprint.
 
 \textbf{Capability probes (10)} estimate model tier via simple math, logic, code syntax, bug fixing, multilingual translation, instruction following, knowledge cutoff, and context length. These are coarse and shared within a family, so they serve as corroborating rather than identifying evidence.
 
@@ -110,7 +110,7 @@ mapping each probe's $p$-value to a likelihood ratio (e.g.\ $p>0.05 \Rightarrow 
 
 \subsection{Data Collection}
 \label{sec:collect}
-For each model we collect 50 samples per probe (1{,}300 responses) through an OpenAI-compatible endpoint at temperature 1.0. To avoid triggering anti-bot defenses we shuffle probe order, randomize inter-request intervals (0.3--1.5\,s), vary the number of probes per batch, and rotate natural User-Agent headers. Wall time is about 15 minutes per model at a cost below \$0.01.
+For each model we collect 50 samples per probe (1{,}300 responses) through an OpenAI-compatible endpoint at temperature 0 (deterministic; the resulting behavioral distributions are point-mass). To avoid triggering anti-bot defenses we shuffle probe order, randomize inter-request intervals (0.3--1.5\,s), vary the number of probes per batch, and rotate natural User-Agent headers. Wall time is about 15 minutes per model; at low public list prices the batch estimates below \$0.01, but the actual cost depends on the model tier and per-token price.
 
 \section{Results}
 \label{sec:results}
