@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.9] - 2026-10-19
+
+### Fixed — 参考目录缺失/空目录 fail-loud（P2）
+- `load_reference_analyzer` 在参考基线目录缺失（裁剪 wheel / 破损 checkout）或目录内无任何 JSON 时，向 **stderr** 打印醒目 WARNING（绝不写入 stdout，遵守单一 JSON 契约），并跳过真实基线加载；此前会静默退化到合成占位、在无说明的情况下给出低置信判定。新增 `test_missing_reference_catalog_warns_loud_on_stderr` 覆盖"整目录缺失"与"目录为空"两条路径，临时目录改用 pytest `tmp_path` 保证异常路径也清理。
+- 删除未被任何源码引用的 `DEFAULT_REFERENCE_DIRS` 常量。
+
+### Harden — sync 脚本陈旧文件清理
+- `sync_reference_data.py` 镜像前先按 src 清单 prune 目标目录中的陈旧 JSON：被删除/改名的目录项不再静默随 wheel 发货。
+
+### Docs — 英文 README 数据透明度补齐 / 计数同步
+- README.en.md 在 "What it actually does" 后补齐 "What the shipped reference data shows"：Okapi 76%、"是否为 Okapi"规则 88% resubstitution 准确率（Wilson 95%CI [0.80, 0.93]）、最强探针 TVD=0.90（分布距离，非分类准确率）、管线自洽后验 0.913（CrI [0.885, 0.937]），明确为 in-distribution resubstitution 自洽检验、非 held-out 准确率，数字与中文 README 逐一对齐。
+- 测试数全仓回填为 **336 passed / 7 skipped**（7 个 skipped 为需真实 key 的 integration）。
+
+### 版本
+- 版本四源统一 0.5.9，版本一致性测试同步。
+
 ## [0.5.8] - 2026-10-17
 
 ### Honesty — 开篇/能力清单诚实分区（产品片 P2）
@@ -364,7 +380,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker support
 - README, LICENSE, .gitignore
 
-[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.8...HEAD
+[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.9...HEAD
+[0.5.9]: https://github.com/dafahaha/transit-truth/compare/v0.5.8...v0.5.9
 [0.5.8]: https://github.com/dafahaha/transit-truth/compare/v0.5.7...v0.5.8
 [0.5.7]: https://github.com/dafahaha/transit-truth/compare/v0.5.6...v0.5.7
 [0.5.6]: https://github.com/dafahaha/transit-truth/compare/v0.5.5...v0.5.6
