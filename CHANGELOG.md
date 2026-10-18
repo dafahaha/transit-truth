@@ -23,6 +23,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 版本
 - 版本四源统一 0.5.9，版本一致性测试同步。
 
+### R1-fix — 审批修复批（技术片 0 P0/P1/P2；产品片 3 P1 / 6 P2 / 7 P3）
+
+#### Fixed — 温度口径与重编 PDF（产品 P1-1）
+- 实际 `probes.py` 全部以 `temperature=0` 采集（点质量数据），此前 paper/main.tex、docs/tech_report.tex/.html、docs/experiment_report.md 多处误写 `temperature=1.0`；全部改为 0，experiment_report.md 明确「探针以 temperature=0 采集为点质量；中转站可能覆盖温度」。`paper/main.pdf`（5 页）与 `docs/tech_report.pdf`（9 页）用 MiKTeX pdflatex 按原仓方式重编，页数与基线一致。
+- 成本表述（README.md/README.en.md、paper/main.tex、experiment_report.md）改为「按公开低档定价估算约 <$0.01（实际取决于模型与单价；代码无计价）」；experiment_report.md 的 26×10 口径改为 shipped 17 请求（5 tokenizer + 4 behavioral×3）并标注基线采集口径。
+
+#### Honesty — 门面匿名化与死命令清理（产品 P1-2 / P1-3）
+- 根 `index.html` 内置 RANKING_DATA 中真实商业域名（wolfai.top/api2d/ohmygpt/betterapi/aihubmix/geekapi/closeai）全部替换为匿名占位 `relay-a.example…relay-e.example`（`https://relay-x.example/v1`），删除 critical 评级与具体 token 通胀百分比，仅保留「演示种子」格式演示；删除「贡献到排行榜」按钮，社区引导改为 GitHub Discussions，与「无在线排行榜/投稿端点」声明一致。
+- README.md 删除已不存在的 `app.moderation list/approve/reject` 命令与「计入排行榜」表述，对齐 README.en.md 的 GitHub Discussions 引导（勿贴 key）。
+
+#### Citations — 文献口径联网复核后分开（严禁混用）
+- arXiv:2504.04715（Cai/Shi/Zhao/Song，Berkeley/Dawn Song）改为「模型替换检测方法评估 + TEE 硬件认证」，全文无 428 站/9 投毒/17 窃 key；428 路由（28 paid+400 free）、9 投毒、17 触 AWS canary、1 ETH draining 归属于 arXiv:2604.08407《Your Agent Is Mine》（供应链攻击，非替换），两者分开引用。
+- arXiv:2607.10252 的 EER 7.3% 改写为 OpenRouter 165 模型 split-half 生物特征式验真（AUC 0.971；165 genuine/27060 impostor；8 cell 10.6%），非替换攻击检出率。
+- arXiv:2605.29524 KBF 的 5–10% 改为「可检测的被替换流量比例下限」（预算级替身 5–7%；强同档替身 MDR95 需 16–43%），非错误率。
+- arXiv:2603.01919 45.83%=11/24（3 个代表性 shadow API × 8 配置，非 17 个全量），可称 ACM CCS 2026；另列 12.50%（3/24）Euclidean 显著偏离。
+- 知道创宇报告按「据媒体转述」口径标注（100 站、849 组合、296=34.9% 命中≥1 异常、涉 75 站、467 可疑/138 强证据），原始报告链接待补，不当一手权威；删除返利色彩重的 apiranking.com，移除实测不通的 ofox.ai/verify；veridrop 注明自称 11878 家含付费展示位，ztest.ai/llmtest.cn/tokensqc.com 分别注明付费榜单/个人维护/含赞助位；补 arXiv:2607.20860 IRIS 一句话（纯文本自定预算审计，Qwen3 家族 0.99 AUROC）。
+
+#### Archive — 废弃文件归档
+- `docs/architecture.md`、`docs/methodology.md`（含旧 t=1.0 表述）、`docs/final_release_package.md`（含陈旧计数 292、旧排行榜/15 端点清单）、`docs/deployment_guide.md` 移入 `docs/archive/` 并加归档横幅；legacy `frontend/` 移入 `docs/archive/frontend/`，根 legacy Dockerfile 的 COPY 改为归档说明；删除根 `vercel.json` 与废弃 `.github/workflows/audit-validation.yml`。
+
+#### Tests — 新增回归（技术 P3-1 / P3-2）
+- `test_v059_nonjson_rejection.py`：客户端收到非 JSON / 非对象的 200 必须计为失败、不进入 statistics（参数化 4 种 shape × 客户端层/端到端 fail-closed）。
+- `test_v059_sync_prune.py`：`tmp_path` 种子陈旧 JSON 断言被 prune，第二次幂等无操作。
+- 本批新增后全量为 **346 passed / 7 skipped**（7 skipped 为需真实 key 的 integration）。
+
+#### Tooling / Docs
+- dev extras（根与 backend 两处）对齐 CI 锁定 `black==26.10.1`、`isort==9.0.2`，backend 补 `ruff` 咨询项。
+- 新增 `SECURITY.md`（GitHub Security Advisories 私有披露 + Discussions/issue 备选，不编造邮箱）；ci.yml push 触发加入 `release/**`；webapp 表单上限对齐服务端钳制 `(1,200)` 最大请求数 / `(1,20)` 行为重复（root webapp 与打包副本同步）。
+- README 中/英加入本地 `transit-truth serve` 实机截图（首页表单 + pass / insufficient_evidence / suspicious 三态报告，本地桩后端、无真实 Key）。
+
+> **依赖说明（P3-4，仅记录未改）**：运行时依赖目前仅写下限、无上限/lockfile；未来主版本可能破坏复现，后续主版本前再评估是否加兼容上限。
+
 ## [0.5.8] - 2026-10-17
 
 ### Honesty — 开篇/能力清单诚实分区（产品片 P2）

@@ -9,7 +9,7 @@ TransitTruth is a stateless CLI that probes any OpenAI-compatible endpoint with 
 
 Built for LLM-security researchers, agent developers, and anyone who routes LLM traffic through third-party relays or gateways.
 
-> **Scope note.** The bundled, current path shipped on PyPI/`verify`/`serve` is **stateless model-identity verification** (CLI/SDK + local `serve` browser UI; the key stays in session memory only). Token billing audit (tiktoken token-billing difference detection), latency/availability/error-rate performance monitoring, OpenAI response-format protocol compliance, balance queries/low-balance alerts, continuous monitoring/alert channels, and a community leaderboard/online submissions belong to an **early, standalone legacy web platform (`app.main`, self-hosted separately)** and are **NOT** part of the current `verify`/`serve`/PyPI bundle.
+> **Scope note.** The bundled current `verify`/`serve` path (the code path intended for PyPI; not yet published) is **stateless model-identity verification** (CLI/SDK + local `serve` browser UI; the key stays in session memory only). Token billing audit (tiktoken token-billing difference detection), latency/availability/error-rate performance monitoring, OpenAI response-format protocol compliance, balance queries/low-balance alerts, continuous monitoring/alert channels, and a community leaderboard/online submissions belong to an **early, standalone legacy web platform (`app.main`, self-hosted separately)** and are **NOT** part of the current `verify`/`serve`/PyPI bundle.
 
 ---
 
@@ -73,6 +73,13 @@ model (pick from the catalog or type it), and optionally your key (a password
 field). The report banner shows the three-state verdict, confidence, posterior /
 LR / 95% CI / chi-square / KS p, per-probe evidence, and flags
 (`deterministic_replay_risk`, `thin_evidence`, `non_cooperation`).
+
+**Local web UI screenshots** (captured from a local `transit-truth serve` against
+local stub backends; no real key; the report contains no key):
+
+| Home form | pass (behavioral evidence supports) | insufficient_evidence (not enough evidence, no forced verdict) | suspicious (differs significantly from reference) |
+| --- | --- | --- | --- |
+| ![Local web UI home](docs/demo_4.png) | ![pass report](docs/demo_1.png) | ![insufficient_evidence report](docs/demo_2.png) | ![suspicious report](docs/demo_3.png) |
 
 ### Key safety (hard contract)
 
@@ -154,8 +161,9 @@ probes (self-reported `usage.prompt_tokens` on a fixed prompt suite) and
 behavioral probes × repeats (distributional "random task" preferences — which
 number, coin flip, color, dice a model returns). It compares the observed
 fingerprint against the shipped reference catalog using chi-square /
-KS tests and a Bayesian posterior, and returns a single report. The whole run
-costs under $0.01.
+KS tests and a Bayesian posterior, and returns a single report. At low public
+list prices a full run estimates under $0.01; the actual cost depends on the
+model tier and per-token price (the code contains no pricing logic).
 
 ### What the shipped reference data shows
 
