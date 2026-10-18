@@ -51,8 +51,13 @@ add_demo.py
 # Python test cache
 .pytest_cache/
 
-# Demo intermediate frames (already have demo.gif / demo.mp4)
+# Ignore any temporary demo capture frames; the four shipped screenshots
+# docs/demo_1.png .. docs/demo_4.png ARE tracked and are whitelisted below.
 docs/demo_*.png
+!docs/demo_1.png
+!docs/demo_2.png
+!docs/demo_3.png
+!docs/demo_4.png
 
 # Banner source files (already have banner_1280x640.png)
 docs/banner.html
