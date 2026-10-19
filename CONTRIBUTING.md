@@ -29,10 +29,7 @@
 | **GitHub PR** | 技术用户 | ⭐⭐⭐ | 提交代码、文档、基准数据 |
 | **GitHub Issue** | 有GitHub账号的用户 | ⭐⭐ | 提交审计结果、报告Bug |
 | **本地核验后贡献** | 所有用户 | ⭐ | 本地 `transit-truth serve` 核验后导出/分享结果 |
-| **邮件提交** | 所有用户 | ⭐ | 把核验结果JSON发到指定邮箱 |
-| **社区提交** | 社区活跃用户 | ⭐ | 在微信群/QQ群/评论区提交 |
-| **API 提交** | 高级用户 | ⭐⭐⭐ | 通过REST API批量提交 |
-| ~~Gitee~~ | （已失效 404，未提供镜像） | — | 历史镜像已下线，走 GitHub Issue / 邮件 |
+| **Discussions / Issue** | 所有用户 | ⭐ | 在 GitHub Discussions 或 Issue 分享审计结果（无官方邮箱、无投稿端点） |
 
 ### 渠道1：GitHub PR（代码/文档/数据贡献）
 
@@ -80,38 +77,9 @@ transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
 
 > Key 仅存于本次会话内存，不落盘、不进日志、不进可分享报告。
 
-### 渠道4：邮件提交（零门槛）
+### 提交与讨论（无官方邮箱、无在线投稿端点）
 
-1. 运行审计，导出结果 JSON
-2. 把 JSON 文件作为附件，发送到：`contribute@transit-truth.xxx`
-3. 邮件标题格式：`[audit-result] 中转站名称 / 模型名称`
-4. 我们会定期审核，批量导入数据库
-
-### 渠道5：社区提交（运营驱动）
-
-- **微信群/QQ群**：在群里发审计结果，管理员定期收集
-- **知乎/V2EX评论区**：在相关文章评论区发结果
-- **其他社区**：任何你活跃的技术社区
-
-### 渠道6：API 批量提交（高级用户）
-
-```python
-import httpx
-
-# 批量提交审计结果
-async def batch_contribute(audit_results: list[dict], api_key: str):
-    async with httpx.AsyncClient() as client:
-        response = await client.post(
-            "https://api.transit-truth.xxx/v1/contributions",
-            headers={"Authorization": f"Bearer {api_key}"},
-            json={"results": audit_results},
-        )
-        return response.json()
-```
-
-### 渠道7：镜像仓库（当前未维护）
-
-历史上的 Gitee 镜像链接已失效（404），目前未提供国内镜像；请直接通过 GitHub Issue / 邮件 / 社区渠道提交。
+当前没有官方联系邮箱，也没有在线投稿/批量提交端点；审计结果请通过 **GitHub Discussions**（[讨论区](https://github.com/dafahaha/transit-truth/discussions)）或 GitHub Issue 分享，切勿在公开帖子中粘贴 API Key。安全漏洞请按 `SECURITY.md` 通过 GitHub Security Advisories 私有披露。
 
 ---
 
@@ -191,15 +159,14 @@ async def batch_contribute(audit_results: list[dict], api_key: str):
 
 ### 问题：我没有 GitHub 账号，怎么办？
 
-**答案**：用邮件或社区渠道提交，不需要 GitHub 账号！
+**答案**：没有官方联系邮箱，也没有在线投稿端点；审计结果请在 GitHub Discussions（[讨论区](https://github.com/dafahaha/transit-truth/discussions)）或 GitHub Issue 分享，不要粘贴 API Key。
 
 1. **本地核验**：`transit-truth serve`（浏览器点选）或 CLI
-2. **邮件提交**：把核验结果 JSON 发到 `contribute@transit-truth.xxx`
-3. **社区提交**：在微信群/QQ群/知乎评论区发结果
+2. **分享结果**：把三态报告/JSON 贴到 Discussions 或 Issue 即可
 
 ### 问题：我访问 GitHub 不稳定，怎么办？
 
-**答案**：当前未提供国内镜像（历史 Gitee 镜像链接已失效 404）。可直接下载仓库到本地，用 `transit-truth serve` 在本机完成核验，再通过邮件/社区提交结果。
+**答案**：当前未提供国内镜像（历史 Gitee 镜像链接已失效 404）。可直接下载仓库到本地，用 `transit-truth serve` 在本机完成核验，再到 GitHub Discussions 或 Issue 分享结果。
 
 ### 问题：我不会用命令行，怎么办？
 
@@ -208,7 +175,7 @@ async def batch_contribute(audit_results: list[dict], api_key: str):
 1. 安装后运行 `transit-truth serve`，浏览器打开 http://127.0.0.1:8766
 2. 填写 base_url 与声称模型，可选 API Key
 3. 点"开始核验"查看三态结果
-4. 导出/分享报告，或通过邮件/社区提交
+4. 导出/分享报告，或到 GitHub Discussions / Issue 分享结果
 
 ---
 

@@ -275,7 +275,7 @@ transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
 
 ### 🚧 开发中
 - [ ] 更多模型基准数据（Claude、Gemini、Llama、Qwen）
-- [ ] 增加基准样本量到200+（当前50样本，统计误差约±14%）
+- [ ] 增加基准样本量到200+（当前 50 样本；76%/88% 的 Wilson 95% 区间半宽约 ±6~12 个百分点，为 resubstitution 口径）
 - [ ] 浏览器插件（实时审计正在使用的API）
 - [ ] 移动端适配
 
@@ -290,7 +290,7 @@ transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
 
 我们的工作定位：
 1. **同家族细粒度区分**：在两个标称同家族端点（gpt-4o vs gpt-4o-mini）上展示行为画像可被区分（最强 TVD=0.90）；这是 tokenizer 指纹做不到的。我们**不**声称这是"首个"此类研究，也不声称已在独立 held-out 数据上验证泛化。
-2. **工程化全功能平台**：不只是指纹工具，而是完整的API安全审计平台
+2. **可本地运行的核验内核**：随包交付无状态 `verify` CLI/SDK、本地 `transit-truth serve` 浏览器界面与本地 `reference-server`；在线排行榜/在线审核平台属早期 legacy web 平台，**不随包发货**
 3. **中文社区优先**：面向中文用户，解决国内中转站乱象
 4. **零门槛离线演示**：根 index.html 浏览器即用（内置演示数据；真实模型身份核验走本地 `transit-truth serve`）
 
@@ -304,7 +304,7 @@ transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
 | **zing-audit**（PyPI） | local-first CLI，审计偷换/截断上下文/假流式/计费虚高 | 与 CLI 直接同赛道 |
 | **veridrop.org**（开源） | 官网自称覆盖约 11878 家中转站（含付费展示位，非中立实测榜），贝叶斯加权红黑榜 | 与"排行榜/买徽章"方向**直接撞车且已规模化**——该身位已被占据 |
 | **IRIS**（arXiv:2607.20860） | 纯文本自定预算审计，联合检测整流替换与分数稀释并估计 ε；Qwen3 家族内 0.99 AUROC | 已覆盖本仓库"ε-稀释预算化检验"的核心思想 |
-| **KBF**（arXiv:2605.29524） | 知识边界指纹，给出"可检测的被替换流量比例下限"（预算级替身 5–7%；强同档替身 MDR95 需 16–43%）；**这是可检测比例下限，不是错误率** | 覆盖 ε-稀释场景 |
+| **KBF**（arXiv:2605.29524） | 知识边界指纹（受控池结果）：budget-tier 替身在被替换流量低于 7% 即可检出；强同档替身在 13–35% 替换流量达 80% TPR（MDR₉₅ 约 16–43%）；受控 155 对经济相关替换全检出、0 同模型误拒；**这是可检测比例下限，不是错误率** | 覆盖 ε-稀释场景 |
 | **truthprobe**（GitHub+PyPI） | **[DEPRECATED]** PyPI 自述已弃用，后继转 npm `truthprobe-mcp`（`npm install -g truthprobe-mcp`），旧 LLM 审计 CLI 不再维护 | 与 `verify` 同定位（已弃用） |
 | **token-difr**（PyPI） | 基于 **Gumbel-Max 采样核验**（Gumbel-Max sampling verification）比对生成输出，非纯 log-prob 比对 | Gumbel-Max 采样核验路线，与自报 token 计数是不同信号 |
 | **TokensQC**（tokensqc.com） | 在线 AI API 质检：协议一致性 / 模型身份 / 延迟探针（页面含赞助位） | 同定位在线工具 |

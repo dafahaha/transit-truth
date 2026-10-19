@@ -22,7 +22,7 @@ Links to keep consistent:
 
 用中转站调 API 的时候，你付的是 `gpt-4o-mini` 的钱，怎么确定后端真的是 gpt-4o-mini，而不是更便宜的模型在套壳？公开研究里类似情况不少：一项 ACM CCS 2026 研究（arXiv:2603.01919）在 3 个代表性 shadow API × 8 种配置上测得 45.83%（11/24）端点过不了模型指纹；另一项恶意中介供应链攻击测量（arXiv:2604.08407《Your Agent Is Mine: Measuring Malicious Intermediary Attacks on the LLM Supply Chain》）在 428 个路由（28 付费 + 400 免费）中发现 9 起投毒、17 个触碰 AWS 金丝雀凭证、1 起 ETH 私钥 draining；另有据媒体转述的知道创宇《大模型中转站研究与测评报告（2026）》（原始报告链接待补，非一手权威）称 100 站、849 组合中 296 个（34.9%）命中至少一项模型真实性异常证据（涉 75 站，467 可疑 / 138 强证据）。但一直没有一个随手能跑的核验工具。
 
-所以我写了 TransitTruth：一个无状态 CLI，对着任意 OpenAI 兼容端点发一组有界探针（17 个请求，跑一次不到 1 美分），输出一份 JSON：
+所以我写了 TransitTruth：一个无状态 CLI，对着任意 OpenAI 兼容端点发一组有界探针（17 个请求；按公开低档定价估算一轮约 <$0.01，实际取决于模型档位与单价，代码不含计价逻辑），输出一份 JSON：
 
 - `pass`：观测指纹和参考一致
 - `suspicious`：差异显著（比如模型家族不对）
@@ -47,7 +47,7 @@ MIT 协议，测试 346 passed / 7 skipped（7 skipped 为需真实 key 的 inte
 **正文：**
 
 做了个小工具 TransitTruth：给 OpenAI 兼容中转站做模型身份核验。
-17 个探针、一次不到 1 美分，输出 pass / suspicious / insufficient_evidence 三态 JSON。
+17 个探针；按公开低档定价估算一轮约 <$0.01（实际取决于模型档位与单价，代码不含计价逻辑），输出 pass / suspicious / insufficient_evidence 三态 JSON。
 诚实声明：这是概率性辅助证据不是密码学证明；目前只内置了 Qwen tokenizer 指纹和单站 GPT 基线。没 key 也能跑，自带本地 reference-server。
 repo：github.com/dafahaha/transit-truth，demo 在 GitHub Pages 零安装可玩。
 
@@ -59,7 +59,7 @@ repo：github.com/dafahaha/transit-truth，demo 在 GitHub Pages 零安装可玩
 
 You pay a relay for `gpt-4o-mini`. How do you know that's what you got?
 
-I built TransitTruth: a stateless CLI that probes any OpenAI-compatible endpoint with a bounded battery (17 requests, < $0.01/run) and returns one JSON verdict — `pass`, `suspicious`, or `insufficient_evidence`.
+I built TransitTruth: a stateless CLI that probes any OpenAI-compatible endpoint with a bounded battery (17 requests; at public low-tier list prices a full run estimates under $0.01; actual cost depends on model tier and per-token price, and the code contains no pricing logic) and returns one JSON verdict — `pass`, `suspicious`, or `insufficient_evidence`.
 
 It is deliberately honest about what it is NOT:
 
@@ -75,7 +75,7 @@ repo + demo links below. MIT.
 
 ## 4. Reddit r/LocalLLaMA（英文）
 
-**Title:** I open-sourced TransitTruth: a CLI that probes OpenAI-compatible relays to verify the model they claim to serve (17 probes, < $0.01/run, three honest verdicts)
+**Title:** I open-sourced TransitTruth: a CLI that probes OpenAI-compatible relays to verify the model they claim to serve (17 probes; estimates under $0.01/run at public low-tier list prices, three honest verdicts)
 
 **Body:**
 
@@ -112,7 +112,7 @@ MIT, 346 passed / 7 skipped (7 skipped = integration tests needing a real key). 
 export TRANSIT_TRUTH_API_KEY=你的key
 transit-truth verify --base-url https://你的站/v1 --model gpt-4o-mini
 ```
-一次 17 个请求，成本不到 1 美分，输出 pass / suspicious / insufficient_evidence。
+一次 17 个请求；按公开低档定价估算一轮约 <$0.01（实际取决于模型档位与单价，代码不含计价逻辑），输出 pass / suspicious / insufficient_evidence。
 
 对站长：这个工具不会搞事——suspicious 只是"证据值得复核对质"，不是定罪；报告里自带 disclaimer。欢迎把它当自我核验的基线：先自己跑一遍自家站，确认声称的模型都过得了，再给用户一个可自查的说法。
 

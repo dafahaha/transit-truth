@@ -74,6 +74,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 温度泛化句：paper/main.tex:202、docs/experiment_report.md:341 的 "even at temperature 1.0" 改为 "at non-zero temperature"，避免全仓零残留口径；`paper/main.pdf`（5 页）随 main.tex 文本改动重编，成本估算句与关键数字核验通过。
 - paper/README.md 页数 4→5（与重编 PDF 一致）。
 
+### R3-fix — 末批 P3 打磨（产品/技术 R3 均 PASS）
+
+#### Cleanup — 门面与代码去商业残留
+- 根 `index.html` 删除中性 `KNOWN_RELAYS` 商业名/URL 表与零调用死函数 `detectRelayName`，并清除删模态框后残留的 `.modal-overlay/.modal/.modal-close/.contribute-option/.contribute-success` 孤儿 CSS。
+- `backend/app/utils/ranking_aggregator.py` 的 `__main__` mock 块把具名 wolfai.top/critical/76.1% 负样本换成匿名占位 `relay-a.example`（verify/serve 运行时不可达）。
+
+#### Honesty — 文案口径对齐
+- README.md backlog 样本量条目改 Wilson 口径（76%/88% 的 Wilson 95% 区间半宽约 ±6~12 个百分点，resubstitution）；定位段"工程化全功能平台"改为"可本地运行的核验内核"（verify/serve 内核 + 本地 reference-server，在线排行榜/审核平台属 legacy 不随包）。
+- `docs/launch_kit.md` 五处裸成本主张补"按公开低档定价估算/实际取决于模型档位与单价/代码不含计价"限定；KBF（arXiv:2605.29524）数字统一为受控池口径（budget-tier <7% 可检出；强同档替身 13–35% 达 80% TPR，MDR₉₅ 约 16–43%；受控 155 对全检出、0 同模型误拒；可检测比例下限非错误率）。
+- `CONTRIBUTING.md` 删除虚构渠道（contribute@ 邮箱、微信/QQ/知乎、api.transit-truth.xxx 端点、Gitee 镜像），并入 GitHub Discussions/Issue 引导，与 SECURITY.md 口径一致。
+- `docs/labels.md`（legacy 排行榜 label 设计稿，含 relay:wolfai.top 示例）移入 `docs/archive/` 并加归档横幅；wheel package-data 仅打包 `app.verify` 的 baselines/fingerprints/webapp，不含 archive/labels/initial_ranking。
+
+#### Tests — detect 无商业默认守卫
+- 新增 `test_v059_detect_no_commercial_default.py`：行为断言空/未知 key 返回 None 或官方端点、绝不返回商业中继；源码级守卫扫描 `detect.py` 无商业域名、`detect_base_url` 无硬编码商业回退，注入"函数开头默认返回商业中继"即 FAIL。
+
 ## [0.5.8] - 2026-10-17
 
 ### Honesty — 开篇/能力清单诚实分区（产品片 P2）
