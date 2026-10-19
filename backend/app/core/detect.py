@@ -22,14 +22,10 @@ class KnownRelay:
     notes: str = ""
 
 
-# Known relay services - base URLs and key prefix patterns
+# Known official provider endpoints - base URLs and key prefix patterns.
+# (Commercial relay lists and auto-detection defaults were removed; this list
+# only documents official first-party endpoints.)
 KNOWN_RELAYS: list[KnownRelay] = [
-    KnownRelay(
-        name="WolfAI",
-        base_url="https://wolfai.top/v1",
-        key_prefix="sk-",
-        notes="国内主流中转站，支持多模型",
-    ),
     KnownRelay(
         name="OpenAI Official",
         base_url="https://api.openai.com/v1",
@@ -116,21 +112,6 @@ KNOWN_RELAYS: list[KnownRelay] = [
     ),
 ]
 
-# Common relay base URL patterns for auto-detection
-COMMON_RELAY_PATTERNS: list[tuple[str, str]] = [
-    (r"wolfai", "https://wolfai.top/v1"),
-    (r"api2d", "https://openai.api2d.net/v1"),
-    (r"closeai", "https://api.closeai-asia.com/v1"),
-    (r"ohmygpt", "https://api.ohmygpt.com/v1"),
-    (r"aigc", "https://api.aigc369.com/v1"),
-    (r"chatanywhere", "https://api.chatanywhere.tech/v1"),
-    (r"geekgpt", "https://ai.fakeopen.com/v1"),
-    (r"openai-sb", "https://api.openai-sb.com/v1"),
-    (r"aidp", "https://api.aidp.cloud/v1"),
-    (r"oneapi", "https://api.oneapi.dev/v1"),
-    (r"newapi", "https://api.newapi.ai/v1"),
-]
-
 
 def detect_base_url(api_key: str) -> Optional[str]:
     """Auto-detect base URL from API key format.
@@ -140,18 +121,11 @@ def detect_base_url(api_key: str) -> Optional[str]:
     if not api_key:
         return None
 
-    # Check key prefix patterns
+    # Check key prefix patterns against official first-party endpoints only.
+    # No commercial-relay default guess is made for unknown keys.
     for relay in KNOWN_RELAYS:
         if relay.key_prefix and api_key.startswith(relay.key_prefix):
-            # For generic "sk-" prefix, return WolfAI as default guess
-            # but mark as uncertain
-            if relay.key_prefix == "sk-" and relay.name == "OpenAI Official (legacy)":
-                continue
             return relay.base_url
-
-    # Default guess for unknown "sk-" keys: try common relays
-    if api_key.startswith("sk-"):
-        return "https://wolfai.top/v1"  # Most common default
 
     return None
 

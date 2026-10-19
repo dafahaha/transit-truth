@@ -31,36 +31,6 @@ from .database import get_audit, list_audits
 from .models import AuditRequest, AuditStatus
 from .utils.report_generator import generate_html_report
 
-# ─── Known Relay Base URLs for auto-detection ───────────────────────
-KNOWN_RELAYS = [
-    {
-        "name": "OpenAI Official",
-        "base_url": "https://api.openai.com/v1",
-        "pattern": "api.openai.com",
-    },
-    {"name": "WolfAI", "base_url": "https://wolfai.top/v1", "pattern": "wolfai.top"},
-    {
-        "name": "API2D",
-        "base_url": "https://openai.api2d.net/v1",
-        "pattern": "api2d.net",
-    },
-    {
-        "name": "OhMyGPT",
-        "base_url": "https://api.ohmygpt.com/v1",
-        "pattern": "ohmygpt.com",
-    },
-    {
-        "name": "AIHubMix",
-        "base_url": "https://aihubmix.com/v1",
-        "pattern": "aihubmix.com",
-    },
-    {
-        "name": "CloseAI",
-        "base_url": "https://api.closeai-asia.com/v1",
-        "pattern": "closeai",
-    },
-]
-
 
 # ─── Color output helpers ────────────────────────────────────────────
 class Colors:
@@ -497,7 +467,10 @@ Environment variables:
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
     # Audit command
-    audit_parser = subparsers.add_parser("audit", help="Run an audit on a relay API")
+    audit_parser = subparsers.add_parser(
+        "audit",
+        help="Run an audit on a relay API (legacy; not part of the shipped verify/serve path)",
+    )
     audit_parser.add_argument(
         "--api-key",
         default=os.environ.get("TRANSIT_TRUTH_API_KEY"),
@@ -545,7 +518,10 @@ Environment variables:
     audit_parser.set_defaults(func=cmd_audit)
 
     # List command
-    list_parser = subparsers.add_parser("list", help="List audit history")
+    list_parser = subparsers.add_parser(
+        "list",
+        help="List audit history (legacy; not part of the shipped verify/serve path)",
+    )
     list_parser.add_argument(
         "--limit", type=int, default=20, help="Number of records (default: 20)"
     )
@@ -553,7 +529,8 @@ Environment variables:
 
     # Export command
     export_parser = subparsers.add_parser(
-        "export", help="Export an audit report to HTML"
+        "export",
+        help="Export an audit report to HTML (legacy; not part of the shipped verify/serve path)",
     )
     export_parser.add_argument("--audit-id", required=True, help="Audit ID to export")
     export_parser.add_argument("--output", "-o", default=None, help="Output file path")
@@ -561,7 +538,8 @@ Environment variables:
 
     # Benchmark command
     bench_parser = subparsers.add_parser(
-        "benchmark", help="Collect model fingerprint benchmark data"
+        "benchmark",
+        help="Collect model fingerprint benchmark data (legacy; not part of the shipped verify/serve path)",
     )
     bench_parser.add_argument(
         "--api-key", default=os.environ.get("TRANSIT_TRUTH_API_KEY"), help="API key"
@@ -585,7 +563,8 @@ Environment variables:
 
     # Balance command
     balance_parser = subparsers.add_parser(
-        "balance", help="Check account balance for relay APIs"
+        "balance",
+        help="Check account balance for relay APIs (legacy; not part of the shipped verify/serve path)",
     )
     balance_parser.add_argument(
         "--api-key",
