@@ -349,7 +349,7 @@ python analyze_baseline.py --input data/baselines/gpt-4o.json
 
 ## PR 流程
 
-1. 确保代码通过所有测试（`pytest`，当前 336 passed / 7 skipped）
+1. 确保代码通过所有测试（`pytest`，当前 346 passed / 7 skipped）
 2. 如有需要，更新文档
 3. 完整填写 PR 模板
 4. 积极响应 review 反馈

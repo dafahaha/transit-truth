@@ -35,7 +35,7 @@ Links to keep consistent:
 
 没有付费 key 也能跑：自带一个本地 reference-server，dummy key 就能把整条链路跑一遍自检。GitHub Pages 仅为离线演示（内置种子数据，不发送 key）；真实核验请在本地/自托管运行 `transit-truth serve`，浏览器直连受 CORS 限制。
 
-MIT 协议，测试 336 passed / 7 skipped（7 skipped 为需真实 key 的 integration）。欢迎拿你常用的站跑一遍，结果贴 Discussion 里（别贴 key）。
+MIT 协议，测试 346 passed / 7 skipped（7 skipped 为需真实 key 的 integration）。欢迎拿你常用的站跑一遍，结果贴 Discussion 里（别贴 key）。
 
 **评论区置顶：**
 > FAQ 见 https://github.com/dafahaha/transit-truth/discussions/2 。suspicious 不等于实锤欺诈，只是值得去找 provider 要个说法。
@@ -96,7 +96,7 @@ Important, stated up front in the README:
 
 You can run the whole thing without a paid key — it ships a local reference server (dummy key, loopback, `--allow-local`). There's also a zero-install browser demo.
 
-MIT, 336 passed / 7 skipped (7 skipped = integration tests needing a real key). If you audit a relay you use, I set up a discussion thread to post results — please never paste keys.
+MIT, 346 passed / 7 skipped (7 skipped = integration tests needing a real key). If you audit a relay you use, I set up a discussion thread to post results — please never paste keys.
 
 ---
 
