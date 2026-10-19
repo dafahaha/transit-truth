@@ -55,6 +55,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 > **依赖说明（P3-4，仅记录未改）**：运行时依赖目前仅写下限、无上限/lockfile；未来主版本可能破坏复现，后续主版本前再评估是否加兼容上限。
 
+### R2-fix — 第二轮产品审批修复批（1 P1 / 3 P2 / 8 P3）
+
+#### Fixed — tech_report.pdf 真正重编（产品 P1-R2-1）
+- `docs/tech_report.pdf` 此前未随 tex 重编，§3.2 仍残留 "under high temperature" / "should be near-uniform"；用当前 `docs/tech_report.tex` 经 MiKTeX pdflatex 两遍重编（9 页，252757 字节），pypdf 提取第 3 页确认两处旧句消失、温度口径为 temperature 0，关键数字（0.913 / CrI [0.885,0.937] / 76% / 88% / TVD 0.90 / [0.80,0.93]）无漂移。
+
+#### Honesty — 成本句估算限定 / 计数同步（产品 P2-R2-1 / P2-R2-2）
+- 实测测试计数全仓由 336 回填为 **346 passed / 7 skipped**（README.md、README.en.md、docs/launch_kit.md、CONTRIBUTING.md、docs/PUBLISHING.md；CHANGELOG 历史记述保留）。
+- 成本句（paper/main.tex Abstract/Conclusion、paper/README.md、docs/experiment_report.md）改为估算口径："at public low-tier list prices a full run estimates under $0.01; actual cost depends on model tier and per-token price (the code contains no pricing logic)"，删除无条件 <$0.01 断言。
+
+#### Cleanup — 死模态 / 死常量 / 商业域名清理（产品 P3-R2-2）
+- 根 `index.html` 删除整块无按钮触发、虚构 `transit-truth@example.com` 邮箱且引用未挂载 `POST /api/contribute/audit` 的死 `contribute-modal` DOM 及其孤儿 JS（contributeToRanking/closeContributeModal/contributeVia*/showContributeSuccess/generateGitHubIssueUrl），社区引导改 GitHub Discussions。
+- 删除 `backend/app/cli.py` 未被引用的 `KNOWN_RELAYS` 死常量；`backend/app/core/detect.py` 删除商业中继条目 WolfAI 与未使用的 `COMMON_RELAY_PATTERNS`，`detect_base_url` 不再为未知 sk- key 返回商业中继默认地址，仅保留官方第一方端点表。
+- `data/initial_ranking.json`（仅 legacy `database.py` 加载、wheel 不打包、Pages 不引用）移入 `docs/archive/`；`docs/blog_post.md`、`docs/promotion_guide.md`（孤儿历史草稿，误植 EER 7.3% 口径）移入 `docs/archive/` 并加归档横幅。
+
+#### Docs / CLI
+- `audit`/`list`/`export`/`benchmark`/`balance` 五个 legacy 子命令 `--help` 标注 "(legacy; not part of the shipped verify/serve path)"，README 补一句说明。
+- 温度泛化句：paper/main.tex:202、docs/experiment_report.md:341 的 "even at temperature 1.0" 改为 "at non-zero temperature"，避免全仓零残留口径；`paper/main.pdf`（5 页）随 main.tex 文本改动重编，成本估算句与关键数字核验通过。
+- paper/README.md 页数 4→5（与重编 PDF 一致）。
+
 ## [0.5.8] - 2026-10-17
 
 ### Honesty — 开篇/能力清单诚实分区（产品片 P2）
