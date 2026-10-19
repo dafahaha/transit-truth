@@ -1,0 +1,91 @@
+{
+  "metadata": {
+    "model": "glm-4-9b-chat",
+    "samples_per_probe": 5,
+    "collected_at": "2026-10-15",
+    "fingerprint_type": "tokenizer-real",
+    "tokenizer_repo": "THUDM/glm-4-9b-chat",
+    "counting_caliber": "system_prompt + user_prompt joined by newline, matching exactly what the probe battery sends to an OpenAI-compatible endpoint (system message + user message). Measured with transformers AutoTokenizer (ChatGLM4Tokenizer, trust_remote_code) using encode(..., add_special_tokens=False), because this model ships tokenization_chatglm.py + tokenizer.model rather than a HuggingFace tokenizers-library tokenizer.json (so reference_server Tokenizer.from_pretrained cannot load it and remains in labeled stub mode for live serving).",
+    "note": "Real prompt-token counts measured with the THUDM/glm-4-9b-chat tokenizer via transformers AutoTokenizer from HF_ENDPOINT=hf-mirror. Behavioral distributions are NOT captured (no local generation); for open-source behavioral references see the Zenodo 165-model fingerprint dataset (CC-BY-4.0) cited in THIRD_PARTY_NOTICES.md. Tokenization is deterministic, so samples are identical by construction. IMPORTANT: with no behavioral reference, verify can only certify tokenizer-family consistency and must NOT output verdict=pass; it caps at insufficient_evidence."
+  },
+  "tokenizer": {
+    "tok-whitespace": {
+      "prompt_tokens": {
+        "samples": [
+          43,
+          43,
+          43,
+          43,
+          43
+        ]
+      }
+    },
+    "tok-code": {
+      "prompt_tokens": {
+        "samples": [
+          41,
+          41,
+          41,
+          41,
+          41
+        ]
+      }
+    },
+    "tok-url": {
+      "prompt_tokens": {
+        "samples": [
+          45,
+          45,
+          45,
+          45,
+          45
+        ]
+      }
+    },
+    "tok-mixed-unicode": {
+      "prompt_tokens": {
+        "samples": [
+          40,
+          40,
+          40,
+          40,
+          40
+        ]
+      }
+    },
+    "tok-repeated-chars": {
+      "prompt_tokens": {
+        "samples": [
+          34,
+          34,
+          34,
+          34,
+          34
+        ]
+      }
+    },
+    "tok-cjk": {
+      "prompt_tokens": {
+        "samples": [
+          39,
+          39,
+          39,
+          39,
+          39
+        ]
+      }
+    },
+    "tok-digits": {
+      "prompt_tokens": {
+        "samples": [
+          48,
+          48,
+          48,
+          48,
+          48
+        ]
+      }
+    }
+  },
+  "behavioral": {}
+}
