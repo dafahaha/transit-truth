@@ -9,7 +9,7 @@ TransitTruth is a stateless CLI that probes any OpenAI-compatible endpoint with 
 
 Built for LLM-security researchers, agent developers, and anyone who routes LLM traffic through third-party relays or gateways.
 
-> **Scope note.** The bundled, current path shipped on PyPI/`verify`/`serve` is **stateless model-identity verification** (CLI/SDK + local `serve` browser UI; the key stays in session memory only). Token billing audit (tiktoken token-billing difference detection), latency/availability/error-rate performance monitoring, OpenAI response-format protocol compliance, balance queries/low-balance alerts, continuous monitoring/alert channels, and a community leaderboard/online submissions belong to an **early, standalone legacy web platform (`app.main`, self-hosted separately)** and are **NOT** part of the current `verify`/`serve`/PyPI bundle.
+> **Scope note.** The bundled current `verify`/`serve` path (the code path intended for PyPI; not yet published) is **stateless model-identity verification** (CLI/SDK + local `serve` browser UI; the key stays in session memory only). Token billing audit (tiktoken token-billing difference detection), latency/availability/error-rate performance monitoring, OpenAI response-format protocol compliance, balance queries/low-balance alerts, continuous monitoring/alert channels, and a community leaderboard/online submissions belong to an **early, standalone legacy web platform (`app.main`, self-hosted separately)** and are **NOT** part of the current `verify`/`serve`/PyPI bundle.
 
 ---
 
@@ -73,6 +73,13 @@ model (pick from the catalog or type it), and optionally your key (a password
 field). The report banner shows the three-state verdict, confidence, posterior /
 LR / 95% CI / chi-square / KS p, per-probe evidence, and flags
 (`deterministic_replay_risk`, `thin_evidence`, `non_cooperation`).
+
+**Local web UI screenshots** (captured from a local `transit-truth serve` against
+local stub backends; no real key; the report contains no key):
+
+| Home form | pass (behavioral evidence supports) | insufficient_evidence (not enough evidence, no forced verdict) | suspicious (differs significantly from reference) |
+| --- | --- | --- | --- |
+| ![Local web UI home](docs/demo_4.png) | ![pass report](docs/demo_1.png) | ![insufficient_evidence report](docs/demo_2.png) | ![suspicious report](docs/demo_3.png) |
 
 ### Key safety (hard contract)
 
@@ -154,8 +161,29 @@ probes (self-reported `usage.prompt_tokens` on a fixed prompt suite) and
 behavioral probes × repeats (distributional "random task" preferences — which
 number, coin flip, color, dice a model returns). It compares the observed
 fingerprint against the shipped reference catalog using chi-square /
-KS tests and a Bayesian posterior, and returns a single report. The whole run
-costs under $0.01.
+KS tests and a Bayesian posterior, and returns a single report. At low public
+list prices a full run estimates under $0.01; the actual cost depends on the
+model tier and per-token price (the code contains no pricing logic).
+
+### What the shipped reference data shows
+
+Numbers from the first catalog (gpt-4o / gpt-4o-mini, n=50 per probe, collected
+through a single third-party relay — not the official endpoint):
+
+- On the "pick a random animal" behavioral probe, gpt-4o returned **"Okapi" 76%**
+  of the time (uniform choice would be ~16%).
+- The simple "is the answer Okapi" rule achieves **88% resubstitution accuracy**
+  on the same benchmark sample (Wilson 95% CI [0.80, 0.93]). This is an
+  **in-distribution resubstitution** self-consistency check, **not** held-out
+  accuracy.
+- The strongest behavioral probe (random animal) reaches **TVD = 0.90** — a
+  distribution distance, not a classification accuracy.
+- The end-to-end pipeline self-consistency posterior is **0.913** (95% CrI
+  [0.885, 0.937]) — again measured against the catalog's own in-distribution
+  reference, not on independent held-out data.
+
+These are shipped as reference fingerprints; the tool deliberately does not
+claim held-out generalization or vendor-independent detection.
 
 ## Honest limitations
 
@@ -244,7 +272,7 @@ current `verify`/`serve`/PyPI model-identity path:
   loopback only; see [docs/serve.md](docs/serve.md)).
 - **Baseline data:** `data/baselines/` (real n=50 collections),
   `data/fingerprints/` (open-source tokenizer catalog).
-- **Tests:** 335 passed / 7 skipped (the 7 skipped are integration
+- **Tests:** 352 passed / 7 skipped (the 7 skipped are integration
   tests that need a real API key; run them with `pytest -m integration`).
 
 ## Installing from source (before the PyPI release)

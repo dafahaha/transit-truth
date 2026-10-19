@@ -1,5 +1,7 @@
 # TransitTruth Detection Methodology
 
+> ⚠️ **已归档（ARCHIVED，v0.5.9）**：本旧内部方法稿已移入 `docs/archive/` 仅作历史保留，不再维护；其中历史温度表述（如 temperature=1.0）与当前 shipped 的 temperature=0 点质量采集不一致，当前口径以 README.md / docs/verify.md 为准。
+
 This document describes the technical methodology behind TransitTruth's detection capabilities. It is intended for researchers, contributors, and users who want to understand how the tool works under the hood.
 
 ## Table of Contents

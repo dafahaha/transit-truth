@@ -39,6 +39,13 @@ JOBS = [
 def main() -> None:
     for src, dst in JOBS:
         dst.mkdir(parents=True, exist_ok=True)
+        wanted = {jf.name for jf in src.glob("*.json") if "test" not in jf.name.lower()}
+        # Prune stale files first so a removed/renamed catalog entry never
+        # silently keeps shipping inside the wheel.
+        for stale in sorted(dst.glob("*.json")):
+            if stale.name not in wanted:
+                stale.unlink()
+                print(f"pruned stale {stale.relative_to(REPO)}")
         for jf in sorted(src.glob("*.json")):
             if "test" in jf.name.lower():
                 continue

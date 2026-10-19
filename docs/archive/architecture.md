@@ -1,5 +1,7 @@
 # TransitTruth Architecture
 
+> ⚠️ **已归档（ARCHIVED，v0.5.9）**：本旧内部架构稿已移入 `docs/archive/` 仅作历史保留，不再维护，可能描述已被取代的 legacy web 平台；当前 `verify`/`serve` 模型身份核验以 README.md 与 docs/verify.md 为准。
+
 ## Overview
 
 TransitTruth is an open-source AI API relay audit tool. It verifies whether AI API relay services (中转站) are engaging in fraudulent practices such as token count inflation, model downgrading, and response caching.

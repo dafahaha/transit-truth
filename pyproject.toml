@@ -10,7 +10,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "transit-truth"
-version = "0.5.8"
+version = "0.5.9"
 description = "Statelessly verify that the model an OpenAI-compatible endpoint claims to serve is the model it actually serves."
 readme = "README.en.md"
 license = {text = "MIT"}
@@ -51,6 +51,9 @@ dev = [
     "flake8>=6.0.0",
     "mypy>=1.5.0",
     "ruff>=0.1.0",
+    # Pinned to the CI hard-gate versions so local formatting cannot drift.
+    "black==26.10.1",
+    "isort==9.0.2",
 ]
 # `reference-server` loads a REAL local tokenizer (downloaded from HF_ENDPOINT,
 # default hf-mirror.com) for genuine token-count fingerprints. Without this

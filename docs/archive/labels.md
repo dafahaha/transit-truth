@@ -1,5 +1,7 @@
 # GitHub Labels 设计
 
+> ⚠️ **已归档（ARCHIVED，v0.5.9）**：本旧排行榜 label 设计稿移入 `docs/archive/` 仅作历史保留，不再维护；其中 `relay:wolfai.top` 等具体中转站标签属已下线的 legacy 排行榜体系，与当前随包的 `verify`/`serve` 路径无关。
+
 排行榜和项目管理使用的 Labels 体系。
 
 ## 审计结果 Labels

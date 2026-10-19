@@ -256,6 +256,26 @@ def test_baseline_loading_diagnostics_go_to_stderr(capsys):
     assert "Loaded real baseline" in captured.err, captured.err
 
 
+def test_missing_reference_catalog_warns_loud_on_stderr(monkeypatch, capsys, tmp_path):
+    """P2: a missing/empty reference catalog must fail loud on stderr, not
+    silently degrade to synthetic placeholders."""
+    import app.verify.reference as refmod
+
+    # Entire catalog missing (trimmed wheel / broken checkout).
+    monkeypatch.setattr(refmod, "_reference_dir", lambda kind: None)
+    refmod.load_reference_analyzer()
+    captured = capsys.readouterr()
+    assert "no reference baseline catalog found" in captured.err, captured.err
+    assert "WARNING" not in captured.out, captured.out
+
+    # Directory present but empty of JSON files (tmp_path auto-cleans).
+    monkeypatch.setattr(refmod, "_reference_dir", lambda kind: tmp_path)
+    refmod.load_reference_analyzer()
+    captured = capsys.readouterr()
+    assert "contains no JSON files" in captured.err, captured.err
+    assert "WARNING" not in captured.out, captured.out
+
+
 _SUBPROCESS_SCRIPT = r"""
 import asyncio, json, socket, threading, time
 import uvicorn

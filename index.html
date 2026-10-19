@@ -477,156 +477,6 @@
     background: var(--bg-secondary);
     border-radius: 8px;
   }
-  /* ─── 贡献模态框（苹果毛玻璃风格）─── */
-  .modal-overlay {
-    display: none;
-    position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    z-index: 1000;
-    justify-content: center;
-    align-items: center;
-    animation: fadeIn 0.2s ease-out;
-  }
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-  @keyframes slideUp {
-    from { opacity: 0; transform: translateY(20px) scale(0.98); }
-    to { opacity: 1; transform: translateY(0) scale(1); }
-  }
-  .modal-overlay.active { display: flex; }
-  .modal {
-    background: rgba(255, 255, 255, 0.72);
-    backdrop-filter: blur(20px) saturate(180%);
-    -webkit-backdrop-filter: blur(20px) saturate(180%);
-    border-radius: 20px;
-    padding: 28px;
-    max-width: 520px;
-    width: 90%;
-    max-height: 85vh;
-    overflow-y: auto;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15), 0 0 0 0.5px rgba(255, 255, 255, 0.5) inset;
-    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .modal h3 {
-    margin: 0 0 6px 0;
-    font-size: 1.3rem;
-    font-weight: 700;
-    letter-spacing: -0.02em;
-  }
-  .modal-subtitle {
-    color: var(--muted);
-    font-size: 0.875rem;
-    margin-bottom: 20px;
-    line-height: 1.5;
-  }
-  .contribute-option {
-    display: flex;
-    align-items: flex-start;
-    gap: 14px;
-    padding: 16px;
-    background: rgba(255, 255, 255, 0.6);
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-radius: 14px;
-    margin-bottom: 10px;
-    cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  .contribute-option:hover {
-    border-color: rgba(0, 113, 227, 0.3);
-    background: rgba(0, 113, 227, 0.06);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 113, 227, 0.1);
-  }
-  .contribute-option:active {
-    transform: translateY(0);
-  }
-  .contribute-option .icon {
-    font-size: 1.6rem;
-    flex-shrink: 0;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0, 0, 0, 0.04);
-    border-radius: 10px;
-  }
-  .contribute-option .content {
-    flex: 1;
-    min-width: 0;
-  }
-  .contribute-option .title {
-    font-weight: 600;
-    font-size: 0.95rem;
-    margin-bottom: 3px;
-    display: flex;
-    align-items: center;
-  }
-  .contribute-option .desc {
-    font-size: 0.8rem;
-    color: var(--muted);
-    line-height: 1.4;
-  }
-  .contribute-option .badge-recommend {
-    background: rgba(52, 199, 89, 0.15);
-    color: #248a3d;
-    padding: 2px 8px;
-    border-radius: 6px;
-    font-size: 0.65rem;
-    font-weight: 600;
-    margin-left: 8px;
-    letter-spacing: 0.02em;
-  }
-  .modal-close {
-    float: right;
-    background: rgba(0, 0, 0, 0.05);
-    border: none;
-    font-size: 1.2rem;
-    cursor: pointer;
-    color: var(--muted);
-    padding: 0;
-    line-height: 1;
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    margin-bottom: 8px;
-  }
-  .modal-close:hover {
-    background: rgba(0, 0, 0, 0.1);
-    color: var(--text);
-  }
-  .contribute-success {
-    text-align: center;
-    padding: 24px 0;
-  }
-  .contribute-success .check-icon {
-    font-size: 3.5rem;
-    margin-bottom: 16px;
-    display: inline-block;
-    animation: bounceIn 0.5s cubic-bezier(0.16, 1, 0.3, 1);
-  }
-  @keyframes bounceIn {
-    0% { transform: scale(0); }
-    50% { transform: scale(1.2); }
-    100% { transform: scale(1); }
-  }
-  .contribute-success h3 {
-    margin-bottom: 8px;
-  }
-  .contribute-success p {
-    color: var(--muted);
-    font-size: 0.9rem;
-    line-height: 1.5;
-  }
 
   /* ── 行为指纹分布条形图 ─────────────────────── */
   .fp-chart-legend { display:flex; gap:20px; align-items:center; font-size:0.8rem; color:var(--muted); margin:6px 0 14px; }
@@ -757,7 +607,6 @@
       <button class="btn btn-secondary" onclick="exportJSON()">📥 导出 JSON</button>
       <button class="btn btn-secondary" onclick="copyResult()">📋 复制结果</button>
       <button class="btn btn-secondary" onclick="generateShareCard()">🖼️ 分享卡片</button>
-      <button class="btn" onclick="contributeToRanking()">🏆 贡献到排行榜</button>
     </div>
   </div>
 
@@ -825,57 +674,6 @@
     </div>
   </div>
 
-  <!-- 贡献模态框 -->
-  <div class="modal-overlay" id="contribute-modal">
-    <div class="modal">
-      <button class="modal-close" onclick="closeContributeModal()">&times;</button>
-      <div id="contribute-modal-content">
-        <h3>🏆 贡献审计结果</h3>
-        <p class="modal-subtitle">选择一种方式提交你的审计结果，帮助更多用户避坑。所有贡献都会公开署名。</p>
-
-        <div class="contribute-option" onclick="contributeViaGitHub()">
-          <div class="icon">🐙</div>
-          <div class="content">
-            <div class="title">GitHub Issue <span class="badge-recommend">推荐</span></div>
-            <div class="desc">有GitHub账号首选，自动填充模板，一键提交，即时可见</div>
-          </div>
-        </div>
-
-        <div class="contribute-option" onclick="contributeViaCopy()">
-          <div class="icon">📋</div>
-          <div class="content">
-            <div class="title">复制 JSON 结果</div>
-            <div class="desc">无GitHub账号？复制完整审计数据，可通过邮件/社区/任何方式提交</div>
-          </div>
-        </div>
-
-        <div class="contribute-option" onclick="contributeViaEmail()">
-          <div class="icon">📧</div>
-          <div class="content">
-            <div class="title">邮件提交</div>
-            <div class="desc">一键打开邮件客户端，自动填充审计结果，发送到项目维护者邮箱</div>
-          </div>
-        </div>
-
-        <div class="contribute-option" onclick="contributeViaCommunity()">
-          <div class="icon">💬</div>
-          <div class="content">
-            <div class="title">社区发帖</div>
-            <div class="desc">在V2EX/知乎/掘金等社区分享你的审计发现，@项目维护者即可收录</div>
-          </div>
-        </div>
-
-        <div class="contribute-option" onclick="contributeViaAPI()">
-          <div class="icon">🔌</div>
-          <div class="content">
-            <div class="title">API 提交（高级）</div>
-            <div class="desc">如果你部署了后端服务，可直接调用 POST /api/contribute/audit 端点提交</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-
   <!-- 免责声明 -->
   <div class="disclaimer">
     <strong>⚠️ 免责声明：</strong>
@@ -909,22 +707,6 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
 }
-
-// ─── 已知中转站映射 ────────────────────────────────────────
-const KNOWN_RELAYS = [
-  { name: 'OpenAI 官方', base_url: 'https://api.openai.com/v1', pattern: /api\.openai\.com/ },
-  { name: 'wolfai', base_url: 'https://wolfai.top/v1', pattern: /wolfai/ },
-  { name: 'API2D', base_url: 'https://openai.api2d.net/v1', pattern: /api2d/ },
-  { name: 'OhMyGPT', base_url: 'https://api.ohmygpt.com/v1', pattern: /ohmygpt/ },
-  { name: 'AIHub', base_url: 'https://aihubmix.com/v1', pattern: /aihubmix/ },
-  { name: 'CloseAI', base_url: 'https://api.closeai-asia.com/v1', pattern: /closeai/ },
-  { name: 'BetterAPI', base_url: 'https://api.betterapi.net/v1', pattern: /betterapi/ },
-  { name: 'GeekAPI', base_url: 'https://api.geekapi.net/v1', pattern: /geekapi/ },
-  { name: 'AnyAI', base_url: 'https://api.anyai.app/v1', pattern: /anyai/ },
-  { name: 'AIProxy', base_url: 'https://api.aiproxy.io/v1', pattern: /aiproxy/ },
-  { name: 'OneAPI', base_url: 'http://localhost:3000/v1', pattern: /localhost:3000/ },
-  { name: 'NewAPI', base_url: 'http://localhost:3001/v1', pattern: /localhost:3001/ },
-];
 
 // ─── 探针定义 ──────────────────────────────────────────────
 const TOKENIZER_PROBES = [
@@ -1358,17 +1140,6 @@ function showResult() {
 }
 
 // ─── 辅助函数 ───────────────────────────────────────────────
-function detectRelayName(baseUrl) {
-  for (const relay of KNOWN_RELAYS) {
-    if (relay.pattern.test(baseUrl)) return relay.name;
-  }
-  try {
-    return new URL(baseUrl).hostname;
-  } catch {
-    return '未知中转站';
-  }
-}
-
 function detectClaimedFamily(model) {
   const m = model.toLowerCase();
   if (m.includes('gpt')) return 'openai-gpt';
@@ -1437,138 +1208,6 @@ function copyResult() {
   });
 }
 
-function contributeToRanking() {
-  // 打开贡献模态框，让用户选择提交方式
-  document.getElementById('contribute-modal').classList.add('active');
-}
-
-function closeContributeModal() {
-  document.getElementById('contribute-modal').classList.remove('active');
-}
-
-// 点击模态框背景关闭
-document.addEventListener('click', function(e) {
-  if (e.target.id === 'contribute-modal') {
-    closeContributeModal();
-  }
-});
-
-function generateGitHubIssueUrl() {
-  const title = encodeURIComponent(`[audit-result] ${auditResult.relay_name} / ${auditResult.model} - ${auditResult.overall_score}分`);
-  const body = encodeURIComponent(`## 审计结果\n\n` +
-    `### 基本信息\n` +
-    `- **中转站**: ${auditResult.relay_name}\n` +
-    `- **Base URL**: ${auditResult.base_url}\n` +
-    `- **模型**: ${auditResult.model}\n` +
-    `- **审计模式**: ${auditResult.mode}\n` +
-    `- **审计时间**: ${auditResult.timestamp}\n\n` +
-    `### 评分\n` +
-    `- **信任分**: ${auditResult.overall_score}/100\n` +
-    `- **信任等级**: ${auditResult.trust_level}\n\n` +
-    `### Token 对比\n` +
-    `- 报告 Prompt Tokens: ${auditResult.token_comparison.prompt_tokens_reported}\n` +
-    `- 预期 Prompt Tokens: ${auditResult.token_comparison.prompt_tokens_expected || 'N/A'}\n` +
-    `- Token 差异率: ${auditResult.token_comparison.prompt_inflation_pct?.toFixed(1) || 'N/A'}%\n` +
-    `- Chat Template 估算: ${auditResult.token_comparison.chat_template_overhead} tokens\n` +
-    `- 可疑: ${auditResult.token_comparison.suspicious ? '是' : '否'}\n\n` +
-    `### 模型指纹\n` +
-    `- 声称模型: ${auditResult.fingerprint.claimed_model}\n` +
-    `- 检测家族: ${auditResult.fingerprint.detected_family || '未知'}\n` +
-    `- 家族匹配: ${auditResult.fingerprint.family_match ? '是' : '否'}\n` +
-    `- 置信度: ${(auditResult.fingerprint.confidence * 100).toFixed(0)}%\n` +
-    `- 能力测试: ${auditResult.fingerprint.capability.passed}/${auditResult.fingerprint.capability.total} 通过\n\n` +
-    `### 延迟与协议\n` +
-    `- 平均延迟: ${auditResult.latency.avg_latency_ms?.toFixed(0) || 'N/A'}ms\n` +
-    `- 协议通过率: ${(auditResult.latency.protocol_pass_rate * 100).toFixed(0)}%\n\n` +
-    `### 原始 JSON\n` +
-    `\`\`\`json\n${JSON.stringify(auditResult, null, 2).substring(0, 3000)}\n\`\`\`\n\n` +
-    `---\n*TransitTruth 离线演示导出（真实核验走本地 transit-truth serve）*`);
-  return `https://github.com/dafahaha/transit-truth/issues/new?title=${title}&body=${body}&labels=audit-result`;
-}
-
-function contributeViaGitHub() {
-  closeContributeModal();
-  window.open(generateGitHubIssueUrl(), '_blank');
-}
-
-function contributeViaCopy() {
-  const json = JSON.stringify(auditResult, null, 2);
-  navigator.clipboard.writeText(json).then(() => {
-    showContributeSuccess('✅ 已复制到剪贴板', '审计结果JSON已复制，你可以通过邮件、社区、即时通讯等任何方式发送给项目维护者。');
-  }).catch(() => {
-    // 降级方案：创建临时textarea
-    const textarea = document.createElement('textarea');
-    textarea.value = json;
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand('copy');
-    document.body.removeChild(textarea);
-    showContributeSuccess('✅ 已复制到剪贴板', '审计结果JSON已复制，你可以通过邮件、社区、即时通讯等任何方式发送给项目维护者。');
-  });
-}
-
-function contributeViaEmail() {
-  closeContributeModal();
-  const subject = encodeURIComponent(`[TransitTruth审计结果] ${auditResult.relay_name} / ${auditResult.model} - ${auditResult.overall_score}分`);
-  const body = encodeURIComponent(`你好，\n\n我使用TransitTruth审计了一个AI API中转站，结果如下：\n\n` +
-    `中转站: ${auditResult.relay_name}\n` +
-    `Base URL: ${auditResult.base_url}\n` +
-    `模型: ${auditResult.model}\n` +
-    `信任分: ${auditResult.overall_score}/100 (${auditResult.trust_level})\n` +
-    `Token差异率: ${auditResult.token_comparison.prompt_inflation_pct?.toFixed(1) || 'N/A'}%\n\n` +
-    `完整JSON数据：\n${JSON.stringify(auditResult, null, 2)}\n\n` +
-    `--\n由TransitTruth自动生成`);
-  window.location.href = `mailto:transit-truth@example.com?subject=${subject}&body=${body}`;
-}
-
-function contributeViaCommunity() {
-  showContributeSuccess('💬 社区发帖指南', '在V2EX/知乎/掘金/小红书等平台发布你的审计发现，标题包含"TransitTruth"或"AI中转站审计"，并@项目维护者（GitHub: @dafahaha）。我们会定期搜索社区内容，将验证通过的结果收录到排行榜。');
-}
-
-function contributeViaAPI() {
-  // R4-1: user-controlled values (relay_name/model AND the whole raw
-  // audit_result JSON) are escaped wholesale inside showContributeSuccess when
-  // it builds innerHTML. Do NOT escape them here, or they would be double
-  // escaped (visible `&quot;` text). The audit_result JSON is intentionally
-  // inserted raw; the popup layer is the single trust boundary.
-  const apiDoc = `POST /api/contribute/audit\n\n` +
-    `Content-Type: application/json\n\n` +
-    `{\n` +
-    `  "relay_name": "${auditResult.relay_name}",\n` +
-    `  "base_url": "${auditResult.base_url}",\n` +
-    `  "model": "${auditResult.model}",\n` +
-    `  "overall_score": ${auditResult.overall_score},\n` +
-    `  "trust_level": "${auditResult.trust_level}",\n` +
-    `  "contributor_id": "your-email-or-id",\n` +
-    `  "audit_result": ${JSON.stringify(auditResult).substring(0, 500)}...\n` +
-    `}`;
-  showContributeSuccess('🔌 API 提交文档', '如果你部署了TransitTruth后端服务，可直接调用贡献API端点：\n\n' + apiDoc + '\n\n完整API文档请参考：https://github.com/dafahaha/transit-truth');
-}
-
-function showContributeSuccess(title, message) {
-  const content = document.getElementById('contribute-modal-content');
-  // R4-1: escape the WHOLE message (including the raw audit_result JSON built
-  // in contributeViaAPI) BEFORE touching innerHTML. A self-entered model name
-  // like `"><img onerror=alert(1)>` must render as inert text, never as a real
-  // tag. Order matters: escape first (so <>"'& become entities), only THEN
-  // turn newlines into real <br> line breaks — escaping after inserting <br>
-  // would mangle the tags into &lt;br&gt;.
-  const safeMessage = escapeHtml(message).replace(/\n/g, '<br>');
-  // R5-1: same latent hole as the message fix — title was interpolated raw.
-  // All current callers pass a hardcoded literal (emoji + space + CJK label),
-  // so it was unreachable today, but any future caller passing user/relay data
-  // would resurrect the same DOM-XSS. Escape the whole title FIRST, then split
-  // on the space (escapeHtml leaves spaces alone, so positions are preserved).
-  const safeTitle = escapeHtml(title);
-  content.innerHTML = `
-    <div class="contribute-success">
-      <div class="check-icon">${safeTitle.split(' ')[0]}</div>
-      <h3>${safeTitle.substring(safeTitle.indexOf(' ') + 1)}</h3>
-      <p style="color:var(--muted);font-size:0.875rem;text-align:left;margin:16px 0;">${safeMessage}</p>
-      <button class="btn" onclick="closeContributeModal()">完成</button>
-    </div>
-  `;
-}
 
 // ─── 分享卡片 ─────────────────────────────────────────────
 function generateShareCard() {
@@ -1777,14 +1416,6 @@ window.runDemo = runDemo;
 window.runVerifyDemo = runVerifyDemo;
 window.exportJSON = exportJSON;
 window.copyResult = copyResult;
-window.contributeToRanking = contributeToRanking;
-window.closeContributeModal = closeContributeModal;
-window.contributeViaGitHub = contributeViaGitHub;
-window.contributeViaCopy = contributeViaCopy;
-window.contributeViaEmail = contributeViaEmail;
-window.contributeViaCommunity = contributeViaCommunity;
-window.contributeViaAPI = contributeViaAPI;
-window.showContributeSuccess = showContributeSuccess;
 window.generateShareCard = generateShareCard;
 window.downloadShareCard = downloadShareCard;
 window.copyShareCard = copyShareCard;
@@ -1794,18 +1425,16 @@ window.copyShareCard = copyShareCard;
 // ════════════════════════════════════════════════════════════
 
 const RANKING_DATA = [
-  { relay: "OpenAI 官方", base_url: "https://api.openai.com/v1", model: "gpt-4o", overall_score: 98, trust_level: "high", token_inflation_pct: 0.5, avg_latency_ms: 850, contributor: "@demo", status: "preliminary", notes: "演示种子（基于公开信息估算，非实测审计）" },
-  { relay: "OpenAI 官方", base_url: "https://api.openai.com/v1", model: "gpt-4o-mini", overall_score: 97, trust_level: "high", token_inflation_pct: 0.3, avg_latency_ms: 420, contributor: "@demo", status: "preliminary", notes: "演示种子（基于公开信息估算，非实测审计）" },
-  { relay: "wolfai", base_url: "https://wolfai.top/v1", model: "gpt-4o-mini", overall_score: 80.4, trust_level: "critical", token_inflation_pct: 76.1, avg_latency_ms: 1976, contributor: "@demo", status: "preliminary", notes: "演示种子（基于公开信息估算，非实测审计）" },
-  { relay: "wolfai", base_url: "https://wolfai.top/v1", model: "gpt-4o", overall_score: 58, trust_level: "low", token_inflation_pct: 76.1, avg_latency_ms: 1161, contributor: "@demo", status: "preliminary", notes: "演示种子（基于公开信息估算，非实测审计）" },
-  { relay: "API2D", base_url: "https://openai.api2d.net/v1", model: "gpt-4o", overall_score: 82, trust_level: "medium", token_inflation_pct: 5.2, avg_latency_ms: 1200, contributor: "@community", status: "preliminary", notes: "演示种子（基于公开信息估算）" },
-  { relay: "OhMyGPT", base_url: "https://api.ohmygpt.com/v1", model: "gpt-4o", overall_score: 75, trust_level: "medium", token_inflation_pct: 8.5, avg_latency_ms: 1500, contributor: "@community", status: "preliminary", notes: "演示种子（基于公开信息估算）" },
-  { relay: "BetterAPI", base_url: "https://api.betterapi.net/v1", model: "gpt-4o", overall_score: 78, trust_level: "medium", token_inflation_pct: 6.0, avg_latency_ms: 1100, contributor: "@community", status: "preliminary", notes: "演示种子（基于公开信息估算）" },
-  { relay: "AIHub", base_url: "https://aihubmix.com/v1", model: "gpt-4o", overall_score: 70, trust_level: "medium", token_inflation_pct: 12.0, avg_latency_ms: 1800, contributor: "@community", status: "preliminary", notes: "演示种子（基于公开信息估算）" },
-  { relay: "GeekAPI", base_url: "https://api.geekapi.net/v1", model: "gpt-4o", overall_score: 72, trust_level: "medium", token_inflation_pct: 10.0, avg_latency_ms: 1600, contributor: "@community", status: "preliminary", notes: "演示种子（基于公开信息估算）" },
-  { relay: "CloseAI", base_url: "https://api.closeai-asia.com/v1", model: "gpt-4o", overall_score: 68, trust_level: "medium", token_inflation_pct: 15.0, avg_latency_ms: 2000, contributor: "@community", status: "preliminary", notes: "演示种子（基于公开信息估算）" },
-  { relay: "Anthropic 官方", base_url: "https://api.anthropic.com/v1", model: "claude-3-5-sonnet", overall_score: 96, trust_level: "high", token_inflation_pct: 1.0, avg_latency_ms: 1200, contributor: "@demo", status: "preliminary", notes: "演示种子（基于公开信息估算，非实测审计）" },
-  { relay: "Google 官方", base_url: "https://generativelanguage.googleapis.com/v1beta", model: "gemini-1.5-pro", overall_score: 95, trust_level: "high", token_inflation_pct: 0.8, avg_latency_ms: 1400, contributor: "@demo", status: "preliminary", notes: "演示种子（基于公开信息估算，非实测审计）" },
+  { relay: "OpenAI 官方", base_url: "https://api.openai.com/v1", model: "gpt-4o", overall_score: 98, trust_level: "high", token_inflation_pct: 0.5, avg_latency_ms: 850, contributor: "@demo", status: "preliminary", notes: "演示种子（官方端点示例，非本工具实测审计）" },
+  { relay: "OpenAI 官方", base_url: "https://api.openai.com/v1", model: "gpt-4o-mini", overall_score: 97, trust_level: "high", token_inflation_pct: 0.3, avg_latency_ms: 420, contributor: "@demo", status: "preliminary", notes: "演示种子（官方端点示例，非本工具实测审计）" },
+  { relay: "relay-a.example", base_url: "https://relay-a.example/v1", model: "gpt-4o", overall_score: 74, trust_level: "n/a", token_inflation_pct: null, avg_latency_ms: 1300, contributor: "@demo", status: "preliminary", notes: "匿名占位演示行（虚构示例，非任何真实中转站，无实测评级或通胀数字）" },
+  { relay: "relay-a.example", base_url: "https://relay-a.example/v1", model: "gpt-4o-mini", overall_score: 72, trust_level: "n/a", token_inflation_pct: null, avg_latency_ms: 1100, contributor: "@demo", status: "preliminary", notes: "匿名占位演示行（虚构示例，非任何真实中转站，无实测评级或通胀数字）" },
+  { relay: "relay-b.example", base_url: "https://relay-b.example/v1", model: "gpt-4o", overall_score: 70, trust_level: "n/a", token_inflation_pct: null, avg_latency_ms: 1500, contributor: "@demo", status: "preliminary", notes: "匿名占位演示行（虚构示例，非任何真实中转站，无实测评级或通胀数字）" },
+  { relay: "relay-c.example", base_url: "https://relay-c.example/v1", model: "gpt-4o-mini", overall_score: 68, trust_level: "n/a", token_inflation_pct: null, avg_latency_ms: 1600, contributor: "@demo", status: "preliminary", notes: "匿名占位演示行（虚构示例，非任何真实中转站，无实测评级或通胀数字）" },
+  { relay: "relay-d.example", base_url: "https://relay-d.example/v1", model: "gpt-4o", overall_score: 66, trust_level: "n/a", token_inflation_pct: null, avg_latency_ms: 1750, contributor: "@demo", status: "preliminary", notes: "匿名占位演示行（虚构示例，非任何真实中转站，无实测评级或通胀数字）" },
+  { relay: "relay-e.example", base_url: "https://relay-e.example/v1", model: "gpt-4o-mini", overall_score: 64, trust_level: "n/a", token_inflation_pct: null, avg_latency_ms: 1900, contributor: "@demo", status: "preliminary", notes: "匿名占位演示行（虚构示例，非任何真实中转站，无实测评级或通胀数字）" },
+  { relay: "Anthropic 官方", base_url: "https://api.anthropic.com/v1", model: "claude-3-5-sonnet", overall_score: 96, trust_level: "high", token_inflation_pct: 1.0, avg_latency_ms: 1200, contributor: "@demo", status: "preliminary", notes: "演示种子（官方端点示例，非本工具实测审计）" },
+  { relay: "Google 官方", base_url: "https://generativelanguage.googleapis.com/v1beta", model: "gemini-1.5-pro", overall_score: 95, trust_level: "high", token_inflation_pct: 0.8, avg_latency_ms: 1400, contributor: "@demo", status: "preliminary", notes: "演示种子（官方端点示例，非本工具实测审计）" },
 ];
 
 let rankingSortKey = 'overall_score';

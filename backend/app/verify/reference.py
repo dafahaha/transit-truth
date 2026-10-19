@@ -25,13 +25,8 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 # ships a mirror of the reference catalog under app/verify/data/. The repo
 # checkout wins when present (development / editable installs); the shipped copy
 # is the fallback that makes `transit-truth verify` work out of the box after a
-# plain pip install. Keep both in sync with tools/sync_reference_data.py.
+# plain pip install. Keep both in sync with sync_reference_data.py (repo root).
 _PKG_DIR = Path(__file__).resolve().parent
-
-DEFAULT_REFERENCE_DIRS = [
-    _REPO_ROOT / "data" / "baselines",
-    _REPO_ROOT / "data" / "fingerprints",
-]
 
 
 def _reference_dir(kind: str) -> "Path | None":
@@ -104,7 +99,27 @@ def load_reference_analyzer(
     # Purge synthetic placeholders once, using the audited baselines dir
     # (live repo checkout, or the shipped mirror after a wheel install).
     baselines_dir = _reference_dir("baselines")
-    if baselines_dir is not None:
+    # Fail loud (stderr, never stdout -- see the diagnostics contract test) when
+    # the reference catalog is missing or empty: a trimmed wheel or a broken
+    # checkout would otherwise silently fall back to synthetic placeholders and
+    # hand out low-confidence verdicts with no explanation.
+    if baselines_dir is None:
+        print(
+            "WARNING: no reference baseline catalog found (neither the repo "
+            "data/baselines directory nor the package-shipped mirror is "
+            "present). verify can only return insufficient_evidence against "
+            "synthetic placeholders. Reinstall the package or run from a "
+            "complete checkout; see docs/PUBLISHING.md.",
+            file=sys.stderr,
+        )
+    elif not any(baselines_dir.glob("*.json")):
+        print(
+            f"WARNING: reference baseline directory {baselines_dir} contains no "
+            "JSON files; verify will run against synthetic placeholders only. "
+            "Run python sync_reference_data.py or reinstall the package.",
+            file=sys.stderr,
+        )
+    else:
         analyzer.load_real_baselines(str(baselines_dir))
 
     extra: list[Path] = []

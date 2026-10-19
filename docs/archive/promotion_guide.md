@@ -1,5 +1,7 @@
 ﻿# TransitTruth 多平台发布指南
 
+> ⚠️ **已归档（ARCHIVED，v0.5.9）**：本历史草稿移入 `docs/archive/` 仅作历史保留，不再维护；其中裸写的 "EER 7.3%" 未带 split-half/AUC/impostor 限定，口径不完整，请勿引用。当前模型身份核验以 README.md / docs/verify.md 为准。
+
 > ⚠️ **历史草稿说明（v0.5.2）**：本文件是旧版"纯前端浏览器演示"时期的历史草稿，其中"零安装 / 纯前端 / Key 不经服务器"等表述已过时。当前**模型身份核验（测中转站真假）必须在本地/自托管运行 `transit-truth serve`**（浏览器跨域直连受 CORS 限制，GitHub Pages 不能在线实测）；测试数与口径以 README.md 为准。
 
 > 本文档包含各平台的发布文案、注意事项和最佳实践。

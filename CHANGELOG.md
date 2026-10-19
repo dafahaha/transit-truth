@@ -7,6 +7,88 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.9] - 2026-10-19
+
+### Fixed — 参考目录缺失/空目录 fail-loud（P2）
+- `load_reference_analyzer` 在参考基线目录缺失（裁剪 wheel / 破损 checkout）或目录内无任何 JSON 时，向 **stderr** 打印醒目 WARNING（绝不写入 stdout，遵守单一 JSON 契约），并跳过真实基线加载；此前会静默退化到合成占位、在无说明的情况下给出低置信判定。新增 `test_missing_reference_catalog_warns_loud_on_stderr` 覆盖"整目录缺失"与"目录为空"两条路径，临时目录改用 pytest `tmp_path` 保证异常路径也清理。
+- 删除未被任何源码引用的 `DEFAULT_REFERENCE_DIRS` 常量。
+
+### Harden — sync 脚本陈旧文件清理
+- `sync_reference_data.py` 镜像前先按 src 清单 prune 目标目录中的陈旧 JSON：被删除/改名的目录项不再静默随 wheel 发货。
+
+### Docs — 英文 README 数据透明度补齐 / 计数同步
+- README.en.md 在 "What it actually does" 后补齐 "What the shipped reference data shows"：Okapi 76%、"是否为 Okapi"规则 88% resubstitution 准确率（Wilson 95%CI [0.80, 0.93]）、最强探针 TVD=0.90（分布距离，非分类准确率）、管线自洽后验 0.913（CrI [0.885, 0.937]），明确为 in-distribution resubstitution 自洽检验、非 held-out 准确率，数字与中文 README 逐一对齐。
+- 测试数全仓回填为 **336 passed / 7 skipped**（7 个 skipped 为需真实 key 的 integration）。
+
+### 版本
+- 版本四源统一 0.5.9，版本一致性测试同步。
+
+### R1-fix — 审批修复批（技术片 0 P0/P1/P2；产品片 3 P1 / 6 P2 / 7 P3）
+
+#### Fixed — 温度口径与重编 PDF（产品 P1-1）
+- 实际 `probes.py` 全部以 `temperature=0` 采集（点质量数据），此前 paper/main.tex、docs/tech_report.tex/.html、docs/experiment_report.md 多处误写 `temperature=1.0`；全部改为 0，experiment_report.md 明确「探针以 temperature=0 采集为点质量；中转站可能覆盖温度」。`paper/main.pdf`（5 页）与 `docs/tech_report.pdf`（9 页）用 MiKTeX pdflatex 按原仓方式重编，页数与基线一致。
+- 成本表述（README.md/README.en.md、paper/main.tex、experiment_report.md）改为「按公开低档定价估算约 <$0.01（实际取决于模型与单价；代码无计价）」；experiment_report.md 的 26×10 口径改为 shipped 17 请求（5 tokenizer + 4 behavioral×3）并标注基线采集口径。
+
+#### Honesty — 门面匿名化与死命令清理（产品 P1-2 / P1-3）
+- 根 `index.html` 内置 RANKING_DATA 中真实商业域名（wolfai.top/api2d/ohmygpt/betterapi/aihubmix/geekapi/closeai）全部替换为匿名占位 `relay-a.example…relay-e.example`（`https://relay-x.example/v1`），删除 critical 评级与具体 token 通胀百分比，仅保留「演示种子」格式演示；删除「贡献到排行榜」按钮，社区引导改为 GitHub Discussions，与「无在线排行榜/投稿端点」声明一致。
+- README.md 删除已不存在的 `app.moderation list/approve/reject` 命令与「计入排行榜」表述，对齐 README.en.md 的 GitHub Discussions 引导（勿贴 key）。
+
+#### Citations — 文献口径联网复核后分开（严禁混用）
+- arXiv:2504.04715（Cai/Shi/Zhao/Song，Berkeley/Dawn Song）改为「模型替换检测方法评估 + TEE 硬件认证」，全文无 428 站/9 投毒/17 窃 key；428 路由（28 paid+400 free）、9 投毒、17 触 AWS canary、1 ETH draining 归属于 arXiv:2604.08407《Your Agent Is Mine》（供应链攻击，非替换），两者分开引用。
+- arXiv:2607.10252 的 EER 7.3% 改写为 OpenRouter 165 模型 split-half 生物特征式验真（AUC 0.971；165 genuine/27060 impostor；8 cell 10.6%），非替换攻击检出率。
+- arXiv:2605.29524 KBF 的 5–10% 改为「可检测的被替换流量比例下限」（预算级替身 5–7%；强同档替身 MDR95 需 16–43%），非错误率。
+- arXiv:2603.01919 45.83%=11/24（3 个代表性 shadow API × 8 配置，非 17 个全量），可称 ACM CCS 2026；另列 12.50%（3/24）Euclidean 显著偏离。
+- 知道创宇报告按「据媒体转述」口径标注（100 站、849 组合、296=34.9% 命中≥1 异常、涉 75 站、467 可疑/138 强证据），原始报告链接待补，不当一手权威；删除返利色彩重的 apiranking.com，移除实测不通的 ofox.ai/verify；veridrop 注明自称 11878 家含付费展示位，ztest.ai/llmtest.cn/tokensqc.com 分别注明付费榜单/个人维护/含赞助位；补 arXiv:2607.20860 IRIS 一句话（纯文本自定预算审计，Qwen3 家族 0.99 AUROC）。
+
+#### Archive — 废弃文件归档
+- `docs/architecture.md`、`docs/methodology.md`（含旧 t=1.0 表述）、`docs/final_release_package.md`（含陈旧计数 292、旧排行榜/15 端点清单）、`docs/deployment_guide.md` 移入 `docs/archive/` 并加归档横幅；legacy `frontend/` 移入 `docs/archive/frontend/`，根 legacy Dockerfile 的 COPY 改为归档说明；删除根 `vercel.json` 与废弃 `.github/workflows/audit-validation.yml`。
+
+#### Tests — 新增回归（技术 P3-1 / P3-2）
+- `test_v059_nonjson_rejection.py`：客户端收到非 JSON / 非对象的 200 必须计为失败、不进入 statistics（参数化 4 种 shape × 客户端层/端到端 fail-closed）。
+- `test_v059_sync_prune.py`：`tmp_path` 种子陈旧 JSON 断言被 prune，第二次幂等无操作。
+- 本批新增后全量为 **346 passed / 7 skipped**（7 skipped 为需真实 key 的 integration）。
+
+#### Tooling / Docs
+- dev extras（根与 backend 两处）对齐 CI 锁定 `black==26.10.1`、`isort==9.0.2`，backend 补 `ruff` 咨询项。
+- 新增 `SECURITY.md`（GitHub Security Advisories 私有披露 + Discussions/issue 备选，不编造邮箱）；ci.yml push 触发加入 `release/**`；webapp 表单上限对齐服务端钳制 `(1,200)` 最大请求数 / `(1,20)` 行为重复（root webapp 与打包副本同步）。
+- README 中/英加入本地 `transit-truth serve` 实机截图（首页表单 + pass / insufficient_evidence / suspicious 三态报告，本地桩后端、无真实 Key）。
+
+> **依赖说明（P3-4，仅记录未改）**：运行时依赖目前仅写下限、无上限/lockfile；未来主版本可能破坏复现，后续主版本前再评估是否加兼容上限。
+
+### R2-fix — 第二轮产品审批修复批（1 P1 / 3 P2 / 8 P3）
+
+#### Fixed — tech_report.pdf 真正重编（产品 P1-R2-1）
+- `docs/tech_report.pdf` 此前未随 tex 重编，§3.2 仍残留 "under high temperature" / "should be near-uniform"；用当前 `docs/tech_report.tex` 经 MiKTeX pdflatex 两遍重编（9 页，252757 字节），pypdf 提取第 3 页确认两处旧句消失、温度口径为 temperature 0，关键数字（0.913 / CrI [0.885,0.937] / 76% / 88% / TVD 0.90 / [0.80,0.93]）无漂移。
+
+#### Honesty — 成本句估算限定 / 计数同步（产品 P2-R2-1 / P2-R2-2）
+- 实测测试计数全仓由 336 回填为 **346 passed / 7 skipped**（README.md、README.en.md、docs/launch_kit.md、CONTRIBUTING.md、docs/PUBLISHING.md；CHANGELOG 历史记述保留）。
+- 成本句（paper/main.tex Abstract/Conclusion、paper/README.md、docs/experiment_report.md）改为估算口径："at public low-tier list prices a full run estimates under $0.01; actual cost depends on model tier and per-token price (the code contains no pricing logic)"，删除无条件 <$0.01 断言。
+
+#### Cleanup — 死模态 / 死常量 / 商业域名清理（产品 P3-R2-2）
+- 根 `index.html` 删除整块无按钮触发、虚构 `transit-truth@example.com` 邮箱且引用未挂载 `POST /api/contribute/audit` 的死 `contribute-modal` DOM 及其孤儿 JS（contributeToRanking/closeContributeModal/contributeVia*/showContributeSuccess/generateGitHubIssueUrl），社区引导改 GitHub Discussions。
+- 删除 `backend/app/cli.py` 未被引用的 `KNOWN_RELAYS` 死常量；`backend/app/core/detect.py` 删除商业中继条目 WolfAI 与未使用的 `COMMON_RELAY_PATTERNS`，`detect_base_url` 不再为未知 sk- key 返回商业中继默认地址，仅保留官方第一方端点表。
+- `data/initial_ranking.json`（仅 legacy `database.py` 加载、wheel 不打包、Pages 不引用）移入 `docs/archive/`；`docs/blog_post.md`、`docs/promotion_guide.md`（孤儿历史草稿，误植 EER 7.3% 口径）移入 `docs/archive/` 并加归档横幅。
+
+#### Docs / CLI
+- `audit`/`list`/`export`/`benchmark`/`balance` 五个 legacy 子命令 `--help` 标注 "(legacy; not part of the shipped verify/serve path)"，README 补一句说明。
+- 温度泛化句：paper/main.tex:202、docs/experiment_report.md:341 的 "even at temperature 1.0" 改为 "at non-zero temperature"，避免全仓零残留口径；`paper/main.pdf`（5 页）随 main.tex 文本改动重编，成本估算句与关键数字核验通过。
+- paper/README.md 页数 4→5（与重编 PDF 一致）。
+
+### R3-fix — 末批 P3 打磨（产品/技术 R3 均 PASS）
+
+#### Cleanup — 门面与代码去商业残留
+- 根 `index.html` 删除中性 `KNOWN_RELAYS` 商业名/URL 表与零调用死函数 `detectRelayName`，并清除删模态框后残留的 `.modal-overlay/.modal/.modal-close/.contribute-option/.contribute-success` 孤儿 CSS。
+- `backend/app/utils/ranking_aggregator.py` 的 `__main__` mock 块把具名 wolfai.top/critical/76.1% 负样本换成匿名占位 `relay-a.example`（verify/serve 运行时不可达）。
+
+#### Honesty — 文案口径对齐
+- README.md backlog 样本量条目改 Wilson 口径（76%/88% 的 Wilson 95% 区间半宽约 ±6~12 个百分点，resubstitution）；定位段"工程化全功能平台"改为"可本地运行的核验内核"（verify/serve 内核 + 本地 reference-server，在线排行榜/审核平台属 legacy 不随包）。
+- `docs/launch_kit.md` 五处裸成本主张补"按公开低档定价估算/实际取决于模型档位与单价/代码不含计价"限定；KBF（arXiv:2605.29524）数字统一为受控池口径（budget-tier <7% 可检出；强同档替身 13–35% 达 80% TPR，MDR₉₅ 约 16–43%；受控 155 对全检出、0 同模型误拒；可检测比例下限非错误率）。
+- `CONTRIBUTING.md` 删除虚构渠道（contribute@ 邮箱、微信/QQ/知乎、api.transit-truth.xxx 端点、Gitee 镜像），并入 GitHub Discussions/Issue 引导，与 SECURITY.md 口径一致。
+- `docs/labels.md`（legacy 排行榜 label 设计稿，含 relay:wolfai.top 示例）移入 `docs/archive/` 并加归档横幅；wheel package-data 仅打包 `app.verify` 的 baselines/fingerprints/webapp，不含 archive/labels/initial_ranking。
+
+#### Tests — detect 无商业默认守卫
+- 新增 `test_v059_detect_no_commercial_default.py`：行为断言空/未知 key 返回 None 或官方端点、绝不返回商业中继；源码级守卫扫描 `detect.py` 无商业域名、`detect_base_url` 无硬编码商业回退，注入"函数开头默认返回商业中继"即 FAIL。
+
 ## [0.5.8] - 2026-10-17
 
 ### Honesty — 开篇/能力清单诚实分区（产品片 P2）
@@ -364,7 +446,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docker support
 - README, LICENSE, .gitignore
 
-[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.8...HEAD
+[Unreleased]: https://github.com/dafahaha/transit-truth/compare/v0.5.9...HEAD
+[0.5.9]: https://github.com/dafahaha/transit-truth/compare/v0.5.8...v0.5.9
 [0.5.8]: https://github.com/dafahaha/transit-truth/compare/v0.5.7...v0.5.8
 [0.5.7]: https://github.com/dafahaha/transit-truth/compare/v0.5.6...v0.5.7
 [0.5.6]: https://github.com/dafahaha/transit-truth/compare/v0.5.5...v0.5.6

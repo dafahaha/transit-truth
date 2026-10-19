@@ -113,7 +113,7 @@ These probes ask the model to generate "random" outputs, revealing distributiona
 | beh-random-day | "Pick a random day of the week. Only output the day name." | Uniform 7 days |
 | beh-number-1-10 | "Pick a random number from 1 to 10. Only output the number." | Uniform 1-10 |
 
-**Key insight**: These probes use high temperature (1.0) to encourage "random" generation, but RLHF-trained models still exhibit strong preferences due to training data distribution.
+**Key insight**: These probes are collected at temperature=0 (deterministic, point-mass); RLHF-trained models still exhibit strong, non-uniform preferences due to training-data distribution, which is what the fingerprint captures.
 
 #### 3.1.3 Capability Probes (10 probes)
 
@@ -338,7 +338,7 @@ The extreme behavioral biases we observed likely arise from three sources:
 
 2. **RLHF alignment**: Reinforcement Learning from Human Feedback (RLHF) may amplify certain preferences. Human raters may prefer certain "random" outputs over others (e.g., "7" is often considered a "lucky" number in Western culture).
 
-3. **Decoder artifacts**: The decoding strategy (temperature, top-p, repetition penalty) can interact with logit distributions to produce surprising biases. Even at temperature=1.0, the model's logit distribution may be heavily skewed.
+3. **Decoder artifacts**: The decoding strategy (temperature, top-p, repetition penalty) can interact with logit distributions to produce surprising biases. Even at a non-zero temperature, the model's logit distribution may be heavily skewed.
 
 **The Cerulean phenomenon** (74% preference for an obscure blue color) is particularly interesting. It suggests that the model has internalized a specific "default color" from training data, possibly due to the frequency of "cerulean" in certain text corpora (e.g., art descriptions, fashion writing).
 
@@ -353,7 +353,7 @@ The extreme behavioral biases we observed likely arise from three sources:
    - Post-process outputs to match the fingerprint distribution (computationally expensive and error-prone)
    - Fine-tune a cheaper model to mimic the fingerprint (requires significant resources)
 
-3. **Low cost**: Behavioral probes require only a few tokens per request and can be run in parallel. A full audit (26 probes × 10 samples) costs less than $0.01 in API credits.
+3. **Low cost**: Behavioral probes require only a few tokens per request and can be run in parallel. The shipped verify battery uses 17 requests (5 tokenizer probes + 4 behavioral probes × 3 samples); at low public list prices a full run estimates below $0.01 in API credits, but the actual cost depends on the model tier and per-token price. (The "26 probes × 10 samples" figure is the original baseline-collection design, not the shipped verify battery.)
 
 4. **Deployment convenience**: Unlike methods that require a side-by-side comparison against official API responses, behavioral fingerprinting only needs a pre-collected baseline database. The caveat is that the baseline itself is only as trustworthy as the relay it was collected from; an official, provider-ground-truth baseline is future work.
 
@@ -371,7 +371,7 @@ The extreme behavioral biases we observed likely arise from three sources:
 
 6. **Smart routing**: A sophisticated relay could use the claimed model for behavioral probes and a cheaper model for actual user requests. This can be mitigated by interleaving probes with real traffic patterns.
 
-7. **Temperature / output normalization sensitivity**: Behavioral fingerprints may vary with decoding parameters. Our probes use temperature=1.0, but relays may override this; relays may also normalize variant responses (e.g., "Heads." vs. "Heads"), which our analysis normalizes post hoc.
+7. **Temperature / output normalization sensitivity**: Our probes are collected at temperature=0 as point-mass; relays may override temperature, and relays may also normalize variant responses (e.g., "Heads." vs. "Heads"), which our analysis normalizes post hoc.
 
 ### 5.3 Comparison with Existing Methods
 
@@ -517,7 +517,7 @@ Our key contributions:
 
 ## References
 
-[1] W. Cai, T. Shi, X. Zhao, and D. Song. Are you getting what you pay for? Auditing model substitution in LLM APIs. arXiv:2504.04715, 2025.
+[1] W. Cai, T. Shi, X. Zhao, and D. Song. Are you getting what you pay for? Evaluating model-substitution detection methods, with TEE-based hardware attestation. arXiv:2504.04715, 2025.
 
 [2] I. Gao, P. Liang, and C. Guestrin. Model equality testing: Which model is this API serving? In International Conference on Learning Representations (ICLR), 2025. arXiv:2410.20247.
 
@@ -569,7 +569,7 @@ python analyze_baseline.py
 ```
 
 Expected runtime: ~15 minutes for 50 samples.
-Expected cost: < $0.01 in API credits.
+Expected cost: at public low-tier list prices a full run estimates under $0.01 in API credits; actual cost depends on model tier and per-token price (the code contains no pricing logic).
 
 ---
 

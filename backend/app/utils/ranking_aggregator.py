@@ -371,28 +371,28 @@ def aggregate_with_reputation(
 
 
 if __name__ == "__main__":
-    # Example usage with mock data
+    # Example usage with mock data (anonymous placeholders; not a real audit)
     mock_entries = [
         AuditEntry(
-            relay="wolfai.top",
+            relay="relay-a.example",
             model="gpt-4o-mini",
-            base_url="https://wolfai.top/v1",
+            base_url="https://relay-a.example/v1",
             overall_score=55.7,
-            trust_level="critical",
+            trust_level="suspicious",
             token_inflation_pct=76.1,
             avg_latency_ms=1856,
-            contributor="@dafahaha",
+            contributor="@demo",
             tested_at="2026-09-14",
         ),
         AuditEntry(
-            relay="wolfai.top",
+            relay="relay-a.example",
             model="gpt-4o",
-            base_url="https://wolfai.top/v1",
+            base_url="https://relay-a.example/v1",
             overall_score=57.5,
-            trust_level="critical",
+            trust_level="suspicious",
             token_inflation_pct=76.1,
             avg_latency_ms=1161,
-            contributor="@dafahaha",
+            contributor="@demo",
             tested_at="2026-09-14",
         ),
     ]
