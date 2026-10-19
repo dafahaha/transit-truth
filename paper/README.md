@@ -3,13 +3,13 @@
 A compact, submission-ready version of the TransitTruth behavioral-fingerprinting study.
 
 - **`main.tex`** — LaTeX source (self-contained, two-column, Times; modeled on the NeurIPS style).
-- **`main.pdf`** — compiled paper (4 pages of main text + references).
+- **`main.pdf`** — compiled paper (5 pages of main text + references).
 - **`fig_results.png`** — results figure generated from real data.
 - **`make_figure.py`** — script that reproduces the figure from the reported statistics.
 
 ## Abstract (short)
 
-Can a black-box auditor distinguish a model from a *same-family* sibling — e.g. gpt-4o vs. gpt-4o-mini, which share an identical tokenizer? Across 26 low-cost probes, five of eight behavioral probes separate the two models (p < 0.05, after normalizing variant responses), with an animal probe reaching total variation distance 0.90, while tokenizer probes are provably identical. Combined with chi-square/KS tests and Bayesian updating, an in-distribution resubstitution check yields a 91.3% posterior (self-consistency on the baseline's own reference, not held-out accuracy) at a cost under $0.01 per audit.
+Can a black-box auditor distinguish a model from a *same-family* sibling — e.g. gpt-4o vs. gpt-4o-mini, which share an identical tokenizer? Across 26 low-cost probes, five of eight behavioral probes separate the two models (p < 0.05, after normalizing variant responses), with an animal probe reaching total variation distance 0.90, while tokenizer probes are provably identical. Combined with chi-square/KS tests and Bayesian updating, an in-distribution resubstitution check yields a 91.3% posterior (self-consistency on the baseline's own reference, not held-out accuracy); at public low-tier list prices a full run estimates under $0.01, and actual cost depends on model tier and per-token price (the code contains no pricing logic).
 
 ## Build
 

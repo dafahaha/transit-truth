@@ -338,7 +338,7 @@ The extreme behavioral biases we observed likely arise from three sources:
 
 2. **RLHF alignment**: Reinforcement Learning from Human Feedback (RLHF) may amplify certain preferences. Human raters may prefer certain "random" outputs over others (e.g., "7" is often considered a "lucky" number in Western culture).
 
-3. **Decoder artifacts**: The decoding strategy (temperature, top-p, repetition penalty) can interact with logit distributions to produce surprising biases. Even at temperature=1.0, the model's logit distribution may be heavily skewed.
+3. **Decoder artifacts**: The decoding strategy (temperature, top-p, repetition penalty) can interact with logit distributions to produce surprising biases. Even at a non-zero temperature, the model's logit distribution may be heavily skewed.
 
 **The Cerulean phenomenon** (74% preference for an obscure blue color) is particularly interesting. It suggests that the model has internalized a specific "default color" from training data, possibly due to the frequency of "cerulean" in certain text corpora (e.g., art descriptions, fashion writing).
 
@@ -569,7 +569,7 @@ python analyze_baseline.py
 ```
 
 Expected runtime: ~15 minutes for 50 samples.
-Expected cost: < $0.01 in API credits.
+Expected cost: at public low-tier list prices a full run estimates under $0.01 in API credits; actual cost depends on model tier and per-token price (the code contains no pricing logic).
 
 ---
 
