@@ -51,6 +51,11 @@ add_demo.py
 # Python test cache
 .pytest_cache/
 
+# Triage / scratch working-tree backups and transient run logs (never commit)
+.triage_backup/
+*.wt
+.r2_pytest_tmp.txt
+
 # Ignore any temporary demo capture frames; the four shipped screenshots
 # docs/demo_1.png .. docs/demo_4.png ARE tracked and are whitelisted below.
 docs/demo_*.png
