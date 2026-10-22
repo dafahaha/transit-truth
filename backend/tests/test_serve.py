@@ -521,6 +521,40 @@ def test_infinity_parameter_rejected_400(client):
     assert resp.json()["error"]["code"] == "invalid_parameter"
 
 
+def test_numeric_nan_float_knob_rejected_400(client):
+    # P3-2: a NUMERIC NaN (json token NaN) on a float knob must be rejected by
+    # the finite check as a clean 400, not slip past the clamp (NaN < lo /
+    # NaN > hi are both False) and degrade to a 502. Pins the isfinite branch.
+    import math
+
+    resp = client.post(
+        "/api/verify",
+        content=(
+            '{"base_url":"http://127.0.0.1/v1","claimed_model":"gpt-4o-mini",'
+            '"timeout": NaN}'
+        ),
+        headers={"content-type": "application/json"},
+    )
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["error"]["code"] == "invalid_parameter"
+    assert "finite" in resp.text
+
+
+def test_numeric_infinity_float_knob_rejected_400(client):
+    # P3-2: numeric Infinity on a float knob must be a clean 400 as well.
+    resp = client.post(
+        "/api/verify",
+        content=(
+            '{"base_url":"http://127.0.0.1/v1","claimed_model":"gpt-4o-mini",'
+            '"total_timeout": Infinity}'
+        ),
+        headers={"content-type": "application/json"},
+    )
+    assert resp.status_code == 400, resp.text
+    assert resp.json()["error"]["code"] == "invalid_parameter"
+    assert "finite" in resp.text
+
+
 def test_host_whitelist_blocks_get_routes(loopback_client):
     # DNS-rebinding Host on a GET (static UI) must be refused, not just POST.
     for path in ("/", "/api/catalog"):

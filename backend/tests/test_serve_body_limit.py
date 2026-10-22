@@ -115,3 +115,38 @@ def test_serve_small_request_is_not_413():
     )
     assert status != 413, "small valid-size request must not be body-limited"
     assert status == 400, f"expected missing_field 400, got {status}"
+
+
+def test_serve_over_limit_cl_rejects_without_reading_body():
+    # P3-1: the Content-Length fast path must short-circuit and return 413
+    # without invoking the ASGI receive channel at all. A receive that fails
+    # loudly proves the body was never read; flipping the fast path to
+    # `if False:` makes this test raise (so the branch is pinned).
+    app = build_serve_app(allow_local=False, loopback_only=False)
+    declared = 2 * MB
+    scope = {
+        "type": "http",
+        "asgi": {"version": "3.0"},
+        "http_version": "1.1",
+        "method": "POST",
+        "path": "/api/verify",
+        "raw_path": b"/api/verify",
+        "query_string": b"",
+        "headers": [
+            (b"content-type", b"application/json"),
+            (b"content-length", str(declared).encode()),
+        ],
+        "client": ("203.0.113.9", 50000),
+        "server": ("testserver", 80),
+    }
+
+    async def receive_should_never_be_called():
+        raise AssertionError("fast path must not read the request body")
+
+    messages = []
+
+    async def send(message):
+        messages.append(message)
+
+    asyncio.run(app(scope, receive_should_never_be_called, send))
+    assert messages[0]["status"] == 413
