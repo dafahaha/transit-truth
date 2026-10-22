@@ -215,7 +215,10 @@ class RelayMonitor:
                 elif channel == "webhook" and self.config.webhook_url:
                     asyncio.create_task(self._alert_webhook(message, record))
             except Exception as e:
-                print(f"  Failed to send alert via {channel}: {e}")
+                # Log only the exception class name: httpx/smtp error strings
+                # may echo the Telegram bot-token URL or webhook URL, which
+                # must never land in the daemon console log.
+                print(f"  Failed to send alert via {channel}: {type(e).__name__}")
 
     def _format_alert_message(self, record: MonitorRecord) -> str:
         """Format alert message."""

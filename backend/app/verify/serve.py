@@ -36,6 +36,7 @@ from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, JSONResponse
 
 from ..config import APP_VERSION
+from ..utils.body_limit import RequestBodyLimitMiddleware
 from .core import verify_endpoint
 from .reference import load_reference_analyzer
 from .reference_server import CATALOG_TOKENIZERS
@@ -309,6 +310,13 @@ def build_serve_app(
     app = FastAPI(title="TransitTruth local verify", version=APP_VERSION)
     semaphore = asyncio.Semaphore(_MAX_CONCURRENT)
     app.state.concurrent_semaphore = semaphore
+
+    # Hard 1 MiB request-body cap (shared with app.main). On a loopback bind it
+    # is harmless defense in depth; on a public bind (--allow-public) it is the
+    # only memory-size protection against an anonymous caller POSTing a huge
+    # JSON body. Over-cap declared Content-Length and streamed chunked bodies
+    # both return 413 before pydantic buffers the body.
+    app.add_middleware(RequestBodyLimitMiddleware)
 
     # NOTE: intentionally NO CORS middleware. The UI and API are same-origin;
     # emitting Access-Control-Allow-Origin:* would let any website drive this

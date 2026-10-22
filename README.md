@@ -187,11 +187,13 @@ Key 仅本次会话内存使用，不落盘/不进日志/不进分享报告；�
 
 ### 🐳 使用Docker
 
+> ⚠️ **legacy 提示**：下方 `docker-compose.yml` + `Dockerfile` 启动的是**早期 legacy `app.main` 审计 web 平台（无鉴权）**，已被 `Dockerfile.serve` + `docker-compose.serve.yml`（当前 verify Web UI）取代，**勿公网发布**。compose 默认只绑宿主 `127.0.0.1:8000`，请勿改成 `0.0.0.0` 或公网发布；需要对外服务请使用 serve 部署并前置 Caddy/Nginx + TLS。
+
 ```bash
 docker-compose up -d
 ```
 
-然后访问 http://localhost:8000
+然后访问 http://127.0.0.1:8000 （仅本机；legacy API 无鉴权，不要发布到局域网/公网）
 
 > 部署注意：compose 已显式 `user: "1000:1000"`（与 Dockerfile 内 `appuser` 对齐）。`./data` 挂载到容器 `/app/data` 后，该目录属主由**宿主目录**决定；若宿主 `./data` 对 UID 1000 不可写，请先在宿主 `sudo chown -R 1000:1000 ./data`，否则首次写 SQLite 会因 EACCES 返回 500。
 
@@ -284,7 +286,7 @@ transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
 - [ ] **HTML 报告生成**（可分享的审计报告）— legacy
 - [ ] **审计结果分享卡片**（1200x630 PNG，一键下载分享社交媒体）— legacy
 - [ ] **灵活配置管理**（legacy web 的 14 个环境变量）— legacy；`serve` 使用自己的少量旋钮（max_requests/behavioral_samples/timeout/total_timeout）
-- [x] **测试**：实测 **352 passed / 7 skipped**（v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.2 诚实性/抗回放、v0.4.3 饥饿式样本绕过回归、v0.4.4 覆盖率门+tokenizer 口径、v0.4.5 版本一致性+tokenizer 严格匹配回归、v0.4.6 单字段容错+stdout 单一 JSON 契约+负 verdict 自洽回归、v0.4.7 非 JSON 200 响应体容错+tokenizer 不确定带不升级 pass 回归、v0.5.0 本地 Web serve 端点+key 不落盘/不进日志/脱敏+公共绑定门控回归、v0.5.1 serve XSS 转义+Origin/Host/Content-Type 守卫+绑定门控+Docker 修正回归、v0.5.2 wheel 打包 webapp+全局 Host/Origin 守卫+NaN/Infinity 拒绝+上游错误体不泄漏 key 回归、v0.5.3 门面模块崩溃修复+非法参数 400+非阻塞 429、v0.5.4 消除外链静态 import+整数旋钮非整 400+CI 守卫/checkout 升级、v0.5.5 hard-cap 理由自洽+错误页人话+守卫扩面+严格整数串+Host fail-closed、v0.5.6 错误码映射对齐+hard-cap 证据标签拆分+IPv6 环回放行+守卫扩面、v0.5.7 hard-cap 两分支变异可失败+双向错误码守卫+静态守卫补盲+弱 pass 强制 low、v0.5.8 开篇/能力清单诚实分区+弱 pass band 边界钉、v0.5.9 参考目录缺失/空目录 fail-loud stderr 警告+sync 陈旧 JSON prune）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
+- [x] **测试**：实测 **371 passed / 7 skipped**（378 collected；v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.2 诚实性/抗回放、v0.4.3 饥饿式样本绕过回归、v0.4.4 覆盖率门+tokenizer 口径、v0.4.5 版本一致性+tokenizer 严格匹配回归、v0.4.6 单字段容错+stdout 单一 JSON 契约+负 verdict 自洽回归、v0.4.7 非 JSON 200 响应体容错+tokenizer 不确定带不升级 pass 回归、v0.5.0 本地 Web serve 端点+key 不落盘/不进日志/脱敏+公共绑定门控回归、v0.5.1 serve XSS 转义+Origin/Host/Content-Type 守卫+绑定门控+Docker 修正回归、v0.5.2 wheel 打包 webapp+全局 Host/Origin 守卫+NaN/Infinity 拒绝+上游错误体不泄漏 key 回归、v0.5.3 门面模块崩溃修复+非法参数 400+非阻塞 429、v0.5.4 消除外链静态 import+整数旋钮非整 400+CI 守卫/checkout 升级、v0.5.5 hard-cap 理由自洽+错误页人话+守卫扩面+严格整数串+Host fail-closed、v0.5.6 错误码映射对齐+hard-cap 证据标签拆分+IPv6 环回放行+守卫扩面、v0.5.7 hard-cap 两分支变异可失败+双向错误码守卫+静态守卫补盲+弱 pass 强制 low、v0.5.8 开篇/能力清单诚实分区+弱 pass band 边界钉、v0.5.9 参考目录缺失/空目录 fail-loud stderr 警告+sync 陈旧 JSON prune）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
 - [x] **CI/CD**（GitHub Actions，Python 3.10/3.11/3.12矩阵）
 
 ### 🚧 开发中

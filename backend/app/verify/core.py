@@ -203,7 +203,10 @@ async def verify_endpoint(
             if parsed.scheme not in ("http", "https") or not parsed.netloc:
                 raise ValueError("Only http:// and https:// URLs are allowed")
         else:
-            validate_public_url(base_url)
+            # validate_public_url does a blocking socket.getaddrinfo; offload it
+            # to a thread so DNS resolution never stalls the event loop (mirrors
+            # require_public_url_async in the legacy audit API).
+            await asyncio.to_thread(validate_public_url, base_url)
     except Exception as exc:  # noqa: BLE001 - sanitized below
         return error_report(
             claimed_model=claimed_model,

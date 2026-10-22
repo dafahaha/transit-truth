@@ -6,6 +6,20 @@ A simple fixed-window counter per client IP caps abuse without adding a auth
 system. It is intentionally process-local (single-process demo deployments)
 and resettable so the full TestClient suite is never throttled.
 
+Window semantics: this is a **fixed window** (bucket resets at a wall-clock
+boundary), NOT a sliding window. A caller can send up to ``_REQUESTS`` just
+before a boundary and another ``_REQUESTS`` just after it, i.e. roughly 2x the
+quota across the boundary; that accepted trade-off keeps the counter O(1) and
+needs no timer heap. Callers needing strict sliding limits should front the
+service with a gateway that enforces them.
+
+Stale-bucket hygiene: expired IP keys are swept out opportunistically (and on
+demand via :func:`prune_expired`) so a long-running process does not grow the
+``_windows`` dict without bound as unseen IPs come and go. The tracked-IP
+count is also bounded: once it exceeds :data:`_MAX_TRACKED_IPS`, expired
+buckets are dropped and, if still over capacity, the oldest buckets are
+evicted first.
+
 Tune with :func:`configure` / clear with :func:`reset` (used by tests).
 
 Trusted-proxy mode (R3-2): by default the bucket key is the direct TCP peer
@@ -24,9 +38,12 @@ import time
 
 from fastapi import HTTPException, Request
 
-# Default quota: N requests per rolling window, per client IP.
+# Default quota: N requests per window, per client IP.
 _REQUESTS: int = 60
 _WINDOW_SECONDS: float = 60.0
+# Hard bound on tracked IP buckets: beyond this, expired buckets are swept and
+# oldest-first eviction keeps the dict bounded under a long-running process.
+_MAX_TRACKED_IPS: int = 4096
 
 _lock = threading.Lock()
 # ip -> (window_start_monotonic, count)
@@ -66,6 +83,42 @@ def reset() -> None:
         _trusted_proxies = set()
 
 
+def prune_expired() -> int:
+    """Drop buckets whose fixed window has fully elapsed; return the count removed.
+
+    Long-running processes see many transient source IPs; without pruning the
+    ``_windows`` dict grows unbounded. Expired buckets carry no live quota, so
+    dropping them changes nothing for active callers.
+    """
+    now = time.monotonic()
+    removed = 0
+    with _lock:
+        stale = [
+            ip
+            for ip, (start, _count) in _windows.items()
+            if now - start > _WINDOW_SECONDS
+        ]
+        for ip in stale:
+            _windows.pop(ip, None)
+            removed += 1
+    return removed
+
+
+def _sweep_locked(now: float) -> None:
+    """Caller holds ``_lock``. Drop expired buckets; if the tracked-IP count is
+    still over :data:`_MAX_TRACKED_IPS`, evict oldest-start buckets first."""
+    stale = [
+        ip for ip, (start, _count) in _windows.items() if now - start > _WINDOW_SECONDS
+    ]
+    for ip in stale:
+        _windows.pop(ip, None)
+    if len(_windows) > _MAX_TRACKED_IPS:
+        ordered = sorted(_windows.items(), key=lambda kv: kv[1][0])
+        overflow = len(_windows) - _MAX_TRACKED_IPS
+        for ip, _ in ordered[:overflow]:
+            _windows.pop(ip, None)
+
+
 def _client_ip(request: Request) -> str:
     """Resolve the bucket key for *request*.
 
@@ -100,6 +153,10 @@ def _check(ip: str) -> bool:
             start, count = now, 0
         count += 1
         _windows[ip] = (start, count)
+        # Opportunistic stale sweep: keep the dict bounded for long-running
+        # processes instead of accumulating every IP that ever called once.
+        if len(_windows) > _MAX_TRACKED_IPS:
+            _sweep_locked(now)
         return count <= _REQUESTS
 
 

@@ -281,12 +281,15 @@ current `verify`/`serve`/PyPI model-identity path:
   `verify`/`serve`/PyPI. **Public-binding risk:** it defaults to loopback;
   exposing it on a public interface requires explicit `--allow-public` and you
   are responsible for authentication, exposure, and key hygiene yourself —
-  do not publish it unauthenticated.
+  do not publish it unauthenticated. The legacy `docker-compose.yml` +
+  `Dockerfile` (same legacy API, no authentication) is SUPERSEDED by
+  `Dockerfile.serve` / `docker-compose.serve.yml`; it publishes only on host
+  `127.0.0.1:8000` and must NOT be exposed to a LAN or the public internet.
 - **Docker:** `docker compose -f docker-compose.serve.yml up -d --build` (host
   loopback only; see [docs/serve.md](docs/serve.md)).
 - **Baseline data:** `data/baselines/` (real n=50 collections),
   `data/fingerprints/` (open-source tokenizer catalog).
-- **Tests:** 352 passed / 7 skipped (the 7 skipped are integration
+- **Tests:** 371 passed / 7 skipped (378 collected; the 7 skipped are integration
   tests that need a real API key; run them with `pytest -m integration`).
 
 ## Installing from source (before the PyPI release)

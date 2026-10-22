@@ -373,6 +373,21 @@ def cmd_reference_server(args):
         f"{honesty_note}",
         file=sys.stderr,
     )
+    # Local plumbing stub with no authentication / no sensitive data; unlike
+    # `serve` there is no --allow-public gate, so a non-loopback bind only
+    # earns a warning rather than a hard exit.
+    from .verify.serve import is_loopback_host
+
+    if not is_loopback_host(args.host):
+        print(
+            Colors.yellow(
+                f"⚠ WARNING: binding reference-server to non-loopback "
+                f"'{args.host}'. This local stub has no authentication; only do "
+                "this on a trusted network and do not expose it to the public "
+                "internet."
+            ),
+            file=sys.stderr,
+        )
     uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
 
 
