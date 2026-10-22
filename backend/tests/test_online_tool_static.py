@@ -6,6 +6,7 @@ sink for user/relay data, no key persistence, and the private-network block
 patterns stay present. Runtime behavior is additionally exercised by the
 headless-Chrome self-documentation in docs/audit_round1_1022.md.
 """
+
 import re
 from pathlib import Path
 
@@ -57,7 +58,9 @@ def test_no_remote_or_inline_script(page_text):
     assert not re.search(r"<script[^>]+src\s*=\s*[\"']?https?://", page_text, re.I)
     assert not re.search(r"<script[^>]+src\s*=\s*[\"']?//", page_text, re.I)
     # Only the external self-hosted app.js is allowed; no inline script block.
-    inline = re.findall(r"<script(?![^>]*src=)[^>]*>(.*?)</script>", page_text, re.S | re.I)
+    inline = re.findall(
+        r"<script(?![^>]*src=)[^>]*>(.*?)</script>", page_text, re.S | re.I
+    )
     inline = [b.strip() for b in inline if b.strip()]
     assert not inline, f"inline script blocks found: {inline}"
 
