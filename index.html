@@ -522,6 +522,21 @@
 
 <div class="container">
 
+  <!-- 一键在线体检（纯静态前端，浏览器直连轻量体检；完整指纹核验仍走本地 serve） -->
+  <div class="card" id="online-hero" style="background:linear-gradient(180deg,#fff,#eef5ff);">
+    <h2>🌐 打开网页就能测：浏览器在线体检</h2>
+    <div style="font-size:0.95rem;color:var(--text);margin:12px 0;line-height:1.8;">
+      粘贴你自己的中转 Base URL，浏览器直接做可达性、协议结构与基础能力快检，输出三态 fail-closed 报告。
+      Key 只在你的浏览器内存里直连你填写的端点，不经本项目服务器、不入库、不进日志。
+      <strong>注意：</strong>浏览器版受 CORS 限制且无行为参考分布，<strong>不会签发 pass</strong>；完整行为指纹 + tokenizer 统计核验仍需本地 <code>transit-truth serve</code>。
+    </div>
+    <div class="btn-row" style="margin-top:16px;">
+      <a class="btn" href="docs/online/index.html" style="text-decoration:none;">▶ 进入在线体检（零安装）</a>
+    </div>
+    <img src="docs/assets/online/online-demo.gif" alt="在线体检演示：粘贴地址、查看三态报告、展开原始证据（本地 mock 录制）"
+         style="max-width:100%;border-radius:14px;margin-top:18px;border:1px solid #e5e7eb;display:block;">
+  </div>
+
   <!-- v0.5.0 本地 Web 门面：5 秒看懂 + CTA + 诚实 CORS 边界 -->
   <div class="card" id="serve-hero" style="background:linear-gradient(180deg,#fff,#f5f5f7);">
     <h2>🚀 本地一键开测：打开网页就能验真</h2>

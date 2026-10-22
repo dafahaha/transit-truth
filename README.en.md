@@ -13,6 +13,20 @@ Built for LLM-security researchers, agent developers, and anyone who routes LLM 
 
 ---
 
+## 🌐 One-click online check (no install, open the page)
+
+No Python needed: open the GitHub Pages build, paste your own relay Base URL (optional temporary/low-quota key), and let **your browser talk straight to the endpoint you typed** for a reachability / protocol / basic-capability liveness check with a fail-closed three-state report. The key lives only in page memory and goes directly to your own endpoint: **it never touches this project's servers, is never stored, never enters the URL, never hits logs**.
+
+**Online URL:** <https://dafahaha.github.io/transit-truth/docs/online/index.html>
+
+![Online demo GIF (recorded against a local mock)](docs/assets/online/online-demo.gif)
+
+![Reachable · insufficient_evidence report (local mock)](docs/assets/online/verify-good.png)
+
+**Limits, read first:** browsers are CORS-restricted, so most relays cannot be read from a web page (the page honestly tells you to use the CLI/local serve); the browser has no behavioral reference distribution and cannot run tiktoken BPE counting, so **the online build never emits `pass`**. Full behavioral fingerprint + tokenizer statistics still require local `transit-truth serve` / CLI. Online output is probabilistic auxiliary evidence, not a cryptographic proof.
+
+---
+
 ## Quickstart
 
 > **PyPI is not published yet.** There is no `pip install transit-truth` from

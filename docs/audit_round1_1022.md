@@ -90,3 +90,52 @@
 3. `verify/core.py` tokenizer override 与硬顶的交互顺序（先 override 还是先 cap）。
 4. `moderation.py` `_build_ranking_entry` 的类型 coercion 是否会把污染字符串写进公共榜。
 5. `utils/rate_limit.py` 窗口字典的过期回收（O1）。
+
+---
+
+## 8. 阶段 2/4：纯静态在线工具（`docs/online/`）构建与自测证据
+
+### 8.1 形态与文件清单（零构建、无 CDN、无框架）
+
+- `docs/online/index.html` — 页面 + 收紧 CSP meta（`default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https: http:; base-uri 'self'; form-action 'none'`；无 `unsafe-inline` 脚本、无外部 script src）。
+- `docs/online/styles.css` — 苹果风，主色 `#0071e3`，无紫/靛；移动优先，640px 断点单列转双列。
+- `docs/online/app.js` — 原生 IIFE，无依赖；纯函数挂 `window.TT` 仅供 headless 自测。
+- 新增离线静态守卫：`backend/tests/test_online_tool_static.py`（11 例，CI 可跑，无需浏览器/网络）。
+
+### 8.2 浏览器可复现 / 不可复现的探测划分（诚实）
+
+- **浏览器做**：`GET /models` 声明清单比对；最小 chat/completions（temperature=0, max_tokens=8）协议结构检查（choices[0].message、usage、echo model、system_fingerprint）；2 道普适常识弱信号快检（7×8、法国首都），仅在双双失败时给 `suspicious` 弱提示。
+- **浏览器不做（明确跳过并在页面说明）**：tiktoken BPE tokenizer 计数、行为分布卡方/KS/贝叶斯后验——浏览器无参考分布、无法跑 tiktoken；**在线版永不签发 `pass`**。
+- 状态机：`pass`（渲染器保留但逻辑不发）/ `suspicious` / `insufficient_evidence` / `transport_error` / `missing_api_key(auth)` / `cors_blocked` / `invalid_endpoint` / `blocked_private`。
+
+### 8.3 安全红线落地
+
+- **XSS**：所有外部来源字符串（URL、模型名、relay 回显、错误文案、原始 JSON）一律 `textContent`/`createElement` 进 DOM；`app.js` 无 `innerHTML/outerHTML/document.write/insertAdjacentHTML`（静态守卫断言）。
+- **URL/SSRF**：仅 http/https；拒绝 file:/data:/ftp:/ws:；默认拦截 loopback(127/::1/localhost)、RFC1918(10/8,172.16/12,192.168/16)、链路本地 169.254/16（含 169.254.169.254）、CGNAT 100.64/10、ULA fc/fd、fe80；知情勾选后放行本机/内网网关。注意：浏览器端无法做服务端那种异步 DNS rebinding 回读，域名指向内网的情况靠 CORS/网络失败诚实暴露，不假装拦截。
+- **Key**：仅内存变量 `runKey`；不写 localStorage/sessionStorage/cookie、不进 URL query（`?key=` 仅在 127.0.0.1/localhost 自测时读取，发布域忽略）、不进 evidence JSON、不进错误文案；结束即清空输入框。
+- **无服务端中转**：Pages 纯静态，fetch 直连用户填写端点；CORS 读不到时给诚实降级卡 + CLI/serve 文档链接。
+
+### 8.4 headless Chrome 自测证据（本地 http.server + 本地 mock 端点）
+
+| 场景 | 输入 | 实测结果 |
+| --- | --- | --- |
+| 可达 + 声明清单 + chat 结构 | mock good 8800，带本地 dummy key | `insufficient_evidence`（不发 pass）；chips 渲染 gpt-4o-mini/gpt-4o；choices/usage/system_fingerprint 齐；能力答 56/Paris；**DOM/evidence 中 dummy key 出现 0 次** |
+| 弱信号双双失败 | mock bad 8801（答 31/London） | `suspicious · 表面异常（弱信号）`，两行 bad 记录回答原文 |
+| 401 | mock auth 8802 | `missing_api_key / auth · Key 缺失或被拒`，不判"key 错误" |
+| 不可达域名 | `http://nonexistent.invalid/v1` | CORS/网络降级卡显示，非 pass |
+| 未带 key | good 8800 无 key | 仅可达性，`insufficient_evidence`，跳过 chat/能力 |
+| 内网默认拦截 | `http://127.0.0.1:8800/v1` 不勾选 | `blocked_private`，不发请求 |
+| 非法协议 | `ftp://` / `file:///etc/passwd` / `data:text/html,` | `invalid_endpoint · 仅支持 http/https` |
+| XSS 注入 | 模型名填 `"><img src=x onerror=alert(1)><script>alert(2)</script>`（含 echo 回显） | DOM 无任何真实 `<img>`/`<script>` 元素，全部转义为文本 |
+| 移动视口 | 390px 宽 | 单列堆叠，chips 换行，无横向溢出 |
+
+全量 pytest 复跑：**363 passed, 7 skipped**（基线 352 + 新增在线工具静态守卫 11），后端未受影响。
+
+## 9. 给下一轮"全新安全审查代理"重点攻击位置（在线工具侧）
+
+1. **URL 校验绕过**：`isPrivateHost` 的 IPv4 段判断（八进制/十进制 IP、`0177.0.0.1`、`127.1` 简写、IPv6 映射 v4、`[::ffff:127.0.0.1]`、IDN/Unicode 主机名、`@` userinfo 绕到内网、尾随点 `localhost.`）；`new URL` 之后 hostname 规范化是否全覆盖。
+2. **XSS 注入点**：声明模型清单 `data[].id/name`、chat 的 `model` 回显、`system_fingerprint`、usage 数字、错误状态文案、原始 `<pre>` JSON——逐个喂 `<img onerror>`、`javascript:`、实体嵌套、超长字符串。
+3. **Key 泄露面**：剪贴板复制内容、evidence 折叠区、网络请求头、报错堆栈、`?key=` 在发布域是否真被忽略、reset/finish 是否清空。
+4. **CSP 缺口**：`connect-src https: http:` 为放开任意域（浏览器 CORS 本就独立生效，确认无 unsafe-inline 脚本可注入）；`style-src 'self'` 下页面是否存在内联 style 属性被拦。
+5. **CORS 降级文案诚实性**：把 DNS 失败与 CORS 混为一谈是否误导；401/403/429/5xx 分类是否诚实，不把限流说成造假。
+6. **弱信号误报**：常识题答案变体（"五十有六"、Paris 大小写/前后缀）是否误判；拒绝回答/空回复是否被错标 suspicious。

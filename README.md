@@ -8,6 +8,20 @@
 
 ---
 
+## 🌐 一键在线体检（打开网页就能测，零安装）
+
+不想装 Python？直接打开 GitHub Pages 在线版，粘贴你自己的中转 Base URL（可选临时/低额度 Key），由**你的浏览器直连你填写的端点**做可达性、协议结构与基础能力快检，输出 fail-closed 三态报告。Key 只存在本页内存、直接发往你自己填写的端点：**不经本项目任何服务器、不入库、不进 URL、不打印到日志**。
+
+**在线版地址**：<https://dafahaha.github.io/transit-truth/docs/online/index.html>
+
+![在线体检演示 GIF（本地 mock 端点录制）](docs/assets/online/online-demo.gif)
+
+![可达 · insufficient_evidence 报告示例（本地 mock 录制）](docs/assets/online/verify-good.png)
+
+**能力边界（先读）**：浏览器受 CORS 同源策略限制，多数中转端点读不到响应（页面会诚实提示改用本地 CLI / serve）；浏览器无行为参考分布、也跑不了 tiktoken BPE 计数，**在线版不会签发 pass**。完整行为指纹 + tokenizer 统计核验仍需本地 `transit-truth serve` / CLI。在线版结果是概率性辅助证据，不是密码学证明。
+
+---
+
 ## 🚦 模型真实性核验（`transit-truth verify`）
 
 新增的核心产品能力：给一个 OpenAI 兼容端点和它**声称**的模型名，跑一个**有界**探针电池，对比本地参考指纹，输出**单一机器可读 JSON 报告**与三态结论。
@@ -45,7 +59,7 @@ transit-truth serve            # 默认 http://127.0.0.1:8766，加 --open 自�
 ```
 
 - Key 仅本次会话内存使用：**不落盘、不进日志、不进可分享报告**；默认只绑 `127.0.0.1`，绑定 `0.0.0.0` 需显式 `--allow-public`。
-- 浏览器受 CORS 限制无法直连中转端点，真实测试由本地服务端发探针；静态 GitHub Pages 只能做门面，不能在线实测。部署（Docker / VPS + Caddy / Cloudflare 边界）见 [docs/serve.md](docs/serve.md)。
+- 浏览器受 CORS 限制，多数中转端点无法被网页直读；**完整测试由本地服务端发探针**。GitHub Pages 在线版只做浏览器可达性/协议/基础能力快检（不出 pass），部署（Docker / VPS + Caddy / Cloudflare 边界）见 [docs/serve.md](docs/serve.md)。
 
 **本地 Web UI 实机截图**（本地 `transit-truth serve` 对本地桩后端采集；无真实 Key，报告不含 Key）：
 

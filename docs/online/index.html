@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TransitTruth 在线体检 · Browser-side endpoint check</title>
+<meta name="description" content="TransitTruth 浏览器直连体检：粘贴 OpenAI 兼容中转 Base URL，前端完成可达性 / 协议 / 基础能力探针，三态 fail-closed 报告。Key 只在你的浏览器内存中直连你填写的端点，不经任何第三方、不入库、不打印。">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; connect-src 'self' https: http:; base-uri 'self'; form-action 'none';">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230071e3'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle' fill='white'%3E%E2%9C%93%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<nav class="topbar">
+  <div class="topbar-inner">
+    <a class="brand" href="../../index.html">TransitTruth</a>
+    <span class="topbar-tag">浏览器版体检 · Browser check</span>
+    <a class="topbar-link" href="../../index.html">返回首页</a>
+  </div>
+</nav>
+
+<main class="page">
+
+  <section class="hero">
+    <h1>粘贴中转站地址，浏览器直接体检</h1>
+    <p class="hero-sub">
+      前端直连你填写的 OpenAI 兼容端点，做可达性、协议结构与基础能力的轻量体检，
+      输出 pass / suspicious / insufficient_evidence 三态（fail-closed）与诚实状态。
+    </p>
+  </section>
+
+  <!-- ─── 输入卡片 ─── -->
+  <section class="card" id="form-card">
+    <form id="verify-form" autocomplete="off">
+      <div class="field">
+        <label for="base-url">Base URL（OpenAI 兼容端点，通常含 /v1）</label>
+        <input id="base-url" name="base-url" type="url" inputmode="url" spellcheck="false"
+               placeholder="https://your-relay.example.com/v1" required>
+        <p class="hint">示例：<code>https://api.openai.com/v1</code>。仅 http/https；file:/data: 等协议一律拒绝。</p>
+      </div>
+
+      <div class="field-row">
+        <div class="field">
+          <label for="claimed-model">声称模型（可选）</label>
+          <input id="claimed-model" name="claimed-model" type="text" spellcheck="false"
+                 placeholder="例如 gpt-4o-mini">
+          <p class="hint">留空则仅做可达性与协议体检，不做模型比对。</p>
+        </div>
+        <div class="field">
+          <label for="api-key">API Key（可选 · 临时/低额度专用）</label>
+          <input id="api-key" name="api-key" type="password" inputmode="text" spellcheck="false"
+                 autocomplete="off" placeholder="sk-... 仅本次内存">
+          <p class="hint">Key 只存在本页内存，直接发往你自己填写的端点；不存 localStorage、不进 URL、不写日志。</p>
+        </div>
+      </div>
+
+      <label class="check">
+        <input id="allow-private" type="checkbox">
+        <span>我知道我在测本机 / 内网网关（localhost、127.0.0.1、192.168/16 等默认拦截，勾选后放行）</span>
+      </label>
+
+      <div class="actions">
+        <button type="submit" class="btn-primary" id="verify-btn">Verify 开始体检</button>
+        <button type="button" class="btn-secondary" id="reset-btn">重置</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- ─── 进度 ─── -->
+  <section class="card hidden" id="progress-card">
+    <h2 class="card-title">正在体检</h2>
+    <ul id="progress-list" class="progress-list"></ul>
+  </section>
+
+  <!-- ─── 报告卡片（全部由 JS 用 DOM API 填充，禁止 innerHTML 拼用户数据） ─── -->
+  <section class="card hidden" id="report-card">
+    <div id="verdict-banner"></div>
+    <div id="report-body"></div>
+
+    <details class="evidence">
+      <summary>查看原始证据（JSON，纯文本展示）</summary>
+      <pre id="evidence-pre" class="evidence-pre"></pre>
+    </details>
+
+    <div class="actions">
+      <button type="button" class="btn-secondary" id="copy-btn">复制报告文本</button>
+      <button type="button" class="btn-secondary" id="rerun-btn">重新体检</button>
+    </div>
+  </section>
+
+  <!-- ─── CORS / 边界降级卡 ─── -->
+  <section class="card hidden" id="cors-card">
+    <h2 class="card-title">浏览器读不到该端点（CORS / 网络）</h2>
+    <p id="cors-text" class="muted"></p>
+    <p class="muted">
+      这不是 bug，而是浏览器同源策略的边界：绝大多数中转端点不会给网页浏览器开放
+      <code>Access-Control-Allow-Origin</code>，页面因此无法读取响应。完整的行为指纹 +
+      tokenizer 统计核验请走本地 CLI / 自托管服务端（由服务端发探针，不受浏览器 CORS 限制）。
+    </p>
+    <div class="actions">
+      <a class="btn-primary btn-link" href="../../README.md" target="_blank" rel="noopener">查看 CLI 用法</a>
+      <a class="btn-secondary btn-link" href="../serve.md" target="_blank" rel="noopener">本地 serve 文档</a>
+    </div>
+  </section>
+
+  <!-- ─── 诚实披露（中英双语） ─── -->
+  <section class="disclosure">
+    <h2>能力边界 · Honest limits（请先读）</h2>
+    <ul>
+      <li><strong>概率性辅助证据，不是密码学证明。</strong>本页不签发"正品证书"；
+        pass 在浏览器版不会被签发，主判定（行为分布卡方/KS/贝叶斯后验）需要本地 CLI。
+        <span lang="en">Probabilistic auxiliary evidence, NOT cryptographic proof. The browser build never emits <code>pass</code>; primary statistics require the local CLI.</span></li>
+      <li><strong>开源指纹覆盖有限。</strong>仓内真实行为基线仅 gpt-4o / gpt-4o-mini（各 n=50）；
+        开放 tokenizer 指纹仅 qwen2.5-0.5b 与 deepseek-r1-distill-qwen-1.5b（均无行为分布）。
+        浏览器也无法运行 tiktoken BPE 计数，tokenizer 探针在本页被跳过。
+        <span lang="en">Limited open coverage; tokenizer counting (tiktoken) cannot run in-browser and is skipped here.</span></li>
+      <li><strong>temperature=0 回放可能被误读。</strong>单次/少数样本的"答对"不代表模型真身，
+        "答错"也可能是端点限流、拒答或措辞差异。
+        <span lang="en">Few-shot temperature=0 replay is weak signal; a correct answer is not certification.</span></li>
+      <li><strong>不评判服务端隐私 / 合规 / 价格。</strong>本页只检查协议可达与表面能力，
+        不判断该服务是否合法、是否留存你的对话。
+        <span lang="en">No privacy, compliance or pricing judgment; this page does not evaluate legality.</span></li>
+      <li><strong>无服务端中转。</strong>本 Pages 是纯静态页面，没有代理后端；你的 Key 不经过本项目任何服务器。
+        <span lang="en">No server relay: static Pages only; your key never touches this project's servers.</span></li>
+    </ul>
+  </section>
+
+</main>
+
+<footer class="footer">
+  <p>TransitTruth · <a href="https://github.com/dafahaha/transit-truth" target="_blank" rel="noopener">GitHub</a> · 纯静态前端，零构建，无第三方脚本</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
