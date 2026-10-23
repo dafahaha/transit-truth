@@ -93,6 +93,12 @@ _SENSITIVE_KEYS = {
 # Embedded credential patterns (a token may sit inside a log line / note).
 _SK_RE = re.compile(r"sk-[A-Za-z0-9_\-]{6,}")
 _BEARER_RE = re.compile(r"(?i)bearer\s+[A-Za-z0-9._\-]+")
+# P3-10: also cover non-sk key prefixes as defense in depth — Google API keys
+# (AIza...), pk-live/test keys, and compact JWTs.
+_GOOGLE_RE = re.compile(r"AIza[0-9A-Za-z_\-]{20,}")
+_PK_RE = re.compile(r"pk-(?:live|test)-[A-Za-z0-9_\-]{6,}")
+_JWT_RE = re.compile(r"eyJ[A-Za-z0-9_\-]{8,}\.[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+")
+_KEY_PATTERNS = (_SK_RE, _GOOGLE_RE, _PK_RE, _JWT_RE)
 
 # Request clamp bounds (P3): keep the local probe battery well-behaved.
 _CLAMPS = {
@@ -149,6 +155,9 @@ def _redact_string(value: str) -> str:
     """Redact credential-shaped strings (whole value or embedded occurrences)."""
     value = _SK_RE.sub("sk-***redacted***", value)
     value = _BEARER_RE.sub("Bearer ***redacted***", value)
+    value = _GOOGLE_RE.sub("***redacted***", value)
+    value = _PK_RE.sub("***redacted***", value)
+    value = _JWT_RE.sub("***redacted***", value)
     return value
 
 

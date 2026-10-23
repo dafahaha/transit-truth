@@ -260,7 +260,12 @@ class AuditEngine:
 
         except Exception as e:
             result.status = AuditStatus.FAILED
-            result.error = str(e)
+            # Do not persist/return the raw exception string: it could in
+            # principle carry an upstream fragment (e.g. a header or URL).
+            # Record the exception type plus a generic message; the full
+            # traceback goes to the server log only.
+            logger.exception("Audit failed for %s", result.model)
+            result.error = f"{type(e).__name__}: audit failed (see server logs)"
             result.completed_at = datetime.now()
 
         return result

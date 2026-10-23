@@ -61,8 +61,11 @@ app.include_router(detect_router)
 app.include_router(balance_router)
 app.include_router(contribute_router)
 
-# Serve frontend
+# Serve frontend. The legacy static UI directory is named "web"; also accept
+# "frontend" so the mount works regardless of the checkout name.
 FRONTEND_DIR = BASE_DIR / "frontend"
+if not FRONTEND_DIR.exists():
+    FRONTEND_DIR = BASE_DIR / "web"
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
 

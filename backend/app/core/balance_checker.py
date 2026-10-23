@@ -146,8 +146,10 @@ class BalanceChecker:
         Returns:
             BalanceResult: 余额查询结果
         """
-        # 检查缓存
-        cache_key = f"{account_name}:{base_url}"
+        # 检查缓存。Include custom_endpoint in the key so two requests for the
+        # same account/base_url but different custom endpoints do not share a
+        # cached result from the wrong endpoint.
+        cache_key = f"{account_name}:{base_url}:{custom_endpoint or ''}"
         if cache_key in self._cache:
             cached = self._cache[cache_key]
             if (datetime.now() - cached.checked_at).total_seconds() < self._cache_ttl:

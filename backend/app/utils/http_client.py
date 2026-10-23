@@ -13,6 +13,25 @@ from .ssrf_guard import guarded_async_client
 
 logger = logging.getLogger(__name__)
 
+# Only these response headers are ever needed by the protocol checks; keep an
+# allowlist rather than the full upstream header set so a relay cannot pass a
+# sensitive custom header into the probe result / report.
+_HEADER_ALLOWLIST = (
+    "content-type",
+    "x-request-id",
+    "x-ratelimit-remaining-requests",
+    "x-ratelimit-remaining-tokens",
+)
+
+
+def _reduce_headers(headers) -> dict:
+    """Return a lowercased, allowlisted subset of the response headers."""
+    out: dict = {}
+    for name in _HEADER_ALLOWLIST:
+        if name in headers:
+            out[name] = headers[name]
+    return out
+
 
 class AsyncAPIClient:
     """Async client for OpenAI-compatible APIs with exponential backoff retry."""
@@ -196,7 +215,7 @@ class AsyncAPIClient:
                             "error": last_error,
                             "_latency_ms": latency_ms,
                             "_status_code": 200,
-                            "_response_headers": dict(response.headers),
+                            "_response_headers": _reduce_headers(response.headers),
                             "_attempts": attempt + 1,
                         }
                     # Even when it parses, the OpenAI schema requires an object
@@ -221,12 +240,12 @@ class AsyncAPIClient:
                             "error": last_error,
                             "_latency_ms": latency_ms,
                             "_status_code": 200,
-                            "_response_headers": dict(response.headers),
+                            "_response_headers": _reduce_headers(response.headers),
                             "_attempts": attempt + 1,
                         }
                     data["_latency_ms"] = latency_ms
                     data["_status_code"] = 200
-                    data["_response_headers"] = dict(response.headers)
+                    data["_response_headers"] = _reduce_headers(response.headers)
                     data["_attempts"] = attempt + 1
                     self._stats["successful"] += 1
                     if attempt > 0:
@@ -257,7 +276,7 @@ class AsyncAPIClient:
                             "error": last_error,
                             "_latency_ms": latency_ms,
                             "_status_code": response.status_code,
-                            "_response_headers": dict(response.headers),
+                            "_response_headers": _reduce_headers(response.headers),
                             "_attempts": attempt + 1,
                         }
 
