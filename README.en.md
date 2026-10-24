@@ -78,8 +78,10 @@ Stdout is a single machine-readable JSON report:
 ```
 
 Exit codes: `0` only for a clean `pass`; `2` for any non-pass (an error report
-**or** `insufficient_evidence`); `3` for `suspicious`; `1` for an unrecovered
-runtime error. Script against the JSON `verdict` field, not the exit code.
+**or** `insufficient_evidence`), **and** argparse usage errors also exit `2`
+(argparse's default); `3` for `suspicious`; `1` for an unrecovered runtime error
+of other commands (e.g. `monitor`). Script against the JSON `verdict` field,
+not the exit code.
 
 ## Local web UI (`transit-truth serve`)
 

@@ -45,10 +45,12 @@ proof** and not a verdict on authenticity.
 ```
 
 Exit codes: `0` for a clean `pass` **only**; `2` for any non-pass, non-suspicious
-outcome (an error report, OR `insufficient_evidence` — a run that simply lacks
-enough evidence still exits non-zero, so scripting must read the JSON `verdict`
-field to tell them apart); `3` for `suspicious`; `1` for an unrecovered runtime
-error (e.g. argparse usage errors).
+verify outcome (an error report, OR `insufficient_evidence` — a run that simply
+lacks enough evidence still exits non-zero, so scripting must read the JSON
+`verdict` field to tell them apart) **and** for argparse usage errors
+(argparse's own default; measured); `3` for `suspicious`; `1` for unrecovered
+runtime errors raised by other commands (e.g. `monitor`). Script against the
+JSON `verdict` field, not the exit code.
 
 ## Reference fingerprints
 

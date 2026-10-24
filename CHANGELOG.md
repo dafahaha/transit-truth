@@ -7,13 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### 发行侧独立审查（4 视角）——测试计数最终为 376 passed / 7 skipped / 383 collected
-- **Fixed (F3)**：`verify_endpoint` 在探针电池前新增 ~5s 裸 TCP 可达性预检（`asyncio.open_connection`，仅验证端口有人监听）；端口拒绝 / DNS 失败 / 超时时立即返回 `error.code = "endpoint_unreachable"`，不再耗尽 90s 总超时后误诊为 `battery_timeout`。新增 `test_verify_endpoint_unreachable.py` 两条回归（死端口快速失败、监听端口不被预检误杀）。
-- **Docs**：中英 README 安装区补「Python 3.10+（3.10–3.13 实测）」、venv 与 PATH 提示、Windows PowerShell 设 key 写法、离线自检需开两个终端；离线自检节新增「预期结果预告」表（默认 stub 安装 → `suspicious`(exit 3) 为正确 fail-closed；装 `[reference]` → tokenizer 匹配但仍 `insufficient_evidence`）；中文 README 补退出码对照表（0 pass / 1 运行错误 / 2 非 pass / 3 suspicious），verify 退出码对齐该表（此前 insufficient_evidence 误返 0）。
-- **Honesty**：httpx 请求日志在 verify 路径默认压到 WARNING（消除逐探针 INFO 噪音）；`invalid_endpoint` 对环回/私网目标追加「loopback/private 目标需加 --allow-local」提示。
-- **计数同步（不改写历史子条目）**：全仓测试计数统一回填为实测终值 **376 passed / 7 skipped / 383 collected**（含本次新增的 2 条可达性回归测试；审计时基线 374/381）：README.en.md、README.md、CONTRIBUTING.md、docs/PUBLISHING.md、docs/launch_kit.md 中英两处。docs/audit_round1_1022.md 为历史审计记录，未改动。
-
 ## [0.5.9] - 2026-10-19
+
+### 发行侧独立审查收尾（测试计数最终为 376 passed / 7 skipped / 383 collected）
+- **Fixed (F3)**：`verify_endpoint` 在探针电池前新增 ~5s 裸 TCP 可达性预检（`asyncio.open_connection`，仅验证端口有人监听）；端口拒绝 / DNS 失败 / 超时时立即返回 `error.code = "endpoint_unreachable"`，不再耗尽 90s 总超时后误诊为 `battery_timeout`。新增 `test_verify_endpoint_unreachable.py` 两条回归（死端口快速失败、监听端口不被预检误杀）。
+- **Hardening (F-1)**：该 TCP 预检补强 DNS-rebinding TOCTOU——预检时重新 getaddrinfo，`allow_local=False` 时对每个解析到的 IP 跑与 SSRF 守卫相同的 blocked-IP 判定并丢弃非公共地址（全部被丢则返回 `invalid_endpoint` 并提示可能 rebinding / 环回目标需 --allow-local），通过 IP 才裸建连；每 IP 尝试 4s（不可路由 IPv6 快速跳过），总预算 8s。
+- **Docs**：中英 README 安装区补「Python 3.10+（3.10–3.13 实测）」、venv 与 PATH 提示、Windows PowerShell 设 key 写法、离线自检需开两个终端；离线自检节新增「预期结果预告」表（默认 stub 安装 → `suspicious`(exit 3) 为正确 fail-closed；装 `[reference]` → tokenizer 匹配但仍 `insufficient_evidence`(exit 2)）；退出码契约与代码完全对齐——`0`=仅 pass，`2`=任何非 pass（error 报告或 insufficient_evidence，argparse usage 错误亦归 2），`3`=suspicious，`1`=其它命令运行时错误（此前 insufficient_evidence 误返 0、docs/verify.md 误写 usage 错误为 1）。
+- **Honesty**：httpx 请求日志在 verify 路径默认压到 WARNING（消除逐探针 INFO 噪音）；`invalid_endpoint` 对环回/私网目标追加「loopback/private 目标需加 --allow-local」提示。
+- **Packaging**：新增根 `MANIFEST.in`（recursive-exclude + prune + global-exclude SOURCES.txt），sdist 不再携带构建期生成的 `backend/transit_truth.egg-info` 陈旧元数据文件。
+- **计数同步（不改写历史子条目）**：全仓测试计数统一回填为实测终值 **376 passed / 7 skipped / 383 collected**（含本次新增的 2 条可达性回归测试；审计时基线 374/381）：README.en.md、README.md、CONTRIBUTING.md、docs/PUBLISHING.md、docs/launch_kit.md 中英两处。docs/audit_round1_1022.md 为历史审计记录，未改动。
 
 ### Fixed — 参考目录缺失/空目录 fail-loud（P2）
 - `load_reference_analyzer` 在参考基线目录缺失（裁剪 wheel / 破损 checkout）或目录内无任何 JSON 时，向 **stderr** 打印醒目 WARNING（绝不写入 stdout，遵守单一 JSON 契约），并跳过真实基线加载；此前会静默退化到合成占位、在无说明的情况下给出低置信判定。新增 `test_missing_reference_catalog_warns_loud_on_stderr` 覆盖"整目录缺失"与"目录为空"两条路径，临时目录改用 pytest `tmp_path` 保证异常路径也清理。
