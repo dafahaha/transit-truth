@@ -253,6 +253,8 @@ PyPI 上**尚未发布** `transit-truth` 包，当前请从源码安装。**需�
 git clone https://github.com/dafahaha/transit-truth.git
 cd transit-truth
 # 建议先建虚拟环境：python -m venv .venv && source .venv/bin/activate（Windows: .venv\Scripts\Activate.ps1）
+# 普通用户直接用：pip install .
+# 下面这行是「可编辑开发模式」（改源码即生效，面向贡献者）：
 pip install -e .
 
 # key 从环境变量读（位置传 sk-xxx / --api-key sk-xxx 会在进程列表可见，仅兼容告警）

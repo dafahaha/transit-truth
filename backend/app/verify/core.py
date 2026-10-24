@@ -288,9 +288,12 @@ async def verify_endpoint(
         # the exact flag that opts in (otherwise the error reads as a broken
         # URL even though the URL itself is fine).
         if "not a public internet address" in message and not allow_local:
-            message += (
-                " Hint: loopback/private targets need --allow-local."
-            )
+            # Ensure the sanitized message ends with a sentence period so the
+            # appended hint never reads as "address Hint: ..." (punctuation run-on).
+            message = message.rstrip()
+            if not message.endswith("."):
+                message += "."
+            message += " Hint: loopback/private targets need --allow-local."
         return error_report(
             claimed_model=claimed_model,
             endpoint_base_url=host_label,

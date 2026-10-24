@@ -14,9 +14,20 @@ import tarfile
 
 EPOCH = int(os.environ["SOURCE_DATE_EPOCH"])
 
+# setuptools regenerates backend/transit_truth.egg-info/ *during* the build,
+# so pre-deleting it (build_release.ps1) cannot keep it out of the sdist.
+# It is a pure build byproduct (file manifest + empty dir), pip regenerates it
+# on install from sdist anyway, so drop these members here.
+SKIP_PATHS = ("transit_truth.egg-info",)
+
+
+def _skipped(name: str) -> bool:
+    return any(p in name for p in SKIP_PATHS)
+
 
 def normalize(src: str) -> None:
     tmp = src + ".normalized"
+    dropped = []
     with tarfile.open(src, "r:*") as tin:
         # gzip layer written explicitly: mtime=0, no FNAME (tarfile's "w:gz"
         # stamps the wall-clock mtime + source filename into the gzip header).
@@ -24,6 +35,9 @@ def normalize(src: str) -> None:
             with gzip.GzipFile(fileobj=raw, mode="wb", compresslevel=9, mtime=0) as gz:
                 with tarfile.open(fileobj=gz, mode="w", format=tarfile.USTAR_FORMAT) as tout:
                     for m in tin.getmembers():
+                        if _skipped(m.name):
+                            dropped.append(m.name)
+                            continue
                         m.mtime = EPOCH
                         # setuptools wrote PAX extended headers carrying the
                         # *original* fractional mtime; they override the numeric
@@ -36,6 +50,10 @@ def normalize(src: str) -> None:
                         f = tin.extractfile(m) if m.isfile() else None
                         tout.addfile(m, f)
     os.replace(tmp, src)
+    if dropped:
+        print("dropped from sdist:", len(dropped), "members")
+        for n in dropped:
+            print("  -", n)
 
 
 if __name__ == "__main__":
