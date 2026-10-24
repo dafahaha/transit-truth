@@ -8,10 +8,31 @@
 
 ## 0. Preflight (already done — re-run before every release)
 
+> 🔒 **Use the release script, not bare `python -m build`.** Bare builds are
+> non-reproducible on Windows: the wheel honors `SOURCE_DATE_EPOCH`, but the
+> sdist tar.gz stamps every tar member (and the gzip header) with the actual
+> wall-clock build time, so the SHA256 of a rebuilt tarball drifts even with
+> byte-identical content. `scripts/build_release.ps1` pins
+> `SOURCE_DATE_EPOCH=1792368000` (0.5.9 release date, 2026-10-19 00:00 UTC),
+> builds both artifacts, then rewrites the sdist with fixed member mtimes,
+> stripped PAX headers, and gzip `mtime=0` — two consecutive clean runs then
+> produce byte-identical sdist+wheel (verified). Always upload those artifacts
+> and record their hashes; if you rebuild by hand, the hashes will NOT match
+> what is archived.
+
 ```powershell
-# from the repo root
+# from the repo root — the ONLY supported release-build path:
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build_release.ps1
+# it runs: clean -> python -m build -> sdist normalize -> twine check
+```
+
+Equivalent manual steps (only if debugging):
+
+```powershell
+$env:SOURCE_DATE_EPOCH = "1792368000"
 python sync_reference_data.py          # mirrors data/ into the package
 python -m build                        # requires: pip install build
+python scripts\_normalize_sdist.py dist\transit_truth-0.5.9.tar.gz
 python -m twine check dist/*           # requires: pip install twine
 ```
 
