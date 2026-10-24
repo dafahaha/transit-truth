@@ -26,6 +26,19 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build_release.ps1
 # it runs: clean -> python -m build -> sdist normalize -> twine check
 ```
 
+**Interpreter preflight (built into the script):** the build needs a Python
+with `build` and `twine` installed (e.g. `pip install build twine`). The
+script resolves the interpreter as `$env:PYTHON` if set, otherwise `python`
+from PATH; it then verifies `import build, twine` succeeds and auto-installs
+them if missing (or fails with an actionable message). If your PATH mixes
+anaconda base (which may lack build/twine) with another Python, point the
+script at the right one explicitly:
+
+```powershell
+$env:PYTHON = "C:\path\to\python.exe"   # optional override
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts\build_release.ps1
+```
+
 Equivalent manual steps (only if debugging):
 
 ```powershell

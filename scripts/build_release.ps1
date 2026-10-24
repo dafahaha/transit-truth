@@ -15,26 +15,41 @@ Set-Location $PSScriptRoot\..
 # 0.5.9 release date, 00:00 UTC — the fixed build timestamp.
 $env:SOURCE_DATE_EPOCH = "1792368000"
 
+# --- Interpreter resolution ---------------------------------------------
+# Prefer $env:PYTHON (explicit override), otherwise `python` from PATH.
+# PATH ordering is fragile: anaconda base 3.11 lacks build/twine, so verify
+# the chosen interpreter can import them and install if missing.
+$py = if ($env:PYTHON) { $env:PYTHON } else { "python" }
+Write-Host "Using interpreter: $py"
+& $py -c "import build, twine" 2>$null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "build/twine missing in $py — installing them now..."
+    & $py -m pip install --upgrade build twine
+    if ($LASTEXITCODE -ne 0) {
+        throw "Could not install build/twine into '$py'. Fix with: `"$py`" -m pip install build twine (or set `$env:PYTHON` to the right interpreter)."
+    }
+}
+
 if (Test-Path dist) { Remove-Item -Recurse -Force dist }
 if (Test-Path build) { Remove-Item -Recurse -Force build }
 Remove-Item -Recurse -Force backend\transit_truth.egg-info -ErrorAction SilentlyContinue
 
-python -m build --outdir dist
+& $py -m build --outdir dist
 if ($LASTEXITCODE -ne 0) { throw "python -m build failed" }
 
 # Normalize sdist tarball timestamps (wheel is already reproducible via
 # SOURCE_DATE_EPOCH).
 $tar = Get-ChildItem dist -Filter *.tar.gz | Select-Object -First 1
-python scripts\_normalize_sdist.py $tar.FullName
+& $py scripts\_normalize_sdist.py $tar.FullName
 if ($LASTEXITCODE -ne 0) { throw "sdist normalization failed" }
 
 # Strip the legacy online-platform module from the wheel (setuptools cannot
 # exclude a single module of a shipped package; the source checkout keeps it).
 $whl = Get-ChildItem dist -Filter *.whl | Select-Object -First 1
-python scripts\_strip_wheel_legacy.py $whl.FullName
+& $py scripts\_strip_wheel_legacy.py $whl.FullName
 if ($LASTEXITCODE -ne 0) { throw "wheel legacy-strip failed" }
 
-python -m twine check dist/*
+& $py -m twine check dist/*
 if ($LASTEXITCODE -ne 0) { throw "twine check failed" }
 
 Write-Host ""
