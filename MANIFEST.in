@@ -1,0 +1,9 @@
+# Build-regenerated metadata residue: packages.find points at backend/, so
+# setuptools writes backend/transit_truth.egg-info/ into the source tree
+# during every build. It is gitignored build output and must NEVER be shipped
+# in the sdist (the wheel already excludes it).
+recursive-exclude backend/transit_truth.egg-info *
+prune backend/transit_truth.egg-info
+# setuptools regenerates SOURCES.txt into the (temp) build tree while the sdist
+# is being assembled, after the manifest above is applied -- exclude by name.
+global-exclude SOURCES.txt

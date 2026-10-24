@@ -13,13 +13,14 @@ import asyncio
 import logging
 import math
 import os
+import socket
 from collections import Counter
 from typing import Optional
 from urllib.parse import urlparse
 
 from ..core.statistical_analyzer import StatisticalVerdict
 from ..utils.http_client import AsyncAPIClient
-from ..utils.ssrf_guard import validate_public_url
+from ..utils.ssrf_guard import _is_blocked_ip, validate_public_url
 from .battery import run_battery
 from .reference import load_reference_analyzer
 from .report import build_report, error_report
@@ -31,26 +32,74 @@ logger = logging.getLogger(__name__)
 # retries+backoff against a base-url whose port accepts nobody, probe raw TCP
 # reachability with a short timeout. A dead port otherwise burns the full
 # total_timeout (90s) and surfaces as the misleading ``battery_timeout``.
-_PRECHECK_TIMEOUT = 5.0
+_PRECHECK_TIMEOUT = 8.0
+# Per-connect attempt budget: dual-stack hosts may list an unroutable IPv6
+# address first; a single long budget would hang on it. ~4s per attempt, first
+# success wins (typical worst case = IPv6(4s) + IPv4 = ~8s).
+_PRECHECK_ATTEMPT_TIMEOUT = 4.0
 
 
-async def _precheck_tcp_reachable(hostname: str, port: int) -> None:
-    """Open a bare TCP connection to ``hostname:port``; raise on any failure.
+class _PrecheckNonPublic(Exception):
+    """All re-resolved addresses are non-public (DNS-rebinding window)."""
 
-    For https targets this deliberately only proves *a server is listening* --
-    TLS handshake errors / 4xx are handled later by the battery. A refused
-    connection, DNS failure, or timeout here means nothing useful can come of
-    probing, so the caller fails closed immediately.
+
+async def _precheck_tcp_reachable(
+    hostname: str, port: int, *, allow_local: bool
+) -> None:
+    """Re-resolve ``hostname`` NOW, drop non-public IPs, then bare-connect.
+
+    This closes the DNS-rebinding TOCTOU between ``validate_public_url`` (which
+    resolved at URL-validation time) and the real battery: a hostile resolver can
+    swap in an internal address later, so we re-resolve at connect time and apply
+    the same SSRF blocklist (skipped when the operator opted in via
+    ``allow_local``). For https targets this deliberately only proves *a server
+    is listening* -- TLS handshake errors / 4xx are handled later by the battery.
+    A refused connection, DNS failure, or timeout here means nothing useful can
+    come of probing, so the caller fails closed immediately.
     """
-    reader, writer = await asyncio.wait_for(
-        asyncio.open_connection(hostname, port),
-        timeout=_PRECHECK_TIMEOUT,
-    )
-    writer.close()
+    loop = asyncio.get_event_loop()
     try:
-        await writer.wait_closed()
-    except Exception:  # noqa: BLE001 - closing best-effort
-        pass
+        infos = await loop.getaddrinfo(hostname, port, proto=socket.IPPROTO_TCP)
+    except (socket.gaierror, UnicodeError, OSError) as exc:
+        raise OSError(f"precheck DNS failure for {hostname}: {exc}") from exc
+
+    ips: list[str] = []
+    for _family, _type, _proto, _canon, sockaddr in infos:
+        ip = str(sockaddr[0])
+        if ip not in ips:
+            ips.append(ip)
+
+    reachable_ips: list[str] = []
+    for ip in ips:
+        if not allow_local and _is_blocked_ip(ip):
+            logger.warning(
+                "precheck dropped non-public resolved address %s for host %s",
+                ip,
+                hostname,
+            )
+            continue
+        reachable_ips.append(ip)
+    if not reachable_ips:
+        raise _PrecheckNonPublic(hostname)
+
+    last_exc: Optional[Exception] = None
+    for ip in reachable_ips:
+        try:
+            _reader, writer = await asyncio.wait_for(
+                asyncio.open_connection(ip, port),
+                timeout=_PRECHECK_ATTEMPT_TIMEOUT,
+            )
+        except (asyncio.TimeoutError, OSError) as exc:
+            last_exc = exc
+            continue
+        writer.close()
+        try:
+            await writer.wait_closed()
+        except Exception:  # noqa: BLE001 - closing best-effort
+            pass
+        return
+    if last_exc is not None:
+        raise last_exc
 
 
 # A behavioral probe whose empirical mode fraction is at least this close to 1.0
@@ -271,13 +320,33 @@ async def verify_endpoint(
     # -- Fast reachability precheck (F3) ----------------------------------
     # A base-url whose host:port accepts nobody otherwise makes every probe
     # retry into the void until total_timeout expires and is then mislabelled
-    # battery_timeout. Probe bare TCP first (~5s): refused / DNS failure /
-    # timeout fail closed HERE with an actionable error code. A reachable
-    # port (even if it 401s/404s on the API) proceeds to the battery.
+    # battery_timeout. Re-resolve NOW (closing the DNS-rebinding window between
+    # the URL check and the battery), drop non-public IPs (unless --allow-local),
+    # and bare-connect first: refused / DNS failure / timeout fail closed HERE
+    # with an actionable error code. A reachable port (even if it 401s/404s on
+    # the API) proceeds to the battery.
     precheck_host = parsed.hostname or ""
     precheck_port = parsed.port or (443 if parsed.scheme == "https" else 80)
     try:
-        await _precheck_tcp_reachable(precheck_host, precheck_port)
+        await _precheck_tcp_reachable(
+            precheck_host, precheck_port, allow_local=allow_local
+        )
+    except _PrecheckNonPublic:
+        logger.warning(
+            "verify_endpoint precheck: all re-resolved addresses of %s are "
+            "non-public (possible DNS rebinding); refusing to probe",
+            precheck_host,
+        )
+        return error_report(
+            claimed_model=claimed_model,
+            endpoint_base_url=host_label,
+            code="invalid_endpoint",
+            message=(
+                f"Host '{precheck_host}' re-resolved to non-public address(es) "
+                "at connect time (possible DNS rebinding). Check host/network; "
+                "loopback/private targets need --allow-local."
+            ),
+        )
     except Exception as exc:  # noqa: BLE001 - DNS/refused/timeout, all fatal
         logger.warning(
             "verify_endpoint reachability precheck failed: %s", type(exc).__name__

@@ -44,9 +44,11 @@ proof** and not a verdict on authenticity.
 }
 ```
 
-Exit codes: `0` for `pass` **or** `insufficient_evidence` (a run that simply
-lacks enough evidence exits 0, so scripting can distinguish via the JSON
-verdict field), `3` for `suspicious`, `2` for an execution error.
+Exit codes: `0` for a clean `pass` **only**; `2` for any non-pass, non-suspicious
+outcome (an error report, OR `insufficient_evidence` — a run that simply lacks
+enough evidence still exits non-zero, so scripting must read the JSON `verdict`
+field to tell them apart); `3` for `suspicious`; `1` for an unrecovered runtime
+error (e.g. argparse usage errors).
 
 ## Reference fingerprints
 

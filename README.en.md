@@ -172,7 +172,7 @@ like a bug):**
 | Setup | reference-server mode | verify verdict (exit code) | Why |
 |---|---|---|---|
 | plain `pip install .` (no `[reference]`) | honest plumbing stub (hash-placeholder `prompt_tokens`, fixed behavioral strings) | **`suspicious` (exit 3)** | the placeholder counts deliberately do NOT match the real Qwen reference numbers |
-| `pip install ".[reference]"` (tokenizer downloadable) | real local tokenizer; behavioral content still a deterministic stub | **`insufficient_evidence` (exit 0)** | tokenizer counts match, but the open-source catalog has no behavioral distribution, so nothing can be certified |
+| `pip install ".[reference]"` (tokenizer downloadable) | real local tokenizer; behavioral content still a deterministic stub | **`insufficient_evidence` (exit 2)** | tokenizer counts match, but the open-source catalog has no behavioral distribution, so nothing can be certified |
 
 This self-check's purpose is **to prove the pipeline runs end-to-end and
 NEVER falsely reports `pass`** — not to *get* a `pass`. A `suspicious` here
