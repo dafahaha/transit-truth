@@ -80,8 +80,8 @@ Stdout is a single machine-readable JSON report:
 Exit codes: `0` only for a clean `pass`; `2` for any non-pass (an error report
 **or** `insufficient_evidence`), **and** argparse usage errors also exit `2`
 (argparse's default); `3` for `suspicious`; `1` for an unrecovered runtime error
-of other commands (e.g. `monitor`). Script against the JSON `verdict` field,
-not the exit code.
+of other commands, and for running `transit-truth` with no subcommand (it prints
+help and exits 1). Script against the JSON `verdict` field, not the exit code.
 
 ## Local web UI (`transit-truth serve`)
 
@@ -302,8 +302,9 @@ current `verify`/`serve`/PyPI model-identity path:
   uses `transit-truth serve` / the CLI (see CORS note above).
 - **Run the local verify web UI:** `transit-truth serve` (default
   127.0.0.1:8766; see [docs/serve.md](docs/serve.md)).
-- **Run the legacy web platform (separate, self-hosted):**
-  `cd backend && pip install -r requirements.txt && uvicorn app.main:app --port 8000`.
+- **Run the legacy web platform (source checkout only — the PyPI wheel does
+  NOT include `app.main`/`app.api`):**
+  `git clone` this repo, then `cd backend && pip install -r requirements.txt && uvicorn app.main:app --port 8000`.
   This legacy platform includes balance-query aggregation, continuous
   monitoring/alerts, and the community leaderboard; it does NOT ship with
   `verify`/`serve`/PyPI. **Public-binding risk:** it defaults to loopback;

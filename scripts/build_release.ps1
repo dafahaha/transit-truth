@@ -28,6 +28,12 @@ $tar = Get-ChildItem dist -Filter *.tar.gz | Select-Object -First 1
 python scripts\_normalize_sdist.py $tar.FullName
 if ($LASTEXITCODE -ne 0) { throw "sdist normalization failed" }
 
+# Strip the legacy online-platform module from the wheel (setuptools cannot
+# exclude a single module of a shipped package; the source checkout keeps it).
+$whl = Get-ChildItem dist -Filter *.whl | Select-Object -First 1
+python scripts\_strip_wheel_legacy.py $whl.FullName
+if ($LASTEXITCODE -ne 0) { throw "wheel legacy-strip failed" }
+
 python -m twine check dist/*
 if ($LASTEXITCODE -ne 0) { throw "twine check failed" }
 

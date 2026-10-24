@@ -59,7 +59,7 @@ transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o-mini
 | 退出码 | 含义 |
 |---|---|
 | `0` | `pass`（干净通过） |
-| `1` | 运行错误（其它命令的未捕获异常，如 monitor） |
+| `1` | 运行错误（其它命令的未捕获异常）；裸跑 `transit-truth`（不带子命令）打印帮助并 exit 1 |
 | `2` | 非 `pass`（核验错误报告，或 `insufficient_evidence`）；**argparse 参数/用法错误也归 2**（argparse 默认，实测） |
 | `3` | `suspicious`（与参考显著不符） |
 

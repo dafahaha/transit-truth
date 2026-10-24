@@ -13,7 +13,7 @@ name = "transit-truth"
 version = "0.5.9"
 description = "Statelessly verify that the model an OpenAI-compatible endpoint claims to serve is the model it actually serves."
 readme = "README.en.md"
-license = {text = "MIT"}
+license = "MIT"
 requires-python = ">=3.10"
 authors = [
     {name = "dafahaha", email = "156556011+dafahaha@users.noreply.github.com"},
@@ -26,11 +26,11 @@ classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
     "Topic :: Security",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
@@ -77,6 +77,10 @@ Documentation = "https://github.com/dafahaha/transit-truth/blob/main/README.en.m
 [tool.setuptools.packages.find]
 where = ["backend"]
 include = ["app*"]
+# Legacy online platform (token-billing audit UI, contribution/ranking/online
+# submission API) is self-hosted separately from source checkout -- NOT part of
+# the PyPI bundle supported by `verify`/`serve`/`reference-server`.
+exclude = ["app.api", "app.api.*", "app.main"]
 
 # Ship the reference catalog mirror (see sync_reference_data.py) so that
 # `transit-truth verify` works out of the box after a plain pip install.

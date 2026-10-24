@@ -49,8 +49,9 @@ verify outcome (an error report, OR `insufficient_evidence` — a run that simpl
 lacks enough evidence still exits non-zero, so scripting must read the JSON
 `verdict` field to tell them apart) **and** for argparse usage errors
 (argparse's own default; measured); `3` for `suspicious`; `1` for unrecovered
-runtime errors raised by other commands (e.g. `monitor`). Script against the
-JSON `verdict` field, not the exit code.
+runtime errors raised by other commands, **and** for running bare `transit-truth`
+with no subcommand (it prints help and exits `1`). Script against the JSON
+`verdict` field, not the exit code.
 
 ## Reference fingerprints
 

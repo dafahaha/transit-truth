@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Docs**：中英 README 安装区补「Python 3.10+（3.10–3.13 实测）」、venv 与 PATH 提示、Windows PowerShell 设 key 写法、离线自检需开两个终端；离线自检节新增「预期结果预告」表（默认 stub 安装 → `suspicious`(exit 3) 为正确 fail-closed；装 `[reference]` → tokenizer 匹配但仍 `insufficient_evidence`(exit 2)）；退出码契约与代码完全对齐——`0`=仅 pass，`2`=任何非 pass（error 报告或 insufficient_evidence，argparse usage 错误亦归 2），`3`=suspicious，`1`=其它命令运行时错误（此前 insufficient_evidence 误返 0、docs/verify.md 误写 usage 错误为 1）。
 - **Honesty**：httpx 请求日志在 verify 路径默认压到 WARNING（消除逐探针 INFO 噪音）；`invalid_endpoint` 对环回/私网目标追加「loopback/private 目标需加 --allow-local」提示。
 - **Packaging**：新增根 `MANIFEST.in`（recursive-exclude + prune + global-exclude SOURCES.txt），sdist 不再携带构建期生成的 `backend/transit_truth.egg-info` 陈旧元数据文件。
+- **Packaging（R6）**：legacy 在线平台（`app.main` FastAPI 应用 + 整个 `app.api` 路由包）不再进入 PyPI wheel——`packages.find` exclude 排除 `app.api` 包，`scripts/_strip_wheel_legacy.py` 在发布构建中剥除 `app/main.py` 模块（setuptools 无法按模块排除已发现包的成员）；源码 checkout 仍保留全部 legacy 代码，README 已注明「legacy 平台需从源码 checkout 运行（uvicorn app.main:app），wheel 不含」。新增 `scripts/build_release.ps1` 可复现发布构建（SOURCE_DATE_EPOCH=1792368000 + sdist 时间戳规范化）；license 改用 SPDX `license = "MIT"`；classifiers 补 Python 3.13。
 - **计数同步（不改写历史子条目）**：全仓测试计数统一回填为实测终值 **376 passed / 7 skipped / 383 collected**（含本次新增的 2 条可达性回归测试；审计时基线 374/381）：README.en.md、README.md、CONTRIBUTING.md、docs/PUBLISHING.md、docs/launch_kit.md 中英两处。docs/audit_round1_1022.md 为历史审计记录，未改动。
 
 ### Fixed — 参考目录缺失/空目录 fail-loud（P2）
@@ -26,7 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Docs — 英文 README 数据透明度补齐 / 计数同步
 - README.en.md 在 "What it actually does" 后补齐 "What the shipped reference data shows"：Okapi 76%、"是否为 Okapi"规则 88% resubstitution 准确率（Wilson 95%CI [0.80, 0.93]）、最强探针 TVD=0.90（分布距离，非分类准确率）、管线自洽后验 0.913（CrI [0.885, 0.937]），明确为 in-distribution resubstitution 自洽检验、非 held-out 准确率，数字与中文 README 逐一对齐。
-- 测试数全仓回填为 **336 passed / 7 skipped**（7 个 skipped 为需真实 key 的 integration）。
+- 测试数全仓回填为 **336 passed / 7 skipped**（7 个 skipped 为需真实 key 的 integration）。（历史当时值；本版本最终计数见上方「发行侧独立审查收尾」子标题 = 376 passed / 7 skipped / 383 collected。）
 
 ### 版本
 - 版本四源统一 0.5.9，版本一致性测试同步。
