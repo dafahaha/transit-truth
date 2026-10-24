@@ -67,7 +67,7 @@ Generate/compare reference fingerprints without a paid key:
 ```
 transit-truth reference-server --model qwen2.5-0.5b-instruct --port 8765
 transit-truth verify --base-url http://127.0.0.1:8765/v1 \
-    --model qwen2.5-0.5b-instruct --allow-local
+    --model qwen2.5-0.5b-instruct --api-key dummy-local-test --allow-local
 ```
 
 `--allow-local` is required for loopback targets; the default enforces the

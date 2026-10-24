@@ -106,7 +106,7 @@ transit-truth verify --base-url http://127.0.0.1:8765/v1 \
 
 这次自检的目的是**证明管线端到端跑通、且绝不出 false `pass`**，**不是**拿到 `pass`。在此本地环回设置下看到 `suspicious` 是 fail-closed 的正确行为；若反而看到 `pass`，那才是 bug。另外：base-url 端口没人监听时，现在约 5 秒快速失败，报 `error.code = "endpoint_unreachable"`（不再耗满 90s 电池超时再误诊为 `battery_timeout`）。
 
-> **无 tokenizers 时降级为 stub**：需要真实 tokenizer 计数时先 `pip install "transit-truth[reference]"`（装 `tokenizers` 包）；reference-server 启动时若下载不到真实 tokenizer（网络受限，`HF_ENDPOINT` 默认 `https://hf-mirror.com`），会自动降级为**显式标注的 plumbing stub** 模式——`prompt_tokens` 只是哈希占位值、行为内容是 `stub-*` 固定串，服务启动 stderr 与 `GET /v1/models` 的 `mode`/`note` 会明确告诉你是 stub，**不会假装是真模型**。此时 verify 只能跑通管线，无法给出任何认证。
+> **无 tokenizers 时降级为 stub**：需要真实 tokenizer 计数时先 `pip install ".[reference]"`（从源码装、装 `tokenizers` 包）；reference-server 启动时若下载不到真实 tokenizer（网络受限，`HF_ENDPOINT` 默认 `https://hf-mirror.com`），会自动降级为**显式标注的 plumbing stub** 模式——`prompt_tokens` 只是哈希占位值、行为内容是 `stub-*` 固定串，服务启动 stderr 与 `GET /v1/models` 的 `mode`/`note` 会明确告诉你是 stub，**不会假装是真模型**。此时 verify 只能跑通管线，无法给出任何认证。
 >
 > **覆盖范围（诚实标注）**：当前自带参考指纹仅覆盖本地开源模型——Qwen2.5-0.5B（真实 tokenizer 计数）、DeepSeek-R1-Distill-Qwen（沿用 Qwen2 tokenizer）、GLM（目录已收录，tokenizer 下载受网络限制待补）。**GPT/Claude/Gemini 等闭源指纹需用户提供自己的 key 后采集接入。**
 >

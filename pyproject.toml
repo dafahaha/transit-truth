@@ -77,10 +77,10 @@ Documentation = "https://github.com/dafahaha/transit-truth/blob/main/README.en.m
 [tool.setuptools.packages.find]
 where = ["backend"]
 include = ["app*"]
-# Legacy online platform (token-billing audit UI, contribution/ranking/online
-# submission API) is self-hosted separately from source checkout -- NOT part of
-# the PyPI bundle supported by `verify`/`serve`/`reference-server`.
-exclude = ["app.api", "app.api.*", "app.main"]
+# NOTE: the legacy online platform (app.main + app.api) is intentionally
+# INCLUDED here so that sdist / `pip install .` ship a complete, importable
+# source tree. The PyPI wheel is trimmed post-build by
+# scripts/_strip_wheel_legacy.py (wheel-only, RECORD-aware).
 
 # Ship the reference catalog mirror (see sync_reference_data.py) so that
 # `transit-truth verify` works out of the box after a plain pip install.
