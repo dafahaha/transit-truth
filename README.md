@@ -6,6 +6,10 @@
 
 > **AI API 模型真实性核验 / 路由层可信度监控** — 无状态验证你用的模型是否货真价实。
 
+> **⚡ 快速安装（一句话）**：需 **Python 3.10+（3.10–3.13 实测）**。PyPI 尚未发布，从源码装：
+> `git clone https://github.com/dafahaha/transit-truth.git && cd transit-truth && pip install .`
+> （建议先 `python -m venv .venv` 建虚拟环境再装；装完 `transit-truth` 应在 PATH 里，找不到就重开终端/激活 venv，或用 `python -m app.cli --help`。完整说明与 `[reference]` 可选件见下方「📦 从源码安装」。）
+
 ---
 
 ## 🌐 一键在线体检（打开网页就能测，零安装）
@@ -50,6 +54,15 @@ transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o-mini
 
 三态结论：`pass` / `suspicious` / `insufficient_evidence`（证据不足时**绝不硬判**）。
 
+退出码对照表（脚本请以 JSON 的 `verdict` 字段为准，别只看退出码）：
+
+| 退出码 | 含义 |
+|---|---|
+| `0` | `pass`（干净通过） |
+| `1` | 运行错误（未捕获异常 / 参数错误） |
+| `2` | 非 `pass`（核验错误报告，或 `insufficient_evidence`） |
+| `3` | `suspicious`（与参考显著不符） |
+
 ### 🖥️ 本地 Web UI（`transit-truth serve`）
 
 不想敲命令？本地起一个网页，填地址/模型/可选 Key，浏览器里直接出三态报告：
@@ -74,10 +87,24 @@ transit-truth serve            # 默认 http://127.0.0.1:8766，加 --open 自�
 export TRANSIT_TRUTH_API_KEY=local-dummy-no-billing
 # Windows PowerShell: $env:TRANSIT_TRUTH_API_KEY="local-dummy-no-billing"
 
+# 注意：要开两个终端——终端 1 常驻 reference-server，终端 2 再跑 verify。
+
+# 终端 1：本地参考后端（常驻，别关）
 transit-truth reference-server --model qwen2.5-0.5b-instruct --port 8765
+
+# 终端 2：对它跑自检
 transit-truth verify --base-url http://127.0.0.1:8765/v1 \
     --model qwen2.5-0.5b-instruct --allow-local
 ```
+
+**自检"理应"看到什么（免得把正确结果当成 bug）：**
+
+| 安装方式 | reference-server 模式 | verify 结论（退出码） | 原因 |
+|---|---|---|---|
+| 直接 `pip install .`（未装 `[reference]`） | 诚实标注的 plumbing stub（`prompt_tokens` 是哈希占位、行为内容固定） | **`suspicious`（退出 3）** | 占位计数**故意不**匹配真实 Qwen 参考数 |
+| `pip install ".[reference]"`（tokenizer 可下载时） | 真实本地 tokenizer；行为内容仍是确定性 stub | **`insufficient_evidence`（退出 2）** | tokenizer 计数匹配，但开源目录没有行为分布，无法认证 |
+
+这次自检的目的是**证明管线端到端跑通、且绝不出 false `pass`**，**不是**拿到 `pass`。在此本地环回设置下看到 `suspicious` 是 fail-closed 的正确行为；若反而看到 `pass`，那才是 bug。另外：base-url 端口没人监听时，现在约 5 秒快速失败，报 `error.code = "endpoint_unreachable"`（不再耗满 90s 电池超时再误诊为 `battery_timeout`）。
 
 > **无 tokenizers 时降级为 stub**：需要真实 tokenizer 计数时先 `pip install "transit-truth[reference]"`（装 `tokenizers` 包）；reference-server 启动时若下载不到真实 tokenizer（网络受限，`HF_ENDPOINT` 默认 `https://hf-mirror.com`），会自动降级为**显式标注的 plumbing stub** 模式——`prompt_tokens` 只是哈希占位值、行为内容是 `stub-*` 固定串，服务启动 stderr 与 `GET /v1/models` 的 `mode`/`note` 会明确告诉你是 stub，**不会假装是真模型**。此时 verify 只能跑通管线，无法给出任何认证。
 >
@@ -220,17 +247,23 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 <!-- PYPI-FLIP：发布到 PyPI 后，把下面整段替换为 `pip install transit-truth`
      （真实 tokenizer 用 `pip install "transit-truth[reference]"`），并删除
      "PyPI 上没有"这句话；具体清单见 docs/PUBLISHING.md 的 post-publish checklist。 -->
-PyPI 上**尚未发布** `transit-truth` 包，当前请从源码安装：
+PyPI 上**尚未发布** `transit-truth` 包，当前请从源码安装。**需要 Python 3.10 及以上（3.10–3.13 实测）**：
 
 ```bash
 git clone https://github.com/dafahaha/transit-truth.git
 cd transit-truth
+# 建议先建虚拟环境：python -m venv .venv && source .venv/bin/activate（Windows: .venv\Scripts\Activate.ps1）
 pip install -e .
 
 # key 从环境变量读（位置传 sk-xxx / --api-key sk-xxx 会在进程列表可见，仅兼容告警）
+# bash / macOS / Linux:
 export TRANSIT_TRUTH_API_KEY=sk-your-key
+# Windows PowerShell:
+$env:TRANSIT_TRUTH_API_KEY="sk-your-key"
 transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
 ```
+
+装完后 `transit-truth` 命令应在你的 PATH 中（位于 Python 的 `Scripts`/`bin` 目录）。如果终端找不到它：重开终端、确认虚拟环境已激活，或直接用模块方式调用 `python -m app.cli --help`。
 
 （后端方式见上方"本地运行"：`cd backend; pip install -r requirements.txt`。）
 
@@ -286,7 +319,7 @@ transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
 - [ ] **HTML 报告生成**（可分享的审计报告）— legacy
 - [ ] **审计结果分享卡片**（1200x630 PNG，一键下载分享社交媒体）— legacy
 - [ ] **灵活配置管理**（legacy web 的 14 个环境变量）— legacy；`serve` 使用自己的少量旋钮（max_requests/behavioral_samples/timeout/total_timeout）
-- [x] **测试**：实测 **374 passed / 7 skipped**（381 collected；v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.2 诚实性/抗回放、v0.4.3 饥饿式样本绕过回归、v0.4.4 覆盖率门+tokenizer 口径、v0.4.5 版本一致性+tokenizer 严格匹配回归、v0.4.6 单字段容错+stdout 单一 JSON 契约+负 verdict 自洽回归、v0.4.7 非 JSON 200 响应体容错+tokenizer 不确定带不升级 pass 回归、v0.5.0 本地 Web serve 端点+key 不落盘/不进日志/脱敏+公共绑定门控回归、v0.5.1 serve XSS 转义+Origin/Host/Content-Type 守卫+绑定门控+Docker 修正回归、v0.5.2 wheel 打包 webapp+全局 Host/Origin 守卫+NaN/Infinity 拒绝+上游错误体不泄漏 key 回归、v0.5.3 门面模块崩溃修复+非法参数 400+非阻塞 429、v0.5.4 消除外链静态 import+整数旋钮非整 400+CI 守卫/checkout 升级、v0.5.5 hard-cap 理由自洽+错误页人话+守卫扩面+严格整数串+Host fail-closed、v0.5.6 错误码映射对齐+hard-cap 证据标签拆分+IPv6 环回放行+守卫扩面、v0.5.7 hard-cap 两分支变异可失败+双向错误码守卫+静态守卫补盲+弱 pass 强制 low、v0.5.8 开篇/能力清单诚实分区+弱 pass band 边界钉、v0.5.9 参考目录缺失/空目录 fail-loud stderr 警告+sync 陈旧 JSON prune）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
+- [x] **测试**：实测 **376 passed / 7 skipped**（383 collected；v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.2 诚实性/抗回放、v0.4.3 饥饿式样本绕过回归、v0.4.4 覆盖率门+tokenizer 口径、v0.4.5 版本一致性+tokenizer 严格匹配回归、v0.4.6 单字段容错+stdout 单一 JSON 契约+负 verdict 自洽回归、v0.4.7 非 JSON 200 响应体容错+tokenizer 不确定带不升级 pass 回归、v0.5.0 本地 Web serve 端点+key 不落盘/不进日志/脱敏+公共绑定门控回归、v0.5.1 serve XSS 转义+Origin/Host/Content-Type 守卫+绑定门控+Docker 修正回归、v0.5.2 wheel 打包 webapp+全局 Host/Origin 守卫+NaN/Infinity 拒绝+上游错误体不泄漏 key 回归、v0.5.3 门面模块崩溃修复+非法参数 400+非阻塞 429、v0.5.4 消除外链静态 import+整数旋钮非整 400+CI 守卫/checkout 升级、v0.5.5 hard-cap 理由自洽+错误页人话+守卫扩面+严格整数串+Host fail-closed、v0.5.6 错误码映射对齐+hard-cap 证据标签拆分+IPv6 环回放行+守卫扩面、v0.5.7 hard-cap 两分支变异可失败+双向错误码守卫+静态守卫补盲+弱 pass 强制 low、v0.5.8 开篇/能力清单诚实分区+弱 pass band 边界钉、v0.5.9 参考目录缺失/空目录 fail-loud stderr 警告+sync 陈旧 JSON prune）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
 - [x] **CI/CD**（GitHub Actions，Python 3.10/3.11/3.12矩阵）
 
 ### 🚧 开发中

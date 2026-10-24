@@ -27,6 +27,32 @@ from .report import build_report, error_report
 logger = logging.getLogger(__name__)
 
 
+# Whole-battery reachability precheck (F3): before spending the battery's
+# retries+backoff against a base-url whose port accepts nobody, probe raw TCP
+# reachability with a short timeout. A dead port otherwise burns the full
+# total_timeout (90s) and surfaces as the misleading ``battery_timeout``.
+_PRECHECK_TIMEOUT = 5.0
+
+
+async def _precheck_tcp_reachable(hostname: str, port: int) -> None:
+    """Open a bare TCP connection to ``hostname:port``; raise on any failure.
+
+    For https targets this deliberately only proves *a server is listening* --
+    TLS handshake errors / 4xx are handled later by the battery. A refused
+    connection, DNS failure, or timeout here means nothing useful can come of
+    probing, so the caller fails closed immediately.
+    """
+    reader, writer = await asyncio.wait_for(
+        asyncio.open_connection(hostname, port),
+        timeout=_PRECHECK_TIMEOUT,
+    )
+    writer.close()
+    try:
+        await writer.wait_closed()
+    except Exception:  # noqa: BLE001 - closing best-effort
+        pass
+
+
 # A behavioral probe whose empirical mode fraction is at least this close to 1.0
 # is treated as a point mass (zero entropy): under temperature=0 the shipped
 # public baselines are exactly such point masses, so they are replayable.
@@ -208,11 +234,19 @@ async def verify_endpoint(
             # require_public_url_async in the legacy audit API).
             await asyncio.to_thread(validate_public_url, base_url)
     except Exception as exc:  # noqa: BLE001 - sanitized below
+        message = str(exc)
+        # Loopback/private targets are rejected by design; tell the operator
+        # the exact flag that opts in (otherwise the error reads as a broken
+        # URL even though the URL itself is fine).
+        if "not a public internet address" in message and not allow_local:
+            message += (
+                " Hint: loopback/private targets need --allow-local."
+            )
         return error_report(
             claimed_model=claimed_model,
             endpoint_base_url=host_label,
             code="invalid_endpoint",
-            message=str(exc),
+            message=message,
         )
 
     # -- Key handling: env fallback, never echoed ---------------------------
@@ -233,6 +267,31 @@ async def verify_endpoint(
     analyzer = load_reference_analyzer(reference_dirs)
     baseline = analyzer._resolve_baseline(claimed_model)
     baseline_found = baseline is not None
+
+    # -- Fast reachability precheck (F3) ----------------------------------
+    # A base-url whose host:port accepts nobody otherwise makes every probe
+    # retry into the void until total_timeout expires and is then mislabelled
+    # battery_timeout. Probe bare TCP first (~5s): refused / DNS failure /
+    # timeout fail closed HERE with an actionable error code. A reachable
+    # port (even if it 401s/404s on the API) proceeds to the battery.
+    precheck_host = parsed.hostname or ""
+    precheck_port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    try:
+        await _precheck_tcp_reachable(precheck_host, precheck_port)
+    except Exception as exc:  # noqa: BLE001 - DNS/refused/timeout, all fatal
+        logger.warning(
+            "verify_endpoint reachability precheck failed: %s", type(exc).__name__
+        )
+        return error_report(
+            claimed_model=claimed_model,
+            endpoint_base_url=host_label,
+            code="endpoint_unreachable",
+            message=(
+                f"Could not connect to {precheck_host}: no server is reachable "
+                "at the given base-url. Check host/port, that the server is "
+                "running, and your network."
+            ),
+        )
 
     # -- Probe the endpoint (whole-battery wall-clock cap; fail closed) ------
     try:

@@ -35,11 +35,20 @@ No Python needed: open the GitHub Pages build, paste your own relay Base URL (op
 ```bash
 git clone https://github.com/dafahaha/transit-truth.git
 cd transit-truth
+# Recommended: create a virtualenv first (python -m venv .venv && source .venv/bin/activate),
+# then install into it.
 pip install .
 # for the self-hosted reference-server's REAL local tokenizer (the no-key path
 # below degrades to an honest plumbing stub without this extra):
 pip install ".[reference]"
 ```
+
+> **Requires Python 3.10+** (tested on 3.10–3.13). After install, the
+> `transit-truth` command should be on your PATH (it lands in your Python's
+> `Scripts`/`bin` directory). If your shell cannot find it, either re-open your
+> terminal, ensure the venv is activated, or invoke the module directly:
+> `python -m app.cli --help`.
+
 <!-- PYPI-FLIP: switch this block back to `pip install transit-truth` +
 `pip install "transit-truth[reference]"` only once the package is actually on PyPI. -->
 
@@ -68,9 +77,9 @@ Stdout is a single machine-readable JSON report:
 }
 ```
 
-Exit codes: `0` for `pass` **or** `insufficient_evidence`, `3` for
-`suspicious`, `2` for an execution error. Script against the JSON `verdict`
-field, not the exit code.
+Exit codes: `0` only for a clean `pass`; `2` for any non-pass (an error report
+**or** `insufficient_evidence`); `3` for `suspicious`; `1` for an unrecovered
+runtime error. Script against the JSON `verdict` field, not the exit code.
 
 ## Local web UI (`transit-truth serve`)
 
@@ -156,6 +165,23 @@ public-URL SSRF guard. If the real tokenizer cannot be downloaded
 (`HF_ENDPOINT` defaults to `https://hf-mirror.com`), the reference-server
 degrades to an explicitly labelled plumbing stub — the stderr banner and
 `GET /v1/models` `mode` field say so loudly, and it cannot certify anything.
+
+**What the self-check is *supposed* to print (so a real result does not look
+like a bug):**
+
+| Setup | reference-server mode | verify verdict (exit code) | Why |
+|---|---|---|---|
+| plain `pip install .` (no `[reference]`) | honest plumbing stub (hash-placeholder `prompt_tokens`, fixed behavioral strings) | **`suspicious` (exit 3)** | the placeholder counts deliberately do NOT match the real Qwen reference numbers |
+| `pip install ".[reference]"` (tokenizer downloadable) | real local tokenizer; behavioral content still a deterministic stub | **`insufficient_evidence` (exit 0)** | tokenizer counts match, but the open-source catalog has no behavioral distribution, so nothing can be certified |
+
+This self-check's purpose is **to prove the pipeline runs end-to-end and
+NEVER falsely reports `pass`** — not to *get* a `pass`. A `suspicious` here
+is fail-closed, correct behavior; if you ever see `pass` from this local
+loopback setup, that would be the bug.
+
+A base-url whose port accepts nobody now fast-fails in ~5s with
+`error.code = "endpoint_unreachable"` (instead of burning the 90s battery
+timeout and misreporting `battery_timeout`).
 
 ## The three verdicts
 
@@ -289,7 +315,7 @@ current `verify`/`serve`/PyPI model-identity path:
   loopback only; see [docs/serve.md](docs/serve.md)).
 - **Baseline data:** `data/baselines/` (real n=50 collections),
   `data/fingerprints/` (open-source tokenizer catalog).
-- **Tests:** 371 passed / 7 skipped (378 collected; the 7 skipped are integration
+- **Tests:** 376 passed / 7 skipped (383 collected; the 7 skipped are integration
   tests that need a real API key; run them with `pytest -m integration`).
 
 ## Installing from source (before the PyPI release)

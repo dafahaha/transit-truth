@@ -301,7 +301,14 @@ def cmd_balance(args):
 
 def cmd_verify(args):
     """Run the stateless model-identity verifier and print a JSON report."""
+    import logging
+
     from .verify import verify_endpoint
+
+    # The verify path prints a single JSON report to stdout; httpx's INFO
+    # "HTTP/1.1 200 OK" line per probe pollutes it. Keep WARNING+ only.
+    logging.getLogger("httpx").setLevel(logging.WARNING)
+    logging.getLogger("httpcore").setLevel(logging.WARNING)
 
     # SECURITY: passing the key as --api-key sk-xxx exposes it in the process
     # list / shell history, same as the old positional quick mode. Warn loudly
@@ -333,10 +340,12 @@ def cmd_verify(args):
     # Single machine-readable JSON report to stdout (pipe-friendly).
     print(json.dumps(report, indent=2, ensure_ascii=False))
 
-    # Exit code reflects the verdict for scripting.
+    # Exit code reflects the verdict for scripting:
+    #   3 = suspicious, 2 = any non-pass (error report OR insufficient_evidence),
+    #   0 = only a clean pass. Script against the JSON `verdict` field too.
     if report.get("verdict") == "suspicious":
         sys.exit(3)
-    if report.get("error"):
+    if report.get("error") or report.get("verdict") != "pass":
         sys.exit(2)
     return report
 

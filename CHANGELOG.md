@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 发行侧独立审查（4 视角）——测试计数最终为 376 passed / 7 skipped / 383 collected
+- **Fixed (F3)**：`verify_endpoint` 在探针电池前新增 ~5s 裸 TCP 可达性预检（`asyncio.open_connection`，仅验证端口有人监听）；端口拒绝 / DNS 失败 / 超时时立即返回 `error.code = "endpoint_unreachable"`，不再耗尽 90s 总超时后误诊为 `battery_timeout`。新增 `test_verify_endpoint_unreachable.py` 两条回归（死端口快速失败、监听端口不被预检误杀）。
+- **Docs**：中英 README 安装区补「Python 3.10+（3.10–3.13 实测）」、venv 与 PATH 提示、Windows PowerShell 设 key 写法、离线自检需开两个终端；离线自检节新增「预期结果预告」表（默认 stub 安装 → `suspicious`(exit 3) 为正确 fail-closed；装 `[reference]` → tokenizer 匹配但仍 `insufficient_evidence`）；中文 README 补退出码对照表（0 pass / 1 运行错误 / 2 非 pass / 3 suspicious），verify 退出码对齐该表（此前 insufficient_evidence 误返 0）。
+- **Honesty**：httpx 请求日志在 verify 路径默认压到 WARNING（消除逐探针 INFO 噪音）；`invalid_endpoint` 对环回/私网目标追加「loopback/private 目标需加 --allow-local」提示。
+- **计数同步（不改写历史子条目）**：全仓测试计数统一回填为实测终值 **376 passed / 7 skipped / 383 collected**（含本次新增的 2 条可达性回归测试；审计时基线 374/381）：README.en.md、README.md、CONTRIBUTING.md、docs/PUBLISHING.md、docs/launch_kit.md 中英两处。docs/audit_round1_1022.md 为历史审计记录，未改动。
+
 ## [0.5.9] - 2026-10-19
 
 ### Fixed — 参考目录缺失/空目录 fail-loud（P2）
