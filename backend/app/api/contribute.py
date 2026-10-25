@@ -324,7 +324,9 @@ async def list_contribution_channels():
     """
     列出所有支持的贡献渠道
 
-    包括：GitHub PR/Issue、在线表单、邮件、社区、API、Gitee
+    仅列出真实存在的渠道：GitHub PR/Issue、本地 REST API。
+    （此前列过的在线表单、占位邮箱、微信群/QQ/知乎、Gitee 镜像均未实际
+    建立，已删除，避免给出无法到达的渠道。）
     """
     channels = [
         {
@@ -344,29 +346,6 @@ async def list_contribution_channels():
             "url": "https://github.com/dafahaha/transit-truth/issues/new",
         },
         {
-            "id": "online_form",
-            "name": "在线表单",
-            "description": "在在线Demo中一键贡献审计结果（推荐普通用户）",
-            "difficulty": "beginner",
-            "requires_github": False,
-            "url": "https://dafahaha.github.io/transit-truth/",
-        },
-        {
-            "id": "email",
-            "name": "邮件提交",
-            "description": "把审计结果JSON发到指定邮箱（零门槛）",
-            "difficulty": "beginner",
-            "requires_github": False,
-            "email": "contribute@transit-truth.xxx",
-        },
-        {
-            "id": "community",
-            "name": "社区提交",
-            "description": "在微信群/QQ群/知乎评论区提交（社区活跃用户）",
-            "difficulty": "beginner",
-            "requires_github": False,
-        },
-        {
             "id": "api",
             "name": "API 提交",
             "description": "通过REST API批量提交（高级用户）",
@@ -374,18 +353,10 @@ async def list_contribution_channels():
             "requires_github": False,
             "endpoint": "POST /api/contribute/audit",
         },
-        {
-            "id": "gitee",
-            "name": "Gitee",
-            "description": "通过Gitee镜像仓库提交（国内用户）",
-            "difficulty": "intermediate",
-            "requires_github": False,
-            "url": "https://gitee.com/dafahaha/transit-truth",
-        },
     ]
 
     return {
         "channels": channels,
         "total": len(channels),
-        "recommendation": "如果你是普通用户，推荐使用「在线表单」；如果你是技术用户，推荐使用「GitHub PR」。",
+        "recommendation": "技术用户推荐使用「GitHub PR」；批量提交可走本地 REST API。",
     }
