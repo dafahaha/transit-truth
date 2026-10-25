@@ -9,14 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.9] - 2026-10-19
 
-### 发行侧独立审查收尾（测试计数最终为 376 passed / 7 skipped / 383 collected）
+### 发行侧独立审查收尾（测试计数最终为 378 passed / 7 skipped / 385 collected）
 - **Fixed (F3)**：`verify_endpoint` 在探针电池前新增 ~5s 裸 TCP 可达性预检（`asyncio.open_connection`，仅验证端口有人监听）；端口拒绝 / DNS 失败 / 超时时立即返回 `error.code = "endpoint_unreachable"`，不再耗尽 90s 总超时后误诊为 `battery_timeout`。新增 `test_verify_endpoint_unreachable.py` 两条回归（死端口快速失败、监听端口不被预检误杀）。
-- **Hardening (F-1)**：该 TCP 预检补强 DNS-rebinding TOCTOU——预检时重新 getaddrinfo，`allow_local=False` 时对每个解析到的 IP 跑与 SSRF 守卫相同的 blocked-IP 判定并丢弃非公共地址（全部被丢则返回 `invalid_endpoint` 并提示可能 rebinding / 环回目标需 --allow-local），通过 IP 才裸建连；每 IP 尝试 4s（不可路由 IPv6 快速跳过），总预算 8s。
+- **Hardening (F-1)**：该 TCP 预检补强 DNS-rebinding TOCTOU——预检时重新 getaddrinfo，`allow_local=False` 时对每个解析到的 IP 跑与 SSRF 守卫相同的 blocked-IP 判定并丢弃非公共地址（全部被丢则返回 `invalid_endpoint` 并提示可能 rebinding / 环回目标需 --allow-local），通过 IP 才裸建连。
+- **Hardening（R15）**：预检对所有通过过滤的 IP **并行竞速**（`asyncio.wait(FIRST_COMPLETED)`），首个连接成功立即返回并取消其余，全部失败才报错；总墙钟被单个 4s 尝试超时封顶，不再按地址数串行叠加（Windows 双栈公网死端口由实测 ~11.2s 降到 ~4s）。新增 `test_precheck_race.py` 两条回归（多地址全超时总耗时≈单次超时、首成功即返回且其余被取消）。
 - **Docs**：中英 README 安装区补「Python 3.10+（3.10–3.13 实测）」、venv 与 PATH 提示、Windows PowerShell 设 key 写法、离线自检需开两个终端；离线自检节新增「预期结果预告」表（默认 stub 安装 → `suspicious`(exit 3) 为正确 fail-closed；装 `[reference]` → tokenizer 匹配但仍 `insufficient_evidence`(exit 2)）；退出码契约与代码完全对齐——`0`=仅 pass，`2`=任何非 pass（error 报告或 insufficient_evidence，argparse usage 错误亦归 2），`3`=suspicious，`1`=其它命令运行时错误（此前 insufficient_evidence 误返 0、docs/verify.md 误写 usage 错误为 1）。
 - **Honesty**：httpx 请求日志在 verify 路径默认压到 WARNING（消除逐探针 INFO 噪音）；`invalid_endpoint` 对环回/私网目标追加「loopback/private 目标需加 --allow-local」提示。
 - **Packaging**：新增根 `MANIFEST.in`（recursive-exclude + prune + global-exclude SOURCES.txt），sdist 不再携带构建期生成的 `backend/transit_truth.egg-info` 陈旧元数据文件。
 - **Packaging（R6）**：legacy 在线平台（`app.main` FastAPI 应用 + 整个 `app.api` 路由包）不再进入 PyPI wheel——`packages.find` exclude 排除 `app.api` 包，`scripts/_strip_wheel_legacy.py` 在发布构建中剥除 `app/main.py` 模块（setuptools 无法按模块排除已发现包的成员）；源码 checkout 仍保留全部 legacy 代码，README 已注明「legacy 平台需从源码 checkout 运行（uvicorn app.main:app），wheel 不含」。新增 `scripts/build_release.ps1` 可复现发布构建（SOURCE_DATE_EPOCH=1792368000 + sdist 时间戳规范化）；license 改用 SPDX `license = "MIT"`；classifiers 补 Python 3.13。
-- **计数同步（不改写历史子条目）**：全仓测试计数统一回填为实测终值 **376 passed / 7 skipped / 383 collected**（含本次新增的 2 条可达性回归测试；审计时基线 374/381）：README.en.md、README.md、CONTRIBUTING.md、docs/PUBLISHING.md、docs/launch_kit.md 中英两处。docs/audit_round1_1022.md 为历史审计记录，未改动。
+- **计数同步（不改写历史子条目）**：全仓测试计数统一回填为实测终值 **378 passed / 7 skipped / 385 collected**（含 2 条可达性回归 + 2 条预检竞速回归；审计时基线 374/381）：README.en.md、README.md、CONTRIBUTING.md、docs/PUBLISHING.md、docs/launch_kit.md 中英两处。docs/audit_round1_1022.md 为历史审计记录，未改动。
 
 ### Fixed — 参考目录缺失/空目录 fail-loud（P2）
 - `load_reference_analyzer` 在参考基线目录缺失（裁剪 wheel / 破损 checkout）或目录内无任何 JSON 时，向 **stderr** 打印醒目 WARNING（绝不写入 stdout，遵守单一 JSON 契约），并跳过真实基线加载；此前会静默退化到合成占位、在无说明的情况下给出低置信判定。新增 `test_missing_reference_catalog_warns_loud_on_stderr` 覆盖"整目录缺失"与"目录为空"两条路径，临时目录改用 pytest `tmp_path` 保证异常路径也清理。
@@ -27,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Docs — 英文 README 数据透明度补齐 / 计数同步
 - README.en.md 在 "What it actually does" 后补齐 "What the shipped reference data shows"：Okapi 76%、"是否为 Okapi"规则 88% resubstitution 准确率（Wilson 95%CI [0.80, 0.93]）、最强探针 TVD=0.90（分布距离，非分类准确率）、管线自洽后验 0.913（CrI [0.885, 0.937]），明确为 in-distribution resubstitution 自洽检验、非 held-out 准确率，数字与中文 README 逐一对齐。
-- 测试数全仓回填为 **336 passed / 7 skipped**（7 个 skipped 为需真实 key 的 integration）。（历史当时值；本版本最终计数见上方「发行侧独立审查收尾」子标题 = 376 passed / 7 skipped / 383 collected。）
+- 测试数全仓回填为 **336 passed / 7 skipped**（7 个 skipped 为需真实 key 的 integration）。（历史当时值；本版本最终计数见上方「发行侧独立审查收尾」子标题 = 378 passed / 7 skipped / 385 collected。）
 
 ### 版本
 - 版本四源统一 0.5.9，版本一致性测试同步。
