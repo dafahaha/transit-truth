@@ -1,4 +1,4 @@
-﻿# TransitTruth 🛡️
+# TransitTruth 🛡️
 
 [English](README.en.md) · 中文
 

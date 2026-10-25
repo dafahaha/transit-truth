@@ -64,9 +64,21 @@ with no subcommand (it prints help and exits `1`). Script against the JSON
 
 Generate/compare reference fingerprints without a paid key:
 
-```
+Set a dummy key in the environment first (the local reference server does not
+validate it, but the verify client requires a non-empty key):
+
+```bash
+# bash / macOS / Linux
+export TRANSIT_TRUTH_API_KEY=dummy-local-test
 transit-truth reference-server --model qwen2.5-0.5b-instruct --port 8765
-transit-truth verify --base-url http://127.0.0.1:8765/v1 --model qwen2.5-0.5b-instruct --allow-local --api-key dummy-local-test
+transit-truth verify --base-url http://127.0.0.1:8765/v1 --model qwen2.5-0.5b-instruct --allow-local
+```
+
+```powershell
+# Windows PowerShell
+$env:TRANSIT_TRUTH_API_KEY="dummy-local-test"
+transit-truth reference-server --model qwen2.5-0.5b-instruct --port 8765
+transit-truth verify --base-url http://127.0.0.1:8765/v1 --model qwen2.5-0.5b-instruct --allow-local
 ```
 
 `--allow-local` is required for loopback targets; the default enforces the
