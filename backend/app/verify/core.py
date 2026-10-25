@@ -82,22 +82,42 @@ async def _precheck_tcp_reachable(
     if not reachable_ips:
         raise _PrecheckNonPublic(hostname)
 
+    async def _attempt(ip: str) -> tuple:
+        """One TCP attempt to a single resolved IP, capped at the per-try timeout."""
+        return await asyncio.wait_for(
+            asyncio.open_connection(ip, port),
+            timeout=_PRECHECK_ATTEMPT_TIMEOUT,
+        )
+
     last_exc: Optional[Exception] = None
-    for ip in reachable_ips:
-        try:
-            _reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(ip, port),
-                timeout=_PRECHECK_ATTEMPT_TIMEOUT,
+    # Race ALL resolved IPs concurrently (IPv6 + IPv4 on a dual-stack host
+    # previously summed N×4s serially, inflating dead-port latency to ~11s).
+    # Wall-clock is now capped by the single per-try timeout, not N of them.
+    tasks = {asyncio.create_task(_attempt(ip)): ip for ip in reachable_ips}
+    try:
+        while tasks:
+            done, _pending = await asyncio.wait(
+                tasks, return_when=asyncio.FIRST_COMPLETED
             )
-        except (asyncio.TimeoutError, OSError) as exc:
-            last_exc = exc
-            continue
-        writer.close()
-        try:
-            await writer.wait_closed()
-        except Exception:  # noqa: BLE001 - closing best-effort
-            pass
-        return
+            for t in done:
+                tasks.pop(t, None)
+                if t.cancelled():
+                    continue
+                if t.exception() is None:
+                    _reader, writer = t.result()
+                    writer.close()
+                    try:
+                        await writer.wait_closed()
+                    except Exception:  # noqa: BLE001 - closing best-effort
+                        pass
+                    return
+                last_exc = t.exception()
+    finally:
+        for t in tasks:
+            if not t.done():
+                t.cancel()
+        if tasks:
+            await asyncio.gather(*tasks, return_exceptions=True)
     if last_exc is not None:
         raise last_exc
 
