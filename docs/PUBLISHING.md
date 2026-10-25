@@ -52,8 +52,8 @@ python -m twine check dist/*           # requires: pip install twine
 Both artifacts must say `PASSED`:
 
 ```
-Checking dist\transit_truth-0.4.7-py3-none-any.whl: PASSED
-Checking dist\transit_truth-0.4.7.tar.gz: PASSED
+Checking dist\transit_truth-0.5.9-py3-none-any.whl: PASSED
+Checking dist\transit_truth-0.5.9.tar.gz: PASSED
 ```
 
 **Versioning rule.** The shipped version lives in four places and a test
