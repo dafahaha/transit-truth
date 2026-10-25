@@ -1,3 +1,6 @@
+# Ship the changelog and license alongside the README in the source distribution.
+include CHANGELOG.md
+include LICENSE
 # Build-regenerated metadata residue: packages.find points at backend/, so
 # setuptools writes backend/transit_truth.egg-info/ into the source tree
 # during every build. It is gitignored build output and must NEVER be shipped
