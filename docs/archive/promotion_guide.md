@@ -1,4 +1,4 @@
-﻿# TransitTruth 多平台发布指南
+# TransitTruth 多平台发布指南
 
 > ⚠️ **已归档（ARCHIVED，v0.5.9）**：本历史草稿移入 `docs/archive/` 仅作历史保留，不再维护；其中裸写的 "EER 7.3%" 未带 split-half/AUC/impostor 限定，口径不完整，请勿引用。当前模型身份核验以 README.md / docs/verify.md 为准。
 

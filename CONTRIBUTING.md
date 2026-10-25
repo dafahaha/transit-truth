@@ -1,4 +1,4 @@
-﻿# 贡献指南 (Contributing to TransitTruth)
+# 贡献指南 (Contributing to TransitTruth)
 
 感谢你对 TransitTruth 的兴趣！本文档 outlines 如何为项目做贡献。
 
