@@ -57,7 +57,10 @@ Point it at a relay and the model it claims to serve. The API key is read from
 the environment — it never touches disk, logs, or the report.
 
 ```bash
+# bash / macOS / Linux:
 export TRANSIT_TRUTH_API_KEY=sk-your-key
+# Windows PowerShell (run this line instead, not the one above):
+# $env:TRANSIT_TRUTH_API_KEY="sk-your-key"
 transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o-mini
 ```
 
@@ -151,15 +154,16 @@ Ships with a self-hosted, OpenAI-compatible reference backend. The verify
 client requires a non-empty key, so just set a dummy value:
 
 ```bash
+# bash / macOS / Linux:
 export TRANSIT_TRUTH_API_KEY=local-dummy-no-billing   # never billed, local only
+# Windows PowerShell: $env:TRANSIT_TRUTH_API_KEY="local-dummy-no-billing"
 
 # terminal 1: local reference backend (real Qwen tokenizer counts,
 # deterministic stub content; no real model, no GPU needed)
 transit-truth reference-server --model qwen2.5-0.5b-instruct --port 8765
 
-# terminal 2: verify it against itself
-transit-truth verify --base-url http://127.0.0.1:8765/v1 \
-    --model qwen2.5-0.5b-instruct --allow-local
+# terminal 2: verify it against itself (run as ONE line; no backslash continuation)
+transit-truth verify --base-url http://127.0.0.1:8765/v1 --model qwen2.5-0.5b-instruct --allow-local
 ```
 
 `--allow-local` is required for loopback targets; the default enforces a

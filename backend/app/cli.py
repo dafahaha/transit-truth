@@ -101,7 +101,7 @@ def print_banner():
     """Print the TransitTruth banner."""
     banner = f"""
 {Colors.cyan('╔══════════════════════════════════════════════════════════╗')}
-{Colors.cyan('║')}  {Colors.bold('🔍 TransitTruth')} - AI API Relay Audit Tool          {Colors.cyan('║')}
+{Colors.cyan('║')}  {Colors.bold('🔍 TransitTruth')} - local model-identity verification   {Colors.cyan('║')}
 {Colors.cyan('╚══════════════════════════════════════════════════════════╝')}
 """
     print(banner)
@@ -468,21 +468,20 @@ def main():
 
     parser = argparse.ArgumentParser(
         prog="transit-truth",
-        description="TransitTruth - AI API Relay Audit Tool",
+        description="TransitTruth - local model-identity verification for OpenAI-compatible endpoints",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Quick mode (one command):
-  transit-truth sk-xxx                          Auto-detect base URL, use gpt-4o
-  transit-truth sk-xxx --model gpt-4o-mini     Specify model
-  transit-truth sk-xxx --base-url https://...   Specify base URL
+Supported (primary) workflow:
+  transit-truth verify --base-url https://relay.example/v1 --model gpt-4o
+      # probe an endpoint; emit one JSON three-state report (pass /
+      # insufficient_evidence / suspicious).
+  transit-truth reference-server --model qwen2.5-0.5b-instruct --port 8765
+      # local reference backend for offline self-checks (no paid key).
+  transit-truth serve
+      # local single-page web UI; open http://127.0.0.1:8766 in a browser.
 
-Full mode:
-  transit-truth audit --api-key sk-xxx --base-url https://api.example.com/v1 --model gpt-4o
-  transit-truth list
-  transit-truth export --audit-id abc123 --output report.html
-  transit-truth benchmark --api-key sk-xxx --model gpt-4o --output benchmark.json
-  transit-truth balance --api-key sk-xxx --base-url https://api.example.com/v1
-  transit-truth balance --accounts-file accounts.json
+Legacy commands (older online-platform workflow, retained but NOT the
+primary path; still runnable): audit / list / export / benchmark / balance.
 
 Environment variables:
   TRANSIT_TRUTH_API_KEY    Default API key
@@ -491,6 +490,100 @@ Environment variables:
         """,
     )
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
+
+    # Verify command: stateless model-identity check -> JSON report
+    verify_parser = subparsers.add_parser(
+        "verify",
+        help="Statelessly verify a relay's claimed model identity (JSON report)",
+    )
+    verify_parser.add_argument(
+        "--base-url",
+        required=True,
+        help="OpenAI-compatible base URL, e.g. https://relay.example/v1",
+    )
+    verify_parser.add_argument(
+        "--model",
+        required=True,
+        help="Claimed model name, e.g. gpt-4o-mini",
+    )
+    verify_parser.add_argument(
+        "--api-key",
+        default=None,
+        help="API key (prefer --api-key-env; never written to disk)",
+    )
+    verify_parser.add_argument(
+        "--api-key-env",
+        default="TRANSIT_TRUTH_API_KEY",
+        help="Env var to read the key from (default: TRANSIT_TRUTH_API_KEY)",
+    )
+    verify_parser.add_argument(
+        "--max-requests",
+        type=int,
+        default=20,
+        help="Hard cap on probe requests (default: 20)",
+    )
+    verify_parser.add_argument(
+        "--behavioral-samples",
+        type=int,
+        default=3,
+        help="Samples per behavioral probe (default: 3)",
+    )
+    verify_parser.add_argument(
+        "--timeout",
+        type=float,
+        default=30.0,
+        help="Per-request timeout seconds (default: 30)",
+    )
+    verify_parser.add_argument(
+        "--total-timeout",
+        type=float,
+        default=90.0,
+        help="Whole-battery wall-clock cap seconds; fail-closed on expiry (default: 90)",
+    )
+    verify_parser.add_argument(
+        "--allow-local",
+        action="store_true",
+        help="Allow loopback/private targets (for the local reference server)",
+    )
+    verify_parser.set_defaults(func=cmd_verify)
+
+    # Reference-server: self-hosted OpenAI-compatible local fingerprint backend
+    ref_parser = subparsers.add_parser(
+        "reference-server",
+        help="Run a local OpenAI-compatible reference backend (no paid key needed)",
+    )
+    ref_parser.add_argument("--model", required=True, help="Catalog model name")
+    ref_parser.add_argument("--host", default="127.0.0.1")
+    ref_parser.add_argument("--port", type=int, default=8765)
+    ref_parser.set_defaults(func=cmd_reference_server)
+
+    # Serve: local single-page web UI (binds 127.0.0.1 by default)
+    serve_parser = subparsers.add_parser(
+        "serve",
+        help="Run the local web UI: open http://127.0.0.1:8766 in a browser",
+    )
+    serve_parser.add_argument(
+        "--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1)"
+    )
+    serve_parser.add_argument(
+        "--port", type=int, default=8766, help="Port (default: 8766)"
+    )
+    serve_parser.add_argument(
+        "--allow-public",
+        action="store_true",
+        help="Permit binding 0.0.0.0 (public on your network); loud warning applies",
+    )
+    serve_parser.add_argument(
+        "--allow-local",
+        action="store_true",
+        help="Allow loopback/private targets for self-test against the local reference server",
+    )
+    serve_parser.add_argument(
+        "--open",
+        action="store_true",
+        help="Open the default browser automatically after the server starts",
+    )
+    serve_parser.set_defaults(func=cmd_serve)
 
     # Audit command
     audit_parser = subparsers.add_parser(
@@ -617,99 +710,6 @@ Environment variables:
     )
     balance_parser.set_defaults(func=cmd_balance)
 
-    # Verify command: stateless model-identity check -> JSON report
-    verify_parser = subparsers.add_parser(
-        "verify",
-        help="Statelessly verify a relay's claimed model identity (JSON report)",
-    )
-    verify_parser.add_argument(
-        "--base-url",
-        required=True,
-        help="OpenAI-compatible base URL, e.g. https://relay.example/v1",
-    )
-    verify_parser.add_argument(
-        "--model",
-        required=True,
-        help="Claimed model name, e.g. gpt-4o-mini",
-    )
-    verify_parser.add_argument(
-        "--api-key",
-        default=None,
-        help="API key (prefer --api-key-env; never written to disk)",
-    )
-    verify_parser.add_argument(
-        "--api-key-env",
-        default="TRANSIT_TRUTH_API_KEY",
-        help="Env var to read the key from (default: TRANSIT_TRUTH_API_KEY)",
-    )
-    verify_parser.add_argument(
-        "--max-requests",
-        type=int,
-        default=20,
-        help="Hard cap on probe requests (default: 20)",
-    )
-    verify_parser.add_argument(
-        "--behavioral-samples",
-        type=int,
-        default=3,
-        help="Samples per behavioral probe (default: 3)",
-    )
-    verify_parser.add_argument(
-        "--timeout",
-        type=float,
-        default=30.0,
-        help="Per-request timeout seconds (default: 30)",
-    )
-    verify_parser.add_argument(
-        "--total-timeout",
-        type=float,
-        default=90.0,
-        help="Whole-battery wall-clock cap seconds; fail-closed on expiry (default: 90)",
-    )
-    verify_parser.add_argument(
-        "--allow-local",
-        action="store_true",
-        help="Allow loopback/private targets (for the local reference server)",
-    )
-    verify_parser.set_defaults(func=cmd_verify)
-
-    # Reference-server: self-hosted OpenAI-compatible local fingerprint backend
-    ref_parser = subparsers.add_parser(
-        "reference-server",
-        help="Run a local OpenAI-compatible reference backend (no paid key needed)",
-    )
-    ref_parser.add_argument("--model", required=True, help="Catalog model name")
-    ref_parser.add_argument("--host", default="127.0.0.1")
-    ref_parser.add_argument("--port", type=int, default=8765)
-    ref_parser.set_defaults(func=cmd_reference_server)
-
-    # Serve: local single-page web UI (binds 127.0.0.1 by default)
-    serve_parser = subparsers.add_parser(
-        "serve",
-        help="Run the local web UI: open http://127.0.0.1:8766 in a browser",
-    )
-    serve_parser.add_argument(
-        "--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1)"
-    )
-    serve_parser.add_argument(
-        "--port", type=int, default=8766, help="Port (default: 8766)"
-    )
-    serve_parser.add_argument(
-        "--allow-public",
-        action="store_true",
-        help="Permit binding 0.0.0.0 (public on your network); loud warning applies",
-    )
-    serve_parser.add_argument(
-        "--allow-local",
-        action="store_true",
-        help="Allow loopback/private targets for self-test against the local reference server",
-    )
-    serve_parser.add_argument(
-        "--open",
-        action="store_true",
-        help="Open the default browser automatically after the server starts",
-    )
-    serve_parser.set_defaults(func=cmd_serve)
 
     args = parser.parse_args()
     if not args.command:

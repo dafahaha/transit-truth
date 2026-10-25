@@ -36,7 +36,10 @@
 
 ```bash
 # key 从环境变量读，不落盘、不进日志/报告
+# bash / macOS / Linux:
 export TRANSIT_TRUTH_API_KEY=sk-...
+# Windows PowerShell（逐行执行，别用上面这行）:
+# $env:TRANSIT_TRUTH_API_KEY="sk-..."
 transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o-mini
 ```
 
@@ -96,9 +99,8 @@ export TRANSIT_TRUTH_API_KEY=local-dummy-no-billing
 # 终端 1：本地参考后端（常驻，别关）
 transit-truth reference-server --model qwen2.5-0.5b-instruct --port 8765
 
-# 终端 2：对它跑自检
-transit-truth verify --base-url http://127.0.0.1:8765/v1 \
-    --model qwen2.5-0.5b-instruct --allow-local
+# 终端 2：对它跑自检（逐行执行，不要写成带 \ 的多行）
+transit-truth verify --base-url http://127.0.0.1:8765/v1 --model qwen2.5-0.5b-instruct --allow-local
 ```
 
 **自检"理应"看到什么（免得把正确结果当成 bug）：**
@@ -112,7 +114,11 @@ transit-truth verify --base-url http://127.0.0.1:8765/v1 \
 
 > **无 tokenizers 时降级为 stub**：需要真实 tokenizer 计数时先 `pip install ".[reference]"`（从源码装、装 `tokenizers` 包）；reference-server 启动时若下载不到真实 tokenizer（网络受限，`HF_ENDPOINT` 默认 `https://hf-mirror.com`），会自动降级为**显式标注的 plumbing stub** 模式——`prompt_tokens` 只是哈希占位值、行为内容是 `stub-*` 固定串，服务启动 stderr 与 `GET /v1/models` 的 `mode`/`note` 会明确告诉你是 stub，**不会假装是真模型**。此时 verify 只能跑通管线，无法给出任何认证。
 >
-> **覆盖范围（诚实标注）**：当前自带参考指纹仅覆盖本地开源模型——Qwen2.5-0.5B（真实 tokenizer 计数）、DeepSeek-R1-Distill-Qwen（沿用 Qwen2 tokenizer）、GLM（目录已收录，tokenizer 下载受网络限制待补）。**GPT/Claude/Gemini 等闭源指纹需用户提供自己的 key 后采集接入。**
+> **覆盖范围（诚实标注）**：当前自带参考指纹——
+> - `gpt-4o-mini` 与 `gpt-4o`：n=50 基线，经**单个第三方中转站 wolfai.top 采集，非 OpenAI 官方端点**；只能声明这两个命名端点在该中转站可被区分，不是厂商无关指纹。
+> - Qwen2.5-0.5B-Instruct：仅真实本地 tokenizer 计数，**无行为分布**，自身永远不可能给出 `pass`。
+> - DeepSeek-R1-Distill-Qwen：派生自 Qwen2 tokenizer，计数无法与 Qwen 区分；GLM 已收录、tokenizer 下载 pending。
+> - Claude / Gemini / 其它 GPT 声明的闭源指纹，需你提供自己的 key 采集。
 >
 > **定位声明**：黑盒结果是**概率性辅助证据，不是密码学证明，也不做真伪裁判**。`suspicious` 不等于"确定造假"。行为探针在 temperature=0 下退化为点质量，公开基线可被确定性回放（硬编码约 4 个众数字符串即可复现"匹配"），报告对此会显式标 `deterministic_replay_risk` 并把置信封顶——**官方密码学 attestation 才是终局，本工具只是概率性辅助**。详见 [docs/verify.md](docs/verify.md) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
@@ -291,7 +297,9 @@ transit-truth serve --open          # 自动打开浏览器
 **2. CLI（一行命令）**
 
 ```bash
+# bash / macOS / Linux:
 export TRANSIT_TRUTH_API_KEY=你的key
+# Windows PowerShell: $env:TRANSIT_TRUTH_API_KEY="你的key"
 transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
 ```
 
