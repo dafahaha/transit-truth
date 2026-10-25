@@ -32,11 +32,13 @@ No Python needed: open the GitHub Pages build, paste your own relay Base URL (op
 > **PyPI is not published yet.** There is no `pip install transit-truth` from
 > PyPI yet (a `pip install transit-truth` today would 404). Install from source:
 
-```bash
+```text
 git clone https://github.com/dafahaha/transit-truth.git
 cd transit-truth
-# Recommended: create a virtualenv first (python -m venv .venv && source .venv/bin/activate),
-# then install into it.
+python -m venv .venv
+# Activate it:
+#   bash / macOS / Linux: source .venv/bin/activate
+#   Windows PowerShell:   .venv\Scripts\Activate.ps1
 pip install .
 # for the self-hosted reference-server's REAL local tokenizer (the no-key path
 # below degrades to an honest plumbing stub without this extra):
@@ -57,10 +59,14 @@ Point it at a relay and the model it claims to serve. The API key is read from
 the environment — it never touches disk, logs, or the report.
 
 ```bash
-# bash / macOS / Linux:
+# bash / macOS / Linux
 export TRANSIT_TRUTH_API_KEY=sk-your-key
-# Windows PowerShell (run this line instead, not the one above):
-# $env:TRANSIT_TRUTH_API_KEY="sk-your-key"
+transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o-mini
+```
+
+```powershell
+# Windows PowerShell (run these lines)
+$env:TRANSIT_TRUTH_API_KEY="sk-your-key"
 transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o-mini
 ```
 
@@ -154,10 +160,16 @@ Ships with a self-hosted, OpenAI-compatible reference backend. The verify
 client requires a non-empty key, so just set a dummy value:
 
 ```bash
-# bash / macOS / Linux:
+# bash / macOS / Linux
 export TRANSIT_TRUTH_API_KEY=local-dummy-no-billing   # never billed, local only
-# Windows PowerShell: $env:TRANSIT_TRUTH_API_KEY="local-dummy-no-billing"
+```
 
+```powershell
+# Windows PowerShell
+$env:TRANSIT_TRUTH_API_KEY="local-dummy-no-billing"
+```
+
+```text
 # terminal 1: local reference backend (real Qwen tokenizer counts,
 # deterministic stub content; no real model, no GPU needed)
 transit-truth reference-server --model qwen2.5-0.5b-instruct --port 8765

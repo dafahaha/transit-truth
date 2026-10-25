@@ -1,0 +1,17 @@
+# Normalize line endings so a fresh checkout on any OS (including Windows
+# Git with system core.autocrlf=true) gets LF and produces byte-identical
+# release artifacts. The build is reproducible only when this holds.
+* text=auto eol=lf
+
+# Explicitly keep packaging artifacts and common binary formats untouched
+# (none are tracked today, but guard against future additions).
+*.whl binary
+*.tar.gz binary
+*.zip binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.ico binary
+*.db binary

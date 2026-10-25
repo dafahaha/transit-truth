@@ -34,12 +34,17 @@
 
 新增的核心产品能力：给一个 OpenAI 兼容端点和它**声称**的模型名，跑一个**有界**探针电池，对比本地参考指纹，输出**单一机器可读 JSON 报告**与三态结论。
 
+key 从环境变量读，不落盘、不进日志/报告。
+
 ```bash
-# key 从环境变量读，不落盘、不进日志/报告
-# bash / macOS / Linux:
+# bash / macOS / Linux
 export TRANSIT_TRUTH_API_KEY=sk-...
-# Windows PowerShell（逐行执行，别用上面这行）:
-# $env:TRANSIT_TRUTH_API_KEY="sk-..."
+transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o-mini
+```
+
+```powershell
+# Windows PowerShell（逐行执行）
+$env:TRANSIT_TRUTH_API_KEY="sk-..."
 transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o-mini
 ```
 
@@ -92,10 +97,16 @@ transit-truth serve            # 默认 http://127.0.0.1:8766，加 --open 自�
 ```bash
 # bash / macOS / Linux
 export TRANSIT_TRUTH_API_KEY=local-dummy-no-billing
-# Windows PowerShell: $env:TRANSIT_TRUTH_API_KEY="local-dummy-no-billing"
+```
 
-# 注意：要开两个终端——终端 1 常驻 reference-server，终端 2 再跑 verify。
+```powershell
+# Windows PowerShell
+$env:TRANSIT_TRUTH_API_KEY="local-dummy-no-billing"
+```
 
+注意：要开两个终端——终端 1 常驻 reference-server，终端 2 再跑 verify。
+
+```text
 # 终端 1：本地参考后端（常驻，别关）
 transit-truth reference-server --model qwen2.5-0.5b-instruct --port 8765
 
@@ -259,18 +270,27 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
      "PyPI 上没有"这句话；具体清单见 docs/PUBLISHING.md 的 post-publish checklist。 -->
 PyPI 上**尚未发布** `transit-truth` 包，当前请从源码安装。**需要 Python 3.10 及以上（3.10–3.13 实测）**：
 
-```bash
+```text
 git clone https://github.com/dafahaha/transit-truth.git
 cd transit-truth
-# 建议先建虚拟环境：python -m venv .venv && source .venv/bin/activate（Windows: .venv\Scripts\Activate.ps1）
-# 普通用户直接用：pip install .
-# 下面这行是「可编辑开发模式」（改源码即生效，面向贡献者）：
-pip install -e .
+python -m venv .venv
+# 激活虚拟环境：
+#   bash / macOS / Linux: source .venv/bin/activate
+#   Windows PowerShell:   .venv\Scripts\Activate.ps1
+# 普通用户：pip install .
+# 贡献者（可编辑）：pip install -e .
+```
 
-# key 从环境变量读（位置传 sk-xxx / --api-key sk-xxx 会在进程列表可见，仅兼容告警）
-# bash / macOS / Linux:
+key 从环境变量读（位置传 sk-xxx / --api-key sk-xxx 会在进程列表可见，仅兼容告警）：
+
+```bash
+# bash / macOS / Linux
 export TRANSIT_TRUTH_API_KEY=sk-your-key
-# Windows PowerShell:
+transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
+```
+
+```powershell
+# Windows PowerShell
 $env:TRANSIT_TRUTH_API_KEY="sk-your-key"
 transit-truth verify --base-url https://your-relay.com/v1 --model gpt-4o
 ```
@@ -297,9 +317,14 @@ transit-truth serve --open          # 自动打开浏览器
 **2. CLI（一行命令）**
 
 ```bash
-# bash / macOS / Linux:
+# bash / macOS / Linux
 export TRANSIT_TRUTH_API_KEY=你的key
-# Windows PowerShell: $env:TRANSIT_TRUTH_API_KEY="你的key"
+transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
+```
+
+```powershell
+# Windows PowerShell
+$env:TRANSIT_TRUTH_API_KEY="你的key"
 transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
 ```
 
