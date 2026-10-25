@@ -6,8 +6,12 @@
 
 > **AI API 模型真实性核验 / 路由层可信度监控** — 无状态验证你用的模型是否货真价实。
 
-> **⚡ 快速安装（一句话）**：需 **Python 3.10+（3.10–3.13 实测）**。PyPI 尚未发布，从源码装：
-> `git clone https://github.com/dafahaha/transit-truth.git && cd transit-truth && pip install .`
+> **⚡ 快速安装（一句话）**：需 **Python 3.10+（3.10–3.13 实测）**。PyPI 尚未发布，从源码装（逐行复制即可，PowerShell 5.1 不支持 `&&` 链式）：
+> ```
+> git clone https://github.com/dafahaha/transit-truth.git
+> cd transit-truth
+> pip install .
+> ```
 > （建议先 `python -m venv .venv` 建虚拟环境再装；装完 `transit-truth` 应在 PATH 里，找不到就重开终端/激活 venv，或用 `python -m app.cli --help`。完整说明与 `[reference]` 可选件见下方「📦 从源码安装」。）
 
 ---
