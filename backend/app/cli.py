@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-"""TransitTruth CLI - Command-line interface for AI API relay auditing.
+"""TransitTruth CLI - model-identity verification for OpenAI-compatible endpoints.
 
-Quick mode (one command):
-    transit-truth sk-xxx                          # Auto-detect base URL, use gpt-4o
-    transit-truth sk-xxx --model gpt-4o-mini     # Specify model
-    transit-truth sk-xxx --base-url https://...   # Specify base URL
+Supported (primary) workflow:
+    transit-truth verify --base-url https://your-relay/v1 --model gpt-4o
+        # probe an endpoint and emit a single JSON three-state report
+        # (pass / insufficient_evidence / suspicious).
+    transit-truth reference-server --model qwen2.5-0.5b-instruct --port 8765
+        # run the local reference server for offline self-checks (no paid key).
+    transit-truth serve
+        # serve the local single-page web UI for the same checks in a browser.
 
-Full mode:
-    transit-truth audit --api-key sk-xxx --base-url https://api.example.com/v1 --model gpt-4o
-    transit-truth list
-    transit-truth export --audit-id abc123 --output report.html
-    transit-truth benchmark --api-key sk-xxx --model gpt-4o --output benchmark.json
+Legacy commands (older online-platform workflow, retained but NOT the
+primary path; still runnable): audit / list / export / benchmark / balance
+# belong to the legacy self-hosted web platform, not the verify/serve path.
 
 Environment variables:
     TRANSIT_TRUTH_API_KEY    Default API key

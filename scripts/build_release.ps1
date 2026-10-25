@@ -21,8 +21,19 @@ $env:SOURCE_DATE_EPOCH = "1792368000"
 # the chosen interpreter can import them and install if missing.
 $py = if ($env:PYTHON) { $env:PYTHON } else { "python" }
 Write-Host "Using interpreter: $py"
-& $py -c "import build, twine" 2>$null
-if ($LASTEXITCODE -ne 0) {
+# Probe build/twine availability. Under EAP=Stop a nonzero exit of the probe
+# (ImportError traceback on stderr) raises a terminating NativeCommandError
+# BEFORE $LASTEXITCODE is read, which would make the auto-install branch
+# dead. Temporarily relax EAP and swallow stderr, then decide on exit code.
+$prevEAP = $ErrorActionPreference
+try {
+    $ErrorActionPreference = "Continue"
+    & $py -c "import build, twine" 2>&1 | Out-Null
+    $probeExit = $LASTEXITCODE
+} finally {
+    $ErrorActionPreference = $prevEAP
+}
+if ($probeExit -ne 0) {
     Write-Host "build/twine missing in $py — installing them now..."
     & $py -m pip install --upgrade build twine
     if ($LASTEXITCODE -ne 0) {
