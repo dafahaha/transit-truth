@@ -108,6 +108,22 @@ def test_qwen_against_own_fingerprint_is_exact_match():
     assert tc["score"] == 1.0, tc
 
 
+
+def test_glm_against_own_fingerprint_is_exact_match():
+    """GLM self-consistency must be match(1.0) once its fingerprint ships."""
+    analyzer = load_reference_analyzer()
+    baseline = analyzer._resolve_baseline('glm-4-9b-chat')
+    assert baseline is not None
+    observed = {
+        pid: samples[0] for pid, samples in baseline.tokenizer_distributions.items()
+    }
+    from app.verify.battery import DEFAULT_TOKENIZER_IDS
+
+    observed = {pid: v for pid, v in observed.items() if pid in DEFAULT_TOKENIZER_IDS}
+    tc = tokenizer_consistency(observed, baseline)
+    assert tc['verdict'] == 'match', tc
+    assert tc['score'] == 1.0, tc
+
 def test_low_overlap_still_insufficient_and_divergence_still_mismatch():
     """The low-overlap guard and the mismatch band are unchanged."""
     baseline = _gpt_min_baseline()
