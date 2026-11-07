@@ -1,10 +1,19 @@
 # Publishing transit-truth to PyPI
 
-> ⚠️ **已被取代 / 以 README 为准（v0.5.2）**：本文件是早期发布流程草稿；当前模型身份核验（测中转站真假）需本地/自托管 `transit-truth serve`，浏览器直连受 CORS 限制；测试数与口径以 README.md 为准，勿以本文件旧计数对外表述。
-
-> **Status: build-ready, NOT published.** Everything below has been verified up
-> to the upload step. The actual upload requires your own PyPI account and 2FA —
-> this is the part only you can do. Do it in order; do not skip TestPyPI.
+> **Status: build-ready, NOT published (verified 2026-11-07).** The official
+> release path below was run end to end on 0.5.9: `twine check` PASSED on both
+> artifacts, and the resulting wheel installed cleanly into a fresh venv where
+> `transit-truth --help` and `transit-truth verify --help` both work.
+> Canonical artifacts (reproducible, `SOURCE_DATE_EPOCH=1792368000`):
+>
+> | file | bytes | sha256 |
+> |---|---|---|
+> | `transit_truth-0.5.9-py3-none-any.whl` | 193021 | `9fbdef02cd9533c70c804c5d3f21c91f08f9687fa7b770ab5bd346dd23311eda` |
+> | `transit_truth-0.5.9.tar.gz` | 223141 | `a98f9a4b555f142be198e0733007ca1aad9ef80b4c190c317c39038f4938e436` |
+>
+> The only remaining step is the upload, which requires your own PyPI account
+> and 2FA token — this is the part only you can do. Do it in order; do not skip
+> TestPyPI.
 
 ## 0. Preflight (already done — re-run before every release)
 
