@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TransitTruth - 中转站公开排行榜</title>
+    <meta name="description" content="社区驱动的 AI API 中转站信任度排名：每条结果来自一次公开审计，报告可查、可复现。">
+    <meta property="og:type" content="website">
+    <meta property="og:title" content="TransitTruth - 中转站公开排行榜">
+    <meta property="og:description" content="你付了 gpt-4o 的钱，后端真的是它吗？看别人的实测结果，或提交你自己的。">
+    <meta property="og:image" content="https://dafahaha.github.io/transit-truth/docs/banner_1280x640.png">
+    <meta name="twitter:card" content="summary_large_image">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -339,6 +345,7 @@
                     token_inflation_pct: fm.token_inflation_pct && fm.token_inflation_pct !== 'N/A' ? parseFloat(fm.token_inflation_pct) : null,
                     avg_latency_ms: fm.avg_latency_ms && fm.avg_latency_ms !== 'N/A' ? parseFloat(fm.avg_latency_ms) : null,
                     contributor: fm.contributor || '',
+                    submitter: fm.submitter || (issue.user && issue.user.login) || '',
                     tested_at: fm.tested_at || '',
                     verified: isVerified,
                     issue_url: issue.html_url,
@@ -387,6 +394,22 @@
             document.getElementById('statAvg').textContent = avg;
         }
 
+        // Credit the person who filed the audit when no explicit contributor is
+        // given: the issue author is a real, checkable attribution.
+        function creditCell(r) {
+            const raw = (r.contributor || '').trim();
+            if (raw && raw.startsWith('@')) {
+                const name = raw.slice(1);
+                return `<a href="https://github.com/${escapeHtml(name)}" target="_blank" rel="noopener">${escapeHtml(raw)}</a>`;
+            }
+            if (raw) return escapeHtml(raw);
+            const submitter = (r.submitter || '').trim();
+            if (submitter) {
+                return `<a href="https://github.com/${escapeHtml(submitter)}" target="_blank" rel="noopener">@${escapeHtml(submitter)}</a>`;
+            }
+            return '-';
+        }
+
         function renderTable() {
             const relay = document.getElementById('filterRelay').value;
             const model = document.getElementById('filterModel').value;
@@ -429,7 +452,7 @@
                     <td><span class="badge ${r.verified ? 'badge-verified' : 'badge-preliminary'}">${r.verified ? '✓ 已验证' : '初步'}</span></td>
                     <td>${r.token_inflation_pct !== null ? r.token_inflation_pct.toFixed(1) + '%' : '-'}</td>
                     <td>${r.avg_latency_ms !== null ? Math.round(r.avg_latency_ms) + 'ms' : '-'}</td>
-                    <td>${escapeHtml(r.contributor || '-')}</td>
+                    <td>${creditCell(r)}</td>
                     <td>${r.tested_at ? new Date(r.tested_at).toLocaleDateString() : '-'}</td>
                     <td><a href="${escapeHtml(r.issue_url)}" target="_blank">查看</a></td>
                 </tr>`;

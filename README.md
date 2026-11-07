@@ -2,14 +2,19 @@
 
 [English](README.en.md) · 中文
 
+[![CI](https://github.com/dafahaha/transit-truth/actions/workflows/ci.yml/badge.svg)](https://github.com/dafahaha/transit-truth/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 ![TransitTruth Banner](docs/banner_1280x640.png)
 
 > **AI API 模型真实性核验 / 路由层可信度监控** — 无状态验证你用的模型是否货真价实。
 
-> **⚡ 一行安装（已在干净 venv 验证）**：需 **Python 3.10+（3.10–3.13 实测）**。PyPI 尚未发布，可直接从仓库 zip 装（不依赖 git）：
+> **⚡ 一行安装（已在干净 venv 验证）**：需 **Python 3.10+（3.10–3.13 实测）**。PyPI 尚未发布，直接从 GitHub Release 拿 wheel（不依赖 git、不重新构建）：
 > ```
-> pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.zip"
+> pip install https://github.com/dafahaha/transit-truth/releases/download/v0.5.9/transit_truth-0.5.9-py3-none-any.whl
 > ```
+> 没有 Release 下载权限时，可退回到仓库 zip 装：`pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.zip"`。
 > 装完 `transit-truth --help` 应列出 8 个子命令；找不到就重开终端/激活 venv。要改源码则改用 `git clone` + `pip install -e .`，完整说明见下方「📦 从源码安装」。
 
 ---

@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use TransitTruth in academic work, cite it as below."
+title: "TransitTruth: stateless verification of claimed model identity behind OpenAI-compatible relays"
+abstract: "A bounded probe battery plus a single JSON report that tells whether an endpoint serves the model it claims, with three fail-closed verdicts (pass / suspicious / insufficient_evidence) and explicit non-claims."
+type: software
+authors:
+  - family-names: "Liao"
+    given-names: "Daizhi"
+    affiliation: "Guangzhou University"
+repository-code: "https://github.com/dafahaha/transit-truth"
+url: "https://dafahaha.github.io/transit-truth/docs/online/index.html"
+license: MIT
+keywords:
+  - "LLM API relay"
+  - "model fingerprinting"
+  - "API auditing"
+  - "supply-chain trust"
+  - "tokenizer fingerprint"

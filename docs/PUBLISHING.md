@@ -1,17 +1,20 @@
 # Publishing transit-truth to PyPI
 
-> **Status: build-ready, NOT published (verified 2026-11-07).** The official
-> release path below was run end to end on 0.5.9: `twine check` PASSED on both
+> **Status: GitHub Release published; PyPI NOT published (verified 2026-11-07).**
+> The release path below was run end to end on 0.5.9: `twine check` PASSED on both
 > artifacts, and the resulting wheel installed cleanly into a fresh venv where
 > `transit-truth --help` and `transit-truth verify --help` both work.
+> The same two files are attached to the GitHub Release
+> (<https://github.com/dafahaha/transit-truth/releases/tag/v0.5.9>), so users can
+> download a wheel without building anything.
 > Canonical artifacts (reproducible, `SOURCE_DATE_EPOCH=1792368000`):
 >
 > | file | bytes | sha256 |
 > |---|---|---|
-> | `transit_truth-0.5.9-py3-none-any.whl` | 193021 | `9fbdef02cd9533c70c804c5d3f21c91f08f9687fa7b770ab5bd346dd23311eda` |
-> | `transit_truth-0.5.9.tar.gz` | 223141 | `a98f9a4b555f142be198e0733007ca1aad9ef80b4c190c317c39038f4938e436` |
+> | `transit_truth-0.5.9-py3-none-any.whl` | 193117 | `82b7abd94fcf288d9350f91603d6696c1ef88d813e985091a699fdd0b0afeccf` |
+> | `transit_truth-0.5.9.tar.gz` | 223287 | `765ef8538f32913a00c8add881ba6e5e8f7594f3da59e652dc977442590f4d80` |
 >
-> The only remaining step is the upload, which requires your own PyPI account
+> The only remaining step is the PyPI upload, which requires your own PyPI account
 > and 2FA token — this is the part only you can do. Do it in order; do not skip
 > TestPyPI.
 

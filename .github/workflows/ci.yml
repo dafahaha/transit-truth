@@ -62,7 +62,7 @@ jobs:
 
       # flake8 is intentionally non-blocking: the pre-existing baseline of
       # violations (mostly long strings/comments) has not yet been cleared.
-      # The count is recorded in docs; do not let it grow.
+      # The count is recorded in docs/audit_round1_1022.md; do not let it grow.
       - name: flake8 (baseline, non-blocking)
         run: |
           cd backend

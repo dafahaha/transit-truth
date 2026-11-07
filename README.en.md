@@ -2,6 +2,10 @@
 
 [English](README.en.md) · [中文](README.md)
 
+[![CI](https://github.com/dafahaha/transit-truth/actions/workflows/ci.yml/badge.svg)](https://github.com/dafahaha/transit-truth/actions/workflows/ci.yml)
+![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+
 ![TransitTruth Banner](docs/banner_1280x640.png)
 
 **You pay for `gpt-4o-mini` at an API relay. Are you actually getting it?**
@@ -36,12 +40,19 @@ No Python needed: open the GitHub Pages build, paste your own relay Base URL (op
 ## Quickstart
 
 > **PyPI is not published yet.** There is no `pip install transit-truth` from
-> PyPI yet (a `pip install transit-truth` today would 404). One-line install
-> straight from the repo archive (verified in a clean venv, no git required):
+> PyPI yet (a `pip install transit-truth` today would 404). Install the prebuilt
+> wheel straight from the GitHub Release (verified in a clean venv, no git and
+> no local build):
+
+```text
+pip install https://github.com/dafahaha/transit-truth/releases/download/v0.5.9/transit_truth-0.5.9-py3-none-any.whl
+transit-truth --help   # should list 8 subcommands
+```
+
+If the release download is blocked, fall back to the repo archive:
 
 ```text
 pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.zip"
-transit-truth --help   # should list 8 subcommands
 ```
 
 To edit the source instead, clone it:
