@@ -68,11 +68,33 @@ def front_matter(body: str) -> dict[str, str] | None:
     return out
 
 
+COMMENT_RE = re.compile(r"<!--.*?-->", re.S)
+
+
+def clean_value(raw: str) -> str:
+    """Strip the invisible HTML hints that issue forms leave in the body.
+
+    GitHub renders `<!-- ... -->` as nothing, but it is still in the issue
+    body. A submitter who leaves a hint untouched would otherwise have the
+    hint parsed as the value: the score hint "0-100, e.g. 55.7" yields 0.
+    """
+    value = COMMENT_RE.sub("", raw)
+    return value.replace("\u200b", "").strip().strip("`").strip()
+
+
 def md_field(body: str, names: list[str]) -> str:
+    """Read a field from either template style.
+
+    Issuers write both `- **总分**: 78` (forms) and `信任分: 78/100` (hand
+    written). Both must parse; the bold markers and the bullet are optional.
+    """
     for name in names:
-        m = re.search(rf"\*\*\s*{re.escape(name)}\s*\*\*\s*[:：]\s*(.+)", body)
+        pattern = rf"(?m)^\s*(?:[-*]\s*)?(?:\*\*)?\s*{re.escape(name)}\s*(?:\*\*)?\s*[:：]\s*(.+)$"
+        m = re.search(pattern, body)
         if m:
-            return m.group(1).strip()
+            value = clean_value(m.group(1))
+            if value:
+                return value
     return ""
 
 
@@ -80,36 +102,62 @@ def parse_issue(issue: dict) -> dict | None:
     body = issue.get("body") or ""
     fm = front_matter(body)
     if fm is None:
-        relay = md_field(body, ["中转站名称", "中转站", "Relay"])
+        relay = md_field(
+            body, ["中转站名称", "中转站", "Relay", "Name", "Relay Service"]
+        )
         if not relay:
             return None
-        score_raw = md_field(body, ["信任分", "总分", "Trust score"])
+        score_raw = md_field(
+            body, ["信任分", "总分", "Trust score", "Overall score", "Score"]
+        )
         fm = {
             "relay": relay,
             "base_url": md_field(body, ["Base URL"]),
-            "model": md_field(body, ["模型名称", "模型", "Model"]) or "unknown",
+            "model": md_field(body, ["模型名称", "模型", "Model", "Model audited"])
+            or "unknown",
             "overall_score": score_raw,
             "trust_level": md_field(body, ["信任等级", "Trust level"]) or "unknown",
-            "contributor": md_field(body, ["GitHub 用户名", "贡献者", "Contributor"]),
-            "tested_at": md_field(body, ["审计时间", "Tested at"]),
+            "contributor": md_field(
+                body, ["GitHub 用户名", "贡献者", "Contributor", "Submitted by"]
+            ),
+            "tested_at": md_field(body, ["审计时间", "Tested at", "Date"]),
             "audit_mode": md_field(body, ["审计模式", "Audit mode"]),
+            "token_inflation_pct": md_field(
+                body, ["Token 膨胀率", "Token 差异率", "Token inflation"]
+            ),
+            "avg_latency_ms": md_field(
+                body,
+                [
+                    "平均延迟 (ms)",
+                    "平均延迟",
+                    "Average latency",
+                    "Average latency (ms)",
+                ],
+            ),
         }
 
     def num(key: str) -> float | None:
         # Submissions write things like "78/100" or "55.7"; take the leading
         # number rather than feeding the whole string to float().
-        raw = str(fm.get(key, "")).strip()  # type: ignore[union-attr]
+        raw = clean_value(str(fm.get(key, "")))  # type: ignore[union-attr]
         if not raw or raw.upper() == "N/A":
             return None
         m = re.search(r"-?\d+(?:\.\d+)?", raw)
         return float(m.group(0)) if m else None
+
+    score = num("overall_score")
+    if score is None or not 0.0 <= score <= 100.0:
+        # Fail closed: a submission without a usable 0-100 score must not
+        # appear on the board as a real "0" — that would look like a verdict
+        # we never made.
+        return None
 
     labels = [str(l.get("name", "")).lower() for l in issue.get("labels") or []]
     return {
         "relay": str(fm.get("relay") or "unknown"),
         "base_url": str(fm.get("base_url") or ""),
         "model": str(fm.get("model") or "unknown"),
-        "overall_score": num("overall_score") or 0.0,
+        "overall_score": score,
         "trust_level": str(fm.get("trust_level") or "unknown").lower(),
         "audit_mode": str(fm.get("audit_mode") or "").strip().lower() or "unknown",
         "token_inflation_pct": num("token_inflation_pct"),
@@ -140,15 +188,21 @@ def main() -> int:
         print(f"::error::network error: {exc}", file=sys.stderr)
         return 1
 
-    entries = [
-        e
-        for e in (
-            parse_issue(i)
-            for i in issues
-            if is_audit_issue(i) and not i.get("pull_request")
-        )
-        if e
-    ]
+    entries: list[dict] = []
+    for issue in issues:
+        if issue.get("pull_request") or not is_audit_issue(issue):
+            continue
+        entry = parse_issue(issue)
+        if entry is None:
+            # Never drop a submission silently: a maintainer reading the run
+            # log must see that this issue exists but could not be parsed.
+            print(
+                f"::warning::issue #{issue.get('number')} looks like an audit "
+                "but has no usable relay name or 0-100 score; skipped",
+                file=sys.stderr,
+            )
+            continue
+        entries.append(entry)
     entries.sort(key=lambda e: str(e["tested_at"]), reverse=True)
 
     payload = {

@@ -69,25 +69,44 @@
   }
 
   function isPrivateHost(hostname) {
-    const h = hostname.toLowerCase();
+    const h = hostname.toLowerCase().replace(/^\[|\]$/g, '');
     if (h === 'localhost' || h.endsWith('.localhost') || h === '0.0.0.0') return true;
+    // Hostnames that always resolve to loopback / RFC1918. A bare regex on
+    // the literal is not enough: these names are public DNS entries.
+    if (h.endsWith('.localtest.me') || h === 'localtest.me') return true;
+    if (h.endsWith('.local') || h.endsWith('.internal')) return true;
+    if (h.endsWith('.nip.io') || h.endsWith('.sslip.io')) return true;
     // IPv4 literal
     const v4 = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
-    if (v4) {
-      const o = v4.slice(1).map(Number);
-      if (o.some((n) => n > 255)) return true;
-      if (o[0] === 127) return true;                 // loopback 127.0.0.0/8
-      if (o[0] === 10) return true;                  // RFC1918
-      if (o[0] === 172 && o[1] >= 16 && o[1] <= 31) return true;
-      if (o[0] === 192 && o[1] === 168) return true;
-      if (o[0] === 169 && o[1] === 254) return true; // link-local / metadata
-      if (o[0] === 100 && o[1] >= 64 && o[1] <= 127) return true; // CGNAT
-      return false;
-    }
-    // IPv6 literal (strip brackets already done by URL parser)
+    if (v4) return isPrivateV4(v4.slice(1).map(Number));
+    // IPv4-mapped IPv6, e.g. ::ffff:127.0.0.1 or ::ffff:7f00:1
     if (h === '::1') return true;
+    const mapped = h.match(/^::ffff:([0-9a-f:.]+)$/);
+    if (mapped) {
+      const tail = mapped[1];
+      const dotted = tail.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+      if (dotted) return isPrivateV4(dotted.slice(1).map(Number));
+      const hex = tail.match(/^([0-9a-f]{1,4}):([0-9a-f]{1,4})$/);
+      if (hex) {
+        const hi = parseInt(hex[1], 16);
+        const lo = parseInt(hex[2], 16);
+        return isPrivateV4([hi >> 8, hi & 0xff, lo >> 8, lo & 0xff]);
+      }
+    }
+    // IPv6 literal (brackets already stripped by URL parser)
     if (h.startsWith('fe80')) return true;           // link-local
     if (h.startsWith('fc') || h.startsWith('fd')) return true; // ULA
+    return false;
+  }
+
+  function isPrivateV4(o) {
+    if (o.some((n) => n > 255)) return true;
+    if (o[0] === 127) return true;                 // loopback 127.0.0.0/8
+    if (o[0] === 10) return true;                  // RFC1918
+    if (o[0] === 172 && o[1] >= 16 && o[1] <= 31) return true;
+    if (o[0] === 192 && o[1] === 168) return true;
+    if (o[0] === 169 && o[1] === 254) return true; // link-local / metadata
+    if (o[0] === 100 && o[1] >= 64 && o[1] <= 127) return true; // CGNAT
     return false;
   }
 
@@ -243,9 +262,15 @@
       markStep(sCap, 'done');
 
       // ─── verdict (browser build never emits pass) ───
-      const fails = capResults.filter((c) => !c.passed).length;
-      if (fails === capResults.length && capResults.length > 0) {
-        showSuspicious(evidence, '两个基础能力问题均未通过：表面能力异常（弱信号，必须用本地 CLI 行为指纹复核，本页不下最终结论）。');
+      // Separate "no answer at all" from "answered and wrong". A throttled
+      // or empty endpoint gives us zero evidence; rendering that as
+      // "suspicious" would be the exact opposite of the fail-closed promise.
+      const answered = capResults.filter((c) => c.status === 200 && c.answer !== null);
+      const wrong = answered.filter((c) => !c.passed);
+      if (answered.length === 0) {
+        showInsufficient(evidence, '两个能力题都没有拿到可用回答（限流、空响应或非 JSON）：没有任何证据，本页不下结论。可稍后重试，或用本地 CLI 做完整核验。');
+      } else if (wrong.length === answered.length) {
+        showSuspicious(evidence, `已拿到回答的 ${answered.length} 个能力问题全部答错：表面能力异常（弱信号，必须用本地 CLI 行为指纹复核，本页不下最终结论）。`);
       } else {
         showInsufficient(evidence, '端点可达、协议基本正常；浏览器版无行为参考分布，证据不足以判定真伪（不会签发 pass）。');
       }
@@ -536,9 +561,11 @@
     const m = q.get('model');
     if (u) baseInput.value = u;
     if (m) modelInput.value = m;
-    // Self-test / local-gateway deep link only; the checkbox remains visible and
-    // unchecked by default for normal users.
-    if (q.get('private') === '1') allowPrivate.checked = true;
+    // Self-test only. A shared link must never pre-arm the private-host
+    // gate: on a public origin ?private=1 would let a crafted URL make the
+    // visitor's browser probe their own intranet.
+    const loopbackOrigin = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    if (loopbackOrigin && q.get('private') === '1') allowPrivate.checked = true;
     // Local-only key injection for headless self-test / screenshots. On any
     // non-loopback origin (including the published Pages site) the ?key=
     // parameter is ignored entirely; the key can never arrive via URL in

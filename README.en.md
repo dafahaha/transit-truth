@@ -15,7 +15,7 @@ Built for LLM-security researchers, agent developers, and anyone who routes LLM 
 
 ### 30-second version
 
-- **The question it answers:** you are billed for `gpt-4o-mini` — is that actually what the endpoint serves? Give it an OpenAI-compatible endpoint and it runs one bounded battery (17 requests), then returns a single JSON report.
+- **The question it answers:** you are billed for `gpt-4o-mini` — is that actually what the endpoint serves? Give it an OpenAI-compatible endpoint and it runs one bounded battery (17 logical probes; retried only on transient failures, up to 3 extra attempts each by default, so the worst case is 17×4 = 68 HTTP calls — lower it with the `MAX_RETRIES` env var), then returns a single JSON report.
 - **What you get:** `pass` / `suspicious` / `insufficient_evidence`, plus confidence and the evidence behind it. Too little evidence means it says so.
 - **What it does not claim:** not a cryptographic proof, only probabilistic auxiliary evidence; the shipped reference set is small (a Qwen2.5 tokenizer fingerprint plus a single-relay GPT baseline); a public `temperature=0` probe battery can be hard-coded and replayed, so reports flag `deterministic_replay_risk` and cap confidence at low. Full limits are in "Limitations" below.
 
@@ -359,7 +359,7 @@ current `verify`/`serve`/PyPI model-identity path:
   loopback only; see [docs/serve.md](docs/serve.md)).
 - **Baseline data:** `data/baselines/` (real n=50 collections),
   `data/fingerprints/` (open-source tokenizer catalog).
-- **Tests:** 378 passed / 7 skipped (385 collected; the 7 skipped are integration
+- **Tests:** 383 passed / 7 skipped (390 collected; the 7 skipped are integration
   tests that need a real API key; run them with `pytest -m integration`).
 
 ## Installing from source (before the PyPI release)

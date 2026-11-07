@@ -205,6 +205,7 @@
 
         <div class="note">
             💡 <strong>数据说明</strong>：排行榜数据来自社区用户通过 GitHub Issues 贡献的审计结果。所有数据公开可查、可复现。建议结合自身需求进行审计验证。本排行榜仅供参考，不构成对任何服务的最终评价。
+            <p id="dataFreshness" style="margin:10px 0 0;font-size:13px;color:#6e6e73;">数据快照：加载中…</p>
         </div>
     </div>
 
@@ -239,12 +240,14 @@
                 //    (60 req/hour per IP — shared networks hit it immediately).
                 // 2) Fall back to the live API only if the snapshot is missing.
                 let entries = null;
+                let snapshotAt = '';
                 try {
                     const snap = await fetch(`./data/audit_results.json?v=${Date.now()}`);
                     if (snap.ok) {
                         const payload = await snap.json();
                         if (Array.isArray(payload.entries) && payload.entries.length) {
                             entries = payload.entries;
+                            snapshotAt = payload.generated_at || '';
                         }
                     }
                 } catch { /* fall back to live API */ }
@@ -270,6 +273,17 @@
                 }
 
                 allEntries = entries;
+                const fresh = document.getElementById('dataFreshness');
+                if (fresh) {
+                    if (snapshotAt) {
+                        const d = new Date(snapshotAt);
+                        fresh.textContent = isNaN(d.getTime())
+                            ? '数据快照：' + snapshotAt + '（GitHub Action 每日 08:15 北京时间刷新）'
+                            : '数据快照：' + d.toLocaleString() + '（GitHub Action 每日 08:15 北京时间刷新）';
+                    } else {
+                        fresh.textContent = '数据来源：实时读取 GitHub Issues（本次未命中静态快照）。';
+                    }
+                }
 
                 populateFilters();
                 updateStats();
@@ -285,34 +299,42 @@
         }
 
         function isAuditIssue(issue) {
-            const title = (issue.title || '').trim();
+            const title = (issue.title || '').trim().toLowerCase();
             const labelled = (issue.labels || []).some(l =>
                 (l.name || '').toLowerCase() === 'audit-result'
             );
-            return labelled || title.toLowerCase().startsWith('[audit-result]');
+            return labelled || title.startsWith('[audit-result]') || title.startsWith('[audit]');
         }
 
-        // Older submissions (and the CLI's plain-Markdown template) carry no YAML
-        // front matter, so read the fields out of the rendered headings instead.
+        // Older submissions (and hand-written issues) carry no YAML front
+        // matter, so read the fields out of the body. Field names and the
+        // comment stripping mirror scripts/build_ranking_data.py, otherwise a
+        // submission would parse differently in CI and in this fallback.
         function parseMarkdownMeta(body) {
-            const get = (label) => {
-                const re = new RegExp('\\*\\*\\s*' + label + '\\s*\\*\\*\\s*[:：]\\s*(.+)');
-                const m = body.match(re);
-                return m ? m[1].trim() : '';
+            const strip = (v) => v.replace(/<!--[\s\S]*?-->/g, '').replace(/\u200b/g, '').trim().replace(/^`|`$/g, '').trim();
+            const get = (labels) => {
+                for (const label of labels) {
+                    const re = new RegExp('^\\s*(?:[-*]\\s*)?(?:\\*\\*)?\\s*' + label + '\\s*(?:\\*\\*)?\\s*[:：]\\s*(.+)$', 'm');
+                    const m = body.match(re);
+                    const v = m ? strip(m[1]) : '';
+                    if (v) return v;
+                }
+                return '';
             };
-            const relay = get('中转站') || get('Relay');
+            const relay = get(['中转站名称', '中转站', 'Relay', 'Name', 'Relay Service']);
             if (!relay) return null;
-            const score = parseFloat(get('信任分') || get('Trust score'));
+            const score = parseFloat(get(['信任分', '总分', 'Trust score', 'Overall score', 'Score']));
+            if (isNaN(score) || score < 0 || score > 100) return null;
             return {
                 relay,
-                base_url: get('Base URL') || '',
-                model: get('模型') || get('Model') || 'unknown',
-                overall_score: isNaN(score) ? 0 : score,
-                trust_level: (get('信任等级') || get('Trust level') || 'unknown').toLowerCase(),
-                token_inflation_pct: null,
-                avg_latency_ms: null,
-                contributor: '',
-                tested_at: get('审计时间') || get('Tested at') || '',
+                base_url: get(['Base URL']) || '',
+                model: get(['模型名称', '模型', 'Model']) || 'unknown',
+                overall_score: score,
+                trust_level: (get(['信任等级', 'Trust level']) || 'unknown').toLowerCase(),
+                token_inflation_pct: get(['Token 膨胀率', 'Token 差异率', 'Token inflation']) || null,
+                avg_latency_ms: get(['平均延迟 (ms)', '平均延迟', 'Average latency (ms)', 'Average latency']) || null,
+                contributor: get(['GitHub 用户名', '贡献者', 'Contributor']),
+                tested_at: get(['审计时间', 'Tested at', 'Date']) || '',
             };
         }
 
@@ -334,7 +356,7 @@
                 }
                 if (!fm) return null;
 
-                const isVerified = (issue.labels || []).some(l => l.name === 'verified');
+                const isVerified = (issue.labels || []).some(l => (l.name || '').toLowerCase() === 'verified');
 
                 return {
                     relay: fm.relay || 'unknown',
@@ -439,7 +461,7 @@
             }
 
             let html = '<table><thead><tr>';
-            html += '<th>#</th><th>中转站</th><th>模型</th><th>信任分</th><th>状态</th><th>Token膨胀</th><th>平均延迟</th><th>贡献者</th><th>审计时间</th><th>详情</th>';
+            html += '<th>#</th><th>中转站</th><th>模型</th><th>模式</th><th>信任分</th><th>状态</th><th>Token膨胀</th><th>平均延迟</th><th>贡献者</th><th>审计时间</th><th>详情</th>';
             html += '</tr></thead><tbody>';
 
             filtered.forEach((r, i) => {
@@ -448,6 +470,7 @@
                     <td>${i + 1}</td>
                     <td><strong>${escapeHtml(r.relay)}</strong></td>
                     <td>${escapeHtml(r.model)}</td>
+                <td>${escapeHtml(r.audit_mode === 'deep' ? '深度' : r.audit_mode === 'quick' ? '快速' : '-')}</td>
                     <td><span class="score-badge score-${level}">${r.overall_score.toFixed(1)}</span></td>
                     <td><span class="badge ${r.verified ? 'badge-verified' : 'badge-preliminary'}">${r.verified ? '✓ 已验证' : '初步'}</span></td>
                     <td>${r.token_inflation_pct !== null ? r.token_inflation_pct.toFixed(1) + '%' : '-'}</td>

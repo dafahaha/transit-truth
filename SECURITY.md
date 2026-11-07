@@ -6,22 +6,21 @@ If you believe you have found a security vulnerability in TransitTruth, please
 **do not** open a public issue or disclose it in a public Discussion / social
 media before it has been handled.
 
-Preferred channel — **GitHub Security Advisory (private disclosure)**:
+Preferred channel — **GitHub private vulnerability reporting** (enabled on this
+repository):
 
-1. Go to the repository's **Security → Report a vulnerability** tab
-   (or "Report a security vulnerability" under **Security → Advisories**).
-2. Open a **private advisory draft** and describe the issue with reproduction
-   steps, affected versions, and any suggested fix. This keeps the report
-   visible only to maintainers until a fix is coordinated.
+<https://github.com/dafahaha/transit-truth/security/advisories/new>
 
-Alternative channels (use only if the private advisory flow is unavailable):
+1. Open that link while signed in to GitHub; it opens a **private advisory
+   draft** visible only to maintainers.
+2. Describe the issue with reproduction steps, affected versions, and any
+   suggested fix. A temporary private fork can be used to collaborate on the
+   patch before anything becomes public.
 
-- Open a **private security issue** via the repository's issue tracker and
-  mark it as security-sensitive; or
-- Start a private thread in **GitHub Discussions** addressed to maintainers.
-
-We do not publish a dedicated security mailing address for this project; please
-use the GitHub-native private channels above rather than guessing an email.
+If that form is unavailable (for example GitHub shows an error instead of the
+draft form), open a Discussion post **containing no vulnerability details** and
+ask a maintainer to provide a private channel. Do not put the technical details
+in a public issue or Discussion.
 
 ## What to include
 

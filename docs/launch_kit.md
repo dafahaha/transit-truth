@@ -42,7 +42,7 @@ Links to keep consistent:
 pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.zip"
 ```
 
-MIT 协议，测试 378 passed / 7 skipped（7 skipped 为需真实 key 的 integration）。如果你拿常用的站跑了一遍，结果可以提交到公开榜单（`docs/ranking.html`），也可以在 Discussion 里贴（别贴 key）。
+MIT 协议，测试 383 passed / 7 skipped（7 skipped 为需真实 key 的 integration）。如果你拿常用的站跑了一遍，结果可以提交到公开榜单（`docs/ranking.html`），也可以在 Discussion 里贴（别贴 key）。
 
 **评论区置顶：**
 > FAQ 见 https://github.com/dafahaha/transit-truth/discussions/2 。suspicious 不等于实锤欺诈，只是值得去找 provider 要个说法。
@@ -113,7 +113,7 @@ Install (PyPI is still pending, so this pulls the repo archive; verified in a cl
 pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.zip"
 ```
 
-MIT, 378 passed / 7 skipped (7 skipped = integration tests needing a real key). If you audit a relay you use, I set up a discussion thread to post results — please never paste keys.
+MIT, 383 passed / 7 skipped (7 skipped = integration tests needing a real key). If you audit a relay you use, I set up a discussion thread to post results — please never paste keys.
 
 ---
 

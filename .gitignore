@@ -79,3 +79,11 @@ docs/*.toc
 docs/*.fls
 docs/*.fdb_latexmk
 docs/*.synctex.gz
+
+# Credentials accidentally written to disk by users of this tool.
+*.pem
+*.key
+*.secret
+.env
+.env.*
+!.env.example
