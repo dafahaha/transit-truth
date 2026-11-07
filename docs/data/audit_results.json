@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-07T07:46:48Z",
+  "generated_at": "2026-11-07T16:47:47Z",
   "repo": "dafahaha/transit-truth",
   "count": 1,
   "entries": [
@@ -17,7 +17,108 @@
       "tested_at": "2026-09-14T17:19:32.537Z",
       "verified": false,
       "issue_url": "https://github.com/dafahaha/transit-truth/issues/1",
-      "issue_number": 1
+      "issue_number": 1,
+      "evidence": {
+        "model": "gpt-4o",
+        "base_url": "https://wolfai.top/v1",
+        "relay_name": "wolfai",
+        "mode": "quick",
+        "timestamp": "2026-09-14T17:19:32.537Z",
+        "checks": [
+          {
+            "name": "Token 计数验证",
+            "score": 90,
+            "passed": true,
+            "details": "Token 差异率 -17.2%，在正常范围内（包含 chat template 开销）"
+          },
+          {
+            "name": "模型指纹验证",
+            "score": 85,
+            "passed": true,
+            "details": "模型家族匹配（置信度 50%），能力测试 3/3 通过"
+          },
+          {
+            "name": "延迟与协议检测",
+            "score": 55,
+            "passed": false,
+            "details": "平均延迟 1571ms (一般)，协议兼容 2/4 项通过"
+          }
+        ],
+        "token_comparison": {
+          "prompt_tokens_reported": 24,
+          "prompt_tokens_expected": 29,
+          "completion_tokens_reported": 16,
+          "total_tokens_reported": 40,
+          "prompt_inflation_pct": -17.24137931034483,
+          "chat_template_overhead": 12,
+          "suspicious": false,
+          "discrepancy_note": "Token 差异率 -17.2%，在正常范围内（包含 chat template 开销）"
+        },
+        "fingerprint": {
+          "claimed_model": "gpt-4o",
+          "detected_family": "openai-gpt",
+          "family_match": true,
+          "confidence": 0.5,
+          "suspicious": false,
+          "capability": {
+            "total": 3,
+            "passed": 3,
+            "failure_rate": 0,
+            "details": {
+              "cap-simple-math": {
+                "response": "391",
+                "passed": true,
+                "latency_ms": 1640
+              },
+              "cap-logic": {
+                "response": "No.",
+                "passed": true,
+                "latency_ms": 1584
+              },
+              "cap-reasoning": {
+                "response": "5",
+                "passed": true,
+                "latency_ms": 1576
+              }
+            }
+          },
+          "tokenizer_signature": {
+            "tok-digits": {
+              "prompt_tokens": 50,
+              "response_preview": "123456789012345678901234567890",
+              "latency_ms": 1997
+            },
+            "tok-cjk": {
+              "prompt_tokens": 51,
+              "response_preview": "人工智能强化学习具身智能机器人视觉语言模型",
+              "latency_ms": 1590
+            },
+            "tok-emoji": {
+              "prompt_tokens": 58,
+              "response_preview": "🤖🧠🚀💻🎯🔥✨🌟💡🎨",
+              "latency_ms": 2097
+            }
+          }
+        },
+        "latency": {
+          "avg_latency_ms": 1571.3333333333333,
+          "latencies": [
+            1703,
+            1741,
+            1270
+          ],
+          "protocol_checks": {
+            "openai_compatible": true,
+            "stream_supported": false,
+            "usage_returned": true,
+            "model_echo": false
+          },
+          "protocol_pass_rate": 0.5
+        },
+        "overall_score": 78,
+        "trust_level": "medium",
+        "duration_ms": 31704
+      }
     }
   ]
 }
