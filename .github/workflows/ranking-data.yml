@@ -19,7 +19,7 @@ on:
 
 permissions:
   contents: write
-  issues: read
+  issues: write
 
 concurrency:
   group: ranking-data
@@ -56,3 +56,48 @@ jobs:
           git add docs/data/audit_results.json
           git commit -m "chore: refresh leaderboard snapshot"
           git push
+
+      # The template used to promise automatic closure and then say nothing;
+      # a submitter could not tell a successful parse from a silent drop.
+      # One durable comment, rewritten in place, closes that loop.
+      - name: Tell the submitter what happened
+        if: github.event_name == 'issues'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- tt-ranking-bot -->';
+            const number = context.payload.issue.number;
+            const data = JSON.parse(
+              fs.readFileSync('docs/data/audit_results.json', 'utf8')
+            );
+            const entry = (data.entries || []).find(e => e.issue_number === number);
+
+            let body;
+            if (entry) {
+              body = `${marker}
+            已收录到公开榜单：**${entry.relay} / ${entry.model}**，总分 **${entry.overall_score}**（${entry.trust_level}）。
+            快照会在 1–2 分钟内刷新；页面不签发 pass，判定边界以报告为准。`;
+            } else {
+              body = `${marker}
+            这条提交**没有进入榜单**：必填字段缺失，或分数/延迟等字段无法解析。
+            请按模板补齐后直接编辑本 Issue；不会自动关闭，也不需要重新开一条。`;
+            }
+
+            const comments = await github.paginate(
+              github.rest.issues.listComments,
+              { owner: context.repo.owner, repo: context.repo.repo, issue_number: number, per_page: 100 }
+            );
+            const old = comments.find(c => (c.body || '').includes(marker));
+            if (old) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                comment_id: old.id, body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner, repo: context.repo.repo,
+                issue_number: number, body,
+              });
+            }
+
