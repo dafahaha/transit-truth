@@ -44,6 +44,16 @@
             font-size: 14px;
         }
         .controls button:hover { background: #1d4ed8; }
+        .controls .submit-link {
+            padding: 10px 16px;
+            background: #0f766e;
+            color: white;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 14px;
+            white-space: nowrap;
+        }
+        .controls .submit-link:hover { background: #115e59; }
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -158,6 +168,7 @@
             </select>
             <input type="text" id="searchInput" placeholder="搜索中转站或模型...">
             <button onclick="loadRanking()">🔄 刷新</button>
+            <a class="submit-link" href="https://github.com/dafahaha/transit-truth/issues/new?template=audit_result.yml&title=%5BAudit%5D%20&labels=audit-result" target="_blank" rel="noopener">提交你的审计结果 →</a>
         </div>
 
         <div class="stats" id="statsSection" style="display:none;">
