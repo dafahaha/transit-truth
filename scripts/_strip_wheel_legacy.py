@@ -12,6 +12,7 @@ fixed zip entry timestamps).
 
 Usage: python _strip_wheel_legacy.py <path-to.whl>
 """
+
 import csv
 import io
 import sys

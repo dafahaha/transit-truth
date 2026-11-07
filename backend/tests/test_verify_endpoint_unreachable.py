@@ -82,6 +82,6 @@ async def test_reachable_port_still_proceeds_to_battery():
         listener.close()
 
     err = report.get("error") or {}
-    assert err.get("code") != "endpoint_unreachable", (
-        "a listening port must pass the precheck"
-    )
+    assert (
+        err.get("code") != "endpoint_unreachable"
+    ), "a listening port must pass the precheck"

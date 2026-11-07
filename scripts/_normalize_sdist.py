@@ -7,6 +7,7 @@ uid/gid/uname/gname zeroed, gzip header mtime -> 0. Content is untouched.
 
 Usage: python _normalize_sdist.py <path-to.tar.gz>
 """
+
 import gzip
 import os
 import sys
@@ -33,7 +34,9 @@ def normalize(src: str) -> None:
         # stamps the wall-clock mtime + source filename into the gzip header).
         with open(tmp, "wb") as raw:
             with gzip.GzipFile(fileobj=raw, mode="wb", compresslevel=9, mtime=0) as gz:
-                with tarfile.open(fileobj=gz, mode="w", format=tarfile.USTAR_FORMAT) as tout:
+                with tarfile.open(
+                    fileobj=gz, mode="w", format=tarfile.USTAR_FORMAT
+                ) as tout:
                     for m in tin.getmembers():
                         if _skipped(m.name):
                             dropped.append(m.name)

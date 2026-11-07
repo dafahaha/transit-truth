@@ -710,7 +710,6 @@ Environment variables:
     )
     balance_parser.set_defaults(func=cmd_balance)
 
-
     args = parser.parse_args()
     if not args.command:
         print_banner()
