@@ -193,6 +193,28 @@ def test_evidence_block_is_archived_not_dropped():
     assert entry["evidence"]["checks"][0]["score"] == 90
 
 
+def test_score_gap_against_evidence_is_disclosed():
+    """A submitted score whose archived checks average to a different number
+    must carry the discrepancy, not look self-consistent on the page."""
+    brd = _load()
+    body = PLAIN + (
+        '\n```json\n{"checks": [{"score": 90}, {"score": 85}, {"score": 55}]}\n```\n'
+    )
+    entry = brd.parse_issue(_issue(body))
+    assert entry is not None
+    assert entry["overall_score"] == 78.0
+    assert entry["score_checks_mean"] == 76.7
+    assert "历史权重未留档" in entry["score_note"]
+
+
+def test_no_score_note_when_evidence_matches():
+    brd = _load()
+    body = PLAIN + '\n```json\n{"checks": [{"score": 78}]}\n```\n'
+    entry = brd.parse_issue(_issue(body))
+    assert entry is not None
+    assert "score_note" not in entry
+
+
 def test_template_evidence_skeleton_is_not_archived():
     """An untouched template carries an empty JSON skeleton; it is not data."""
     brd = _load()

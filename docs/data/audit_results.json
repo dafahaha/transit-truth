@@ -118,7 +118,9 @@
         "overall_score": 78,
         "trust_level": "medium",
         "duration_ms": 31704
-      }
+      },
+      "score_checks_mean": 76.7,
+      "score_note": "总分 78 来自提交报告；evidence 子项均分 76.7；历史权重未留档，以报告为准。"
     }
   ]
 }

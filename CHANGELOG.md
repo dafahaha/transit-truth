@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **P1-5/P1-6 标题前缀与触发面**：workflow 改为 `toLower` + `startsWith('[audit-result]')`/`'[audit]'`，与 Python、contributors 页一致；`ranking-data.yml` 在 job 级跳过非审计 issue，bug/feature issue 不再触发解析。
 - **P1-7/P1-8/P1-9**：`docs/launch_kit.md` 五处「17 个请求」改为「17 个逻辑探针 / 最坏 68 次 HTTP」；`CITATION.cff` 补 `version: 0.5.9` 与 `date-released: 2026-11-07`；`THIRD_PARTY_NOTICES.md` 补 pydantic。
 - **P2-1/P2-3/P2-4/P2-5/P2-6/P2-11/P2-14**：`ci.yml` 加 `permissions: contents: read`；`?private=1` 的 loopback 判定补 `::1` / `[::1]`；徽章颜色优先按 `trust_level`；新增 `capabilityVerdict()` 纯函数并用 node 跑 6 种输入的行为断言，替代只看源码字符串的断言。
-- **测试计数**：398 passed / 7 skipped / 405 collected（+7 解析器回归、+1 双解析器一致性、+1 verdict 行为断言）。
+- **测试计数**：400 passed / 7 skipped / 407 collected（+7 解析器回归、+1 双解析器一致性、+1 verdict 行为断言）。
 ### 第二轮独立审查修复（公开路径，不含版本号变更）
 
 - **Leaderboard parser（P0-2/P0-3）**：`scripts/build_ranking_data.py` 先剥 HTML 注释再取值（未改的表单提示 `<!-- 0-100 -->` 不再被当成 0 分），字段行支持 `- **总分**:`、`总分:` 与英文 `- **Overall score**:` 三种写法；relay/score/model 别名补齐 `Name`/`Overall score`/`Model`；总分必须落在 0–100，否则该条不入榜并在 Action 日志打 `::warning::`（不再静默丢弃）。Markdown 路径补读 `Token 差异率` 与 `平均延迟`。英文模板改为解析器可读的字段格式。新增 `backend/tests/test_ranking_parser.py`（5 条）。
@@ -35,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **解析器一致性**：延迟标签顺序两端统一；parity 用例 22 组、比对 13 个字段，并加入一条手写期望值，避免两端同时错还互相证明。
 - **模板**：删除永远不被解析的「模型指纹家族」「家族匹配」两栏；注释明确「中转站名称和总分必填，其余缺失不影响收录」。
 - **机器人评论**：对 relay/model 做长度截断与 Markdown 转义，`@` 用零宽空格断开，用户可控文本不再能注入格式或 ping 真人。
+- **分数口径**：当提交的 `overall_score` 与 evidence 子项均分相差超过 0.05 时，快照写入 `score_checks_mean` 与 `score_note`，公开承认「历史权重未留档」，不再让 78 与 76.7 在同一文件里互相矛盾；新增 2 条回归。
 - **页面与可发现性**：榜单数据说明补「总分不由子项重算、历史权重未必保存、取整口径」；补 `robots.txt`、`sitemap.xml`、Apple 风 `404.html`；首页演示 GIF 加 `loading="lazy"` 与显式宽高；修正贡献者页裸链接缺 `/docs/`。
 
 ## [0.5.9] - 2026-10-19

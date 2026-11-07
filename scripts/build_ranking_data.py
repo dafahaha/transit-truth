@@ -218,7 +218,7 @@ def parse_issue(issue: dict) -> dict | None:
         return None
 
     labels = [str(l.get("name", "")).lower() for l in issue.get("labels") or []]
-    return {
+    entry = {
         "relay": str(fm.get("relay") or "unknown"),
         "base_url": str(fm.get("base_url") or ""),
         "model": str(fm.get("model") or "unknown"),
@@ -235,6 +235,28 @@ def parse_issue(issue: dict) -> dict | None:
         "issue_number": issue.get("number", 0),
         "evidence": parse_evidence(body),
     }
+
+    # The submitted report may use a weighting rule that was never archived.
+    # Do not hide the resulting gap: state it next to the number, so a reader
+    # can see why 78 and a 76.7 sub-score mean appear in the same record.
+    checks = (entry["evidence"] or {}).get("checks")
+    if isinstance(checks, list):
+        scores = [
+            c.get("score")
+            for c in checks
+            if isinstance(c, dict)
+            and isinstance(c.get("score"), (int, float))
+            and not isinstance(c.get("score"), bool)
+        ]
+        if scores:
+            mean = round(sum(scores) / len(scores), 1)
+            if abs(mean - score) > 0.05:
+                entry["score_checks_mean"] = mean
+                entry["score_note"] = (
+                    f"总分 {score:g} 来自提交报告；evidence 子项均分 {mean:g}；"
+                    "历史权重未留档，以报告为准。"
+                )
+    return entry
 
 
 def is_audit_issue(issue: dict) -> bool:
