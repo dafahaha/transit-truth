@@ -140,7 +140,15 @@ def main() -> int:
         print(f"::error::network error: {exc}", file=sys.stderr)
         return 1
 
-    entries = [e for e in (parse_issue(i) for i in issues if is_audit_issue(i) and not i.get("pull_request")) if e]
+    entries = [
+        e
+        for e in (
+            parse_issue(i)
+            for i in issues
+            if is_audit_issue(i) and not i.get("pull_request")
+        )
+        if e
+    ]
     entries.sort(key=lambda e: str(e["tested_at"]), reverse=True)
 
     payload = {
@@ -150,7 +158,9 @@ def main() -> int:
         "entries": entries,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
-    OUT.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    OUT.write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
     print(f"wrote {OUT} with {len(entries)} entries")
     return 0
 
