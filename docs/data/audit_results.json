@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-07T07:13:04Z",
+  "generated_at": "2026-11-07T07:46:48Z",
   "repo": "dafahaha/transit-truth",
   "count": 1,
   "entries": [
@@ -10,8 +10,8 @@
       "overall_score": 78.0,
       "trust_level": "medium",
       "audit_mode": "quick",
-      "token_inflation_pct": null,
-      "avg_latency_ms": null,
+      "token_inflation_pct": -17.2,
+      "avg_latency_ms": 1571.0,
       "contributor": "",
       "submitter": "dafahaha",
       "tested_at": "2026-09-14T17:19:32.537Z",
