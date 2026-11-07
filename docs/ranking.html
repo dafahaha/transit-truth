@@ -380,7 +380,11 @@
             try {
                 const data = JSON.parse(m[1]);
                 if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
-                if (!data.audit_id && !data.checks) return null;
+                const checks = data.checks;
+                const emptyChecks = !checks || (Array.isArray(checks)
+                    ? checks.length === 0
+                    : (typeof checks === 'object' && Object.keys(checks).length === 0));
+                if (!data.audit_id && emptyChecks) return null;
                 return data;
             } catch {
                 return null;

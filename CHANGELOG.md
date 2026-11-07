@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **P0-1 占位符不再变成 0 分（`scripts/build_ranking_data.py`）**：`num()` 从「在任意位置取第一个数字」改为整串匹配（接受 `78`、`78/100`、`-17.2%`、`1571ms`），`about 78`、`990`、`[0-100, e.g. 55.7]` 一律返回 `None`；`md_field` 对方括号占位符与含 `e.g.`/`例如` 的值判为未填写；`clean_value` 对未闭合注释 fail-closed；字段名加 `IGNORECASE`。英文模板原样提交、中文模板原样提交都不再产生假榜单项。
 - **P0-2 模板承诺与实现对齐（`.github/ISSUE_TEMPLATE/audit_result.yml`）**：删掉无法兑现的「格式不正确的提交将被自动关闭」，改为「字段缺失或无法解析的提交不会进入榜单，可在 Issue 下留言补全」；补上有限样本会随时间波动的免责说明。
-- **P1-1 双解析器行为一致（`docs/ranking.html` + 新测试）**：浏览器 fallback 改用与 Python 相同的整串数字匹配、占位符门、未闭合注释 fail-closed、字段名大小写不敏感、正则标签转义（`平均延迟 (ms)` 不再被吞）、front-matter 补 0–100 门并删除 `|| 0`；新增 `backend/tests/test_ranking_parser_parity.py`，对同一组 30 个 body 要求两端逐字段一致（无 node 时跳过）。
+- **P1-1 双解析器行为一致（`docs/ranking.html` + 新测试）**：浏览器 fallback 改用与 Python 相同的整串数字匹配、占位符门、未闭合注释 fail-closed、字段名大小写不敏感、正则标签转义（`平均延迟 (ms)` 不再被吞）、front-matter 补 0–100 门并删除 `|| 0`；新增 `backend/tests/test_ranking_parser_parity.py`，对同一组 31 个 body 要求两端逐字段一致（无 node 时跳过）。
 - **P1-2/P1-3 数据血缘与文案**：解析器把提交里的 ```json 证据块存进 `entry.evidence`（空骨架不存），快照不再只有标量；榜单页把「所有数据公开可查、可复现」改为「每条记录链接到提交它的 Issue，原始证据可在那里查到」，并注明分数取自 `overall_score`、不由子项平均；快照文案改为「新提交合并后自动刷新，每日 08:15 北京时间兜底」。
 - **P1-5/P1-6 标题前缀与触发面**：workflow 改为 `toLower` + `startsWith('[audit-result]')`/`'[audit]'`，与 Python、contributors 页一致；`ranking-data.yml` 在 job 级跳过非审计 issue，bug/feature issue 不再触发解析。
 - **P1-7/P1-8/P1-9**：`docs/launch_kit.md` 五处「17 个请求」改为「17 个逻辑探针 / 最坏 68 次 HTTP」；`CITATION.cff` 补 `version: 0.5.9` 与 `date-released: 2026-11-07`；`THIRD_PARTY_NOTICES.md` 补 pydantic。
@@ -25,14 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Security（P1-2/P2-4/P2-5/P2-6）**：仓库已开启 GitHub 私有漏洞报告，`SECURITY.md` 只保留真实可达的 `/security/advisories/new` 入口并写明表单不可用时的无细节求助方式；`?private=1` 仅在 localhost/127.0.0.1 生效，公开页不再被构造链接预勾选；私网判定补 `::ffff:7f00:1` 等 IPv4-mapped IPv6 与 `localtest.me` / `nip.io` 这类回环别名；`.gitignore` 增加 `*.pem` / `*.key` / `.env*` 等凭证模式。
 - **Docs honesty（P1-3/P0-4）**：README 中英把「17 个请求」改为「17 个逻辑探针，瞬时失败才重试，最坏 17×4 = 68 次 HTTP（`MAX_RETRIES` 可调）」；测试计数随新增回归更新为 398 passed / 7 skipped / 405 collected（0.5.9 发布说明中的 378 为该 tag 的历史值）。
 
-- **P1-1 追加（自测发现）**：前端 front-matter 分支的 `Number.parseFloat` 会接受 `78abc`，Python 会拒绝；改为共用 `parseNumber` 的整串匹配。Python 的 `\d` 会接受全角数字（`７８`），JS 不接受；改为 `[0-9]`。front-matter 缺 `relay` 或仍是 `[e.g. Example Relay]` 时两端都拒绝，不再回落成 `unknown`。parity 用例扩到 30 组，并新增 `tested_at` / `submitter` / `verified` 字段比对。
+- **P1-1 追加（自测发现）**：前端 front-matter 分支的 `Number.parseFloat` 会接受 `78abc`，Python 会拒绝；改为共用 `parseNumber` 的整串匹配。Python 的 `\d` 会接受全角数字（`７８`），JS 不接受；改为 `[0-9]`。front-matter 缺 `relay` 或仍是 `[e.g. Example Relay]` 时两端都拒绝，不再回落成 `unknown`。parity 用例扩到 31 组，并新增 `tested_at` / `submitter` / `verified` 字段比对。
 
 ### 第三轮修复批次（2026-11-08）
 
 - **CLI**：新增 `--version`（`transit-truth 0.5.9`，exit 0）；陌生人安装后的第二个命令不再报 unrecognized arguments。
 - **快照不再空转**：`build_ranking_data.py` 仅在 `entries` 变化时写盘，`generated_at` 恢复「数据最后变化时间」的含义；`ranking-data.yml` 在 commit 后 `git pull --rebase`，避免人工 push 落在 checkout 与 push 之间时整个 run 失败。
 - **抓取上限**：`fetch_issues` 固定读 10 页（最多 1000 条）并在 docstring 写明这是刻意上限；`test_fetch_issues_reads_every_page` 锁住翻页。
-- **解析器一致性**：延迟标签顺序两端统一；parity 用例 30 组、比对 14 个字段，并加入一条手写期望值，避免两端同时错还互相证明。
+- **解析器一致性**：延迟标签顺序两端统一；parity 用例 31 组、比对 14 个字段，并加入一条手写期望值，避免两端同时错还互相证明。
 - **模板**：删除永远不被解析的「模型指纹家族」「家族匹配」两栏；注释明确「中转站名称和总分必填，其余缺失不影响收录」。
 - **机器人评论**：对 relay/model 做长度截断与 Markdown 转义，`@` 用零宽空格断开，用户可控文本不再能注入格式或 ping 真人。
 - **分数口径**：当提交的 `overall_score` 与 evidence 子项均分相差超过 0.05 时，快照写入 `score_checks_mean` 与 `score_note`，公开承认「历史权重未留档」，不再让 78 与 76.7 在同一文件里互相矛盾；新增 2 条回归。

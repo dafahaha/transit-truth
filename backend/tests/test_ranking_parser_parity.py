@@ -58,6 +58,7 @@ CASES = [
     "中转站: x\n总分: 78\n平均延迟: 1500ms\nAverage latency (ms): 2000",
     # Evidence block is archived by both sides; an empty skeleton is not.
     '中转站: x\n总分: 78\n```json\n{"checks": [{"score": 78}]}\n```',
+    '中转站: x\n总分: 78\n```json\n{"checks": []}\n```',
 ]
 
 FIELDS = (
