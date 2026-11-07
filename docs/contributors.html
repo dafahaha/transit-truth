@@ -181,28 +181,50 @@
 
             try {
                 const response = await fetch(
-                    `https://api.github.com/repos/${REPO}/issues?labels=audit-result&state=open&per_page=100`
+                    `https://api.github.com/repos/${REPO}/issues?state=all&per_page=100&sort=created&direction=desc`
                 );
 
                 if (!response.ok) {
                     throw new Error(`GitHub API error: ${response.status}`);
                 }
 
-                const issues = await response.json();
+                const issues = (await response.json()).filter(i => !i.pull_request);
                 const contributors = {};
 
                 issues.forEach(issue => {
                     const body = issue.body || '';
-                    const fmMatch = body.match(/^---\n([\s\S]*?)\n---/);
-                    if (!fmMatch) return;
+                    const labelled = (issue.labels || []).some(
+                        l => (l.name || '').toLowerCase() === 'audit-result'
+                    );
+                    const titled = (issue.title || '').toLowerCase().startsWith('[audit-result]');
+                    if (!labelled && !titled) return;
 
                     const fm = {};
-                    fmMatch[1].split('\n').forEach(line => {
-                        const [key, ...valueParts] = line.split(':');
-                        if (key && valueParts.length > 0) {
-                            fm[key.trim()] = valueParts.join(':').trim();
-                        }
-                    });
+                    const fmMatch = body.match(/^---\n([\s\S]*?)\n---/);
+                    if (fmMatch) {
+                        fmMatch[1].split('\n').forEach(line => {
+                            const [key, ...valueParts] = line.split(':');
+                            if (key && valueParts.length > 0) {
+                                fm[key.trim()] = valueParts.join(':').trim();
+                            }
+                        });
+                    } else {
+                        // Markdown submissions (the issue template is markdown-only)
+                        const grab = (names) => {
+                            for (const name of names) {
+                                const re = new RegExp('\\*\\*' + name + '\\*\\*\\s*[:：]\\s*([^\\n]+)');
+                                const m = body.match(re);
+                                if (m) return m[1].trim();
+                            }
+                            return '';
+                        };
+                        fm.relay = grab(['中转站', 'Relay']);
+                        fm.model = grab(['模型', 'Model']);
+                        fm.contributor = grab(['GitHub 用户名', '贡献者', 'Contributor']);
+                        fm.score = grab(['信任分', '总分', 'Trust score']);
+                    }
+                    // No explicit credit: the issue author is the real submitter.
+                    if (!fm.contributor) fm.contributor = '@' + (issue.user && issue.user.login ? issue.user.login : '');
 
                     const contributor = fm.contributor || '';
                     if (contributor && contributor !== '匿名' && !contributor.startsWith('@')) {

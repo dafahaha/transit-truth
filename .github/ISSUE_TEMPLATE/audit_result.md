@@ -2,7 +2,7 @@
 name: Audit Result Discussion
 about: Share and discuss audit results of specific relay services
 title: "[Audit] "
-labels: audit-results
+labels: audit-result
 ---
 
 ## Relay Service

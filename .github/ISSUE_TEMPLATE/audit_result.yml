@@ -15,7 +15,7 @@ labels: audit-result
 - **中转站名称**: <!-- 例如 wolfai.top -->
 - **Base URL**: <!-- 例如 https://wolfai.top/v1 -->
 - **模型名称**: <!-- 例如 gpt-4o -->
-- **审计模式**: <!-- quick 或 deep，只有 deep 模式会加入排行榜 -->
+- **审计模式**: <!-- quick 或 deep；两者都会上榜，quick 标注为「初步」，deep 证据更完整 -->
 
 ## 审计结果
 

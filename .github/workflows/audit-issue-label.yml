@@ -1,9 +1,9 @@
 name: audit-issue-label
 
 # Keeps the public leaderboard (docs/ranking.html) fed: every submission whose
-# title starts with [audit-result] gets the label the board filters on. Before
-# this workflow the label did not exist, so every submission stayed unlabelled
-# and the board rendered empty no matter how many audits were filed.
+# title starts with [audit-result] or [Audit] gets the label the board filters on.
+# Before this workflow the label did not exist, so every submission stayed
+# unlabelled and the board rendered empty no matter how many audits were filed.
 
 on:
   issues:
@@ -14,7 +14,7 @@ permissions:
 
 jobs:
   label:
-    if: startsWith(github.event.issue.title, '[audit-result]')
+    if: startsWith(github.event.issue.title, '[audit-result]') || startsWith(github.event.issue.title, '[Audit]')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/github-script@v7
