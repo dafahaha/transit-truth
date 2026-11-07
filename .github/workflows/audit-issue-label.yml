@@ -1,0 +1,47 @@
+name: audit-issue-label
+
+# Keeps the public leaderboard (docs/ranking.html) fed: every submission whose
+# title starts with [audit-result] gets the label the board filters on. Before
+# this workflow the label did not exist, so every submission stayed unlabelled
+# and the board rendered empty no matter how many audits were filed.
+
+on:
+  issues:
+    types: [opened, edited, reopened]
+
+permissions:
+  issues: write
+
+jobs:
+  label:
+    if: startsWith(github.event.issue.title, '[audit-result]')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const name = 'audit-result';
+
+            try {
+              await github.rest.issues.getLabel({ owner, repo, name });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              await github.rest.issues.createLabel({
+                owner, repo, name,
+                color: '0e8a16',
+                description: 'Audit submission shown on the public leaderboard',
+              });
+            }
+
+            const labels = (context.payload.issue.labels || []).map(l =>
+              typeof l === 'string' ? l : l.name
+            );
+            if (!labels.includes(name)) {
+              await github.rest.issues.addLabels({
+                owner, repo,
+                issue_number: context.payload.issue.number,
+                labels: [name],
+              });
+            }
