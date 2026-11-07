@@ -6,13 +6,19 @@
 
 > **AI API 模型真实性核验 / 路由层可信度监控** — 无状态验证你用的模型是否货真价实。
 
-> **⚡ 快速安装（一句话）**：需 **Python 3.10+（3.10–3.13 实测）**。PyPI 尚未发布，从源码装（逐行复制即可，PowerShell 5.1 不支持 `&&` 链式）：
+> **⚡ 一行安装（已在干净 venv 验证）**：需 **Python 3.10+（3.10–3.13 实测）**。PyPI 尚未发布，可直接从仓库 zip 装（不依赖 git）：
 > ```
-> git clone https://github.com/dafahaha/transit-truth.git
-> cd transit-truth
-> pip install .
+> pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.zip"
 > ```
-> （建议先 `python -m venv .venv` 建虚拟环境再装；装完 `transit-truth` 应在 PATH 里，找不到就重开终端/激活 venv，或用 `python -m app.cli --help`。完整说明与 `[reference]` 可选件见下方「📦 从源码安装」。）
+> 装完 `transit-truth --help` 应列出 8 个子命令；找不到就重开终端/激活 venv。要改源码则改用 `git clone` + `pip install -e .`，完整说明见下方「📦 从源码安装」。
+
+---
+
+## ⏱ 30 秒看懂
+
+- **它回答什么**：你按 `gpt-4o-mini` 的价付钱，后端真的是这个模型吗？给它一个 OpenAI 兼容端点，它跑一轮有界探针（17 个请求），出一份 JSON。
+- **它输出什么**：`pass` / `suspicious` / `insufficient_evidence` 三态 + 置信度 + 证据。证据不足就说不足，不硬猜。
+- **它不声称什么**：不是密码学证明，只是概率性辅助证据；内置参考有限（当前是 Qwen2.5 tokenizer 指纹 + 单站采集的 GPT 基线）；temperature=0 的公开探针可被硬编码复现，报告会标 `deterministic_replay_risk` 并把置信度压到 low。完整边界见文末「局限」。
 
 ---
 
@@ -21,6 +27,8 @@
 不想装 Python？直接打开 GitHub Pages 在线版，粘贴你自己的中转 Base URL（可选临时/低额度 Key），由**你的浏览器直连你填写的端点**做可达性、协议结构与基础能力快检，输出 fail-closed 三态报告。Key 只存在本页内存、直接发往你自己填写的端点：**不经本项目任何服务器、不入库、不进 URL、不打印到日志**。
 
 **在线版地址**：<https://dafahaha.github.io/transit-truth/docs/online/index.html>
+
+**公开榜单**：<https://dafahaha.github.io/transit-truth/docs/ranking.html> — 现在只有 1 条真实提交（冷启动中），跑完可以把自己的结果提交上去。
 
 ![在线体检演示 GIF（本地 mock 端点录制）](docs/assets/online/online-demo.gif)
 

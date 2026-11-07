@@ -9,6 +9,12 @@ TransitTruth is a stateless CLI that probes any OpenAI-compatible endpoint with 
 
 Built for LLM-security researchers, agent developers, and anyone who routes LLM traffic through third-party relays or gateways.
 
+### 30-second version
+
+- **The question it answers:** you are billed for `gpt-4o-mini` — is that actually what the endpoint serves? Give it an OpenAI-compatible endpoint and it runs one bounded battery (17 requests), then returns a single JSON report.
+- **What you get:** `pass` / `suspicious` / `insufficient_evidence`, plus confidence and the evidence behind it. Too little evidence means it says so.
+- **What it does not claim:** not a cryptographic proof, only probabilistic auxiliary evidence; the shipped reference set is small (a Qwen2.5 tokenizer fingerprint plus a single-relay GPT baseline); a public `temperature=0` probe battery can be hard-coded and replayed, so reports flag `deterministic_replay_risk` and cap confidence at low. Full limits are in "Limitations" below.
+
 > **Scope note.** The bundled current `verify`/`serve` path (the code path intended for PyPI; not yet published) is **stateless model-identity verification** (CLI/SDK + local `serve` browser UI; the key stays in session memory only). Token billing audit (tiktoken token-billing difference detection), latency/availability/error-rate performance monitoring, OpenAI response-format protocol compliance, balance queries/low-balance alerts, continuous monitoring/alert channels, and a community leaderboard/online submissions belong to an **early, standalone legacy web platform (`app.main`, self-hosted separately)** and are **NOT** part of the current `verify`/`serve`/PyPI bundle.
 
 ---
@@ -30,7 +36,15 @@ No Python needed: open the GitHub Pages build, paste your own relay Base URL (op
 ## Quickstart
 
 > **PyPI is not published yet.** There is no `pip install transit-truth` from
-> PyPI yet (a `pip install transit-truth` today would 404). Install from source:
+> PyPI yet (a `pip install transit-truth` today would 404). One-line install
+> straight from the repo archive (verified in a clean venv, no git required):
+
+```text
+pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.zip"
+transit-truth --help   # should list 8 subcommands
+```
+
+To edit the source instead, clone it:
 
 ```text
 git clone https://github.com/dafahaha/transit-truth.git
