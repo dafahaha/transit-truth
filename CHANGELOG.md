@@ -25,14 +25,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Security（P1-2/P2-4/P2-5/P2-6）**：仓库已开启 GitHub 私有漏洞报告，`SECURITY.md` 只保留真实可达的 `/security/advisories/new` 入口并写明表单不可用时的无细节求助方式；`?private=1` 仅在 localhost/127.0.0.1 生效，公开页不再被构造链接预勾选；私网判定补 `::ffff:7f00:1` 等 IPv4-mapped IPv6 与 `localtest.me` / `nip.io` 这类回环别名；`.gitignore` 增加 `*.pem` / `*.key` / `.env*` 等凭证模式。
 - **Docs honesty（P1-3/P0-4）**：README 中英把「17 个请求」改为「17 个逻辑探针，瞬时失败才重试，最坏 17×4 = 68 次 HTTP（`MAX_RETRIES` 可调）」；测试计数随新增回归更新为 398 passed / 7 skipped / 405 collected（0.5.9 发布说明中的 378 为该 tag 的历史值）。
 
-- **P1-1 追加（自测发现）**：前端 front-matter 分支的 `Number.parseFloat` 会接受 `78abc`，Python 会拒绝；改为共用 `parseNumber` 的整串匹配。Python 的 `\d` 会接受全角数字（`７８`），JS 不接受；改为 `[0-9]`。front-matter 缺 `relay` 或仍是 `[e.g. Example Relay]` 时两端都拒绝，不再回落成 `unknown`。parity 用例扩到 22 组，并新增 `tested_at` / `submitter` / `verified` 字段比对。
+- **P1-1 追加（自测发现）**：前端 front-matter 分支的 `Number.parseFloat` 会接受 `78abc`，Python 会拒绝；改为共用 `parseNumber` 的整串匹配。Python 的 `\d` 会接受全角数字（`７８`），JS 不接受；改为 `[0-9]`。front-matter 缺 `relay` 或仍是 `[e.g. Example Relay]` 时两端都拒绝，不再回落成 `unknown`。parity 用例扩到 29 组，并新增 `tested_at` / `submitter` / `verified` 字段比对。
 
 ### 第三轮修复批次（2026-11-08）
 
 - **CLI**：新增 `--version`（`transit-truth 0.5.9`，exit 0）；陌生人安装后的第二个命令不再报 unrecognized arguments。
 - **快照不再空转**：`build_ranking_data.py` 仅在 `entries` 变化时写盘，`generated_at` 恢复「数据最后变化时间」的含义；`ranking-data.yml` 在 commit 后 `git pull --rebase`，避免人工 push 落在 checkout 与 push 之间时整个 run 失败。
 - **抓取上限**：`fetch_issues` 固定读 10 页（最多 1000 条）并在 docstring 写明这是刻意上限；`test_fetch_issues_reads_every_page` 锁住翻页。
-- **解析器一致性**：延迟标签顺序两端统一；parity 用例 22 组、比对 13 个字段，并加入一条手写期望值，避免两端同时错还互相证明。
+- **解析器一致性**：延迟标签顺序两端统一；parity 用例 29 组、比对 13 个字段，并加入一条手写期望值，避免两端同时错还互相证明。
 - **模板**：删除永远不被解析的「模型指纹家族」「家族匹配」两栏；注释明确「中转站名称和总分必填，其余缺失不影响收录」。
 - **机器人评论**：对 relay/model 做长度截断与 Markdown 转义，`@` 用零宽空格断开，用户可控文本不再能注入格式或 ping 真人。
 - **分数口径**：当提交的 `overall_score` 与 evidence 子项均分相差超过 0.05 时，快照写入 `score_checks_mean` 与 `score_note`，公开承认「历史权重未留档」，不再让 78 与 76.7 在同一文件里互相矛盾；新增 2 条回归。
