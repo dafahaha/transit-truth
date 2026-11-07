@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Online page verdict（P1-1）**：浏览器版把「没拿到任何回答」与「拿到回答且答错」分开：零回答显示证据不足，只有已获回答的能力题全错才给 `suspicious`，不再出现零证据下的负面结论。
 - **Ranking page（P1-4/P2-2/P2-3）**：浏览器 fallback 解析器与 Python 版对齐（同一批别名、剥注释、`verified` 大小写不敏感、0–100 门）；新增「模式」列与数据快照时间（读取 `generated_at`，注明 Action 每日 08:15 北京时间刷新）。
 - **Security（P1-2/P2-4/P2-5/P2-6）**：仓库已开启 GitHub 私有漏洞报告，`SECURITY.md` 只保留真实可达的 `/security/advisories/new` 入口并写明表单不可用时的无细节求助方式；`?private=1` 仅在 localhost/127.0.0.1 生效，公开页不再被构造链接预勾选；私网判定补 `::ffff:7f00:1` 等 IPv4-mapped IPv6 与 `localtest.me` / `nip.io` 这类回环别名；`.gitignore` 增加 `*.pem` / `*.key` / `.env*` 等凭证模式。
-- **Docs honesty（P1-3/P0-4）**：README 中英把「17 个请求」改为「17 个逻辑探针，瞬时失败才重试，最坏 17×4 = 68 次 HTTP（`MAX_RETRIES` 可调）」；测试计数随新增回归更新为 383 passed / 7 skipped / 390 collected（0.5.9 发布说明中的 378 为该 tag 的历史值）。
+- **Docs honesty（P1-3/P0-4）**：README 中英把「17 个请求」改为「17 个逻辑探针，瞬时失败才重试，最坏 17×4 = 68 次 HTTP（`MAX_RETRIES` 可调）」；测试计数随新增回归更新为 386 passed / 7 skipped / 393 collected（0.5.9 发布说明中的 378 为该 tag 的历史值）。
 
 ## [0.5.9] - 2026-10-19
 

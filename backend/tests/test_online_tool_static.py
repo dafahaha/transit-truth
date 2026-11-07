@@ -111,3 +111,27 @@ def test_three_state_verdict_labels_present(js_text, page_text):
 def test_bilingual_disclosure_present(page_text):
     assert "Probabilistic auxiliary evidence" in page_text
     assert "概率性辅助证据" in page_text
+
+
+def test_zero_answer_is_not_suspicious(js_code):
+    # A failed/blocked capability probe must not count as a wrong answer:
+    # zero usable answers is insufficient evidence, not a negative verdict.
+    assert "answered" in js_code
+    assert "status === 200 && c.answer !== null" in js_code
+    assert "wrong.length === answered.length" in js_code
+    assert "fails === capResults.length" not in js_code
+
+
+def test_private_gate_not_armed_by_query_on_public_origin(js_code):
+    # ?private=1 must only pre-arm on a loopback origin; otherwise any shared
+    # link could make a visitor's browser probe their own intranet.
+    assert "loopbackOrigin" in js_code
+    assert re.search(
+        r"if \(loopbackOrigin && q\.get\('private'\) === '1'\) allowPrivate\.checked = true",
+        js_code,
+    )
+
+
+def test_ipv4_mapped_ipv6_counts_as_private(js_text):
+    assert "::ffff:" in js_text
+    assert "isPrivateV4" in js_text
