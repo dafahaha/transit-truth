@@ -374,6 +374,19 @@
             };
         }
 
+        function parseEvidence(body) {
+            const m = String(body).match(/```json\s*([\s\S]*?)```/i);
+            if (!m) return null;
+            try {
+                const data = JSON.parse(m[1]);
+                if (!data || typeof data !== 'object' || Array.isArray(data)) return null;
+                if (!data.audit_id && !data.checks) return null;
+                return data;
+            } catch {
+                return null;
+            }
+        }
+
         function parseIssue(issue) {
             try {
                 const body = issue.body || '';
@@ -421,6 +434,7 @@
                     verified: isVerified,
                     issue_url: issue.html_url,
                     issue_number: issue.number,
+                    evidence: parseEvidence(body),
                 };
             } catch {
                 return null;

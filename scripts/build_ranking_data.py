@@ -59,6 +59,15 @@ def fetch_issues(token: str | None, pages: int = 10) -> list[dict]:
         items.extend(batch)
         if len(batch) < 100:
             break
+    if len(items) >= pages * 100:
+        # The cap is deliberate, but a silent drop is not acceptable: a board
+        # that quietly loses its oldest submissions is worse than one that says
+        # it is truncated.
+        print(
+            f"::warning::read {len(items)} issues; the {pages}-page ceiling was "
+            "reached, so older submissions may be missing",
+            file=sys.stderr,
+        )
     return items
 
 

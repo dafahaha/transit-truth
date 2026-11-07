@@ -23,7 +23,9 @@ permissions:
 
 concurrency:
   group: ranking-data
-  cancel-in-progress: true
+  # Do not cancel an in-flight submission: the cancelled run never reaches the
+  # comment step, so that submitter would get no feedback at all. Queue instead.
+  cancel-in-progress: false
 
 jobs:
   build:
@@ -42,10 +44,12 @@ jobs:
         with:
           python-version: "3.11"
       - name: Rebuild snapshot
+        id: rebuild
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python scripts/build_ranking_data.py
       - name: Commit if changed
+        id: publish
         run: |
           if git diff --quiet -- docs/data/audit_results.json; then
             echo "no change"
@@ -64,30 +68,44 @@ jobs:
       # a submitter could not tell a successful parse from a silent drop.
       # One durable comment, rewritten in place, closes that loop.
       - name: Tell the submitter what happened
-        if: github.event_name == 'issues'
+        if: always() && github.event_name == 'issues'
         uses: actions/github-script@v7
+        env:
+          REBUILD_OUTCOME: ${{ steps.rebuild.outcome }}
+          PUBLISH_OUTCOME: ${{ steps.publish.outcome }}
         with:
           script: |
             const fs = require('fs');
             const marker = '<!-- tt-ranking-bot -->';
             const number = context.payload.issue.number;
             // The entry text comes from a user-controlled issue body. Escape
-            // Markdown punctuation and break @-mentions so a relay name can
-            // neither inject formatting nor ping a real account.
+            // Markdown punctuation, flatten newlines and break @-mentions so a
+            // relay name can neither inject formatting nor ping a real account.
             const safe = (value) => String(value ?? '')
               .slice(0, 80)
+              .replace(/\r?\n/g, ' ')
               .replace(/[\\`*_{}[\]()#+\-.!|<>]/g, '\\$&')
               .replace(/@/g, '@\u200b');
             const data = JSON.parse(
               fs.readFileSync('docs/data/audit_results.json', 'utf8')
             );
             const entry = (data.entries || []).find(e => e.issue_number === number);
+            const rebuildOk = process.env.REBUILD_OUTCOME === 'success';
+            const publishOk = process.env.PUBLISH_OUTCOME === 'success';
 
             let body;
-            if (entry) {
+            if (!rebuildOk) {
+              body = `${marker}
+            这次**解析没有跑完**（脚本报错，通常是 GitHub API 限流或网络问题）。
+            你的提交没有丢；维护者会重跑，或你编辑一次本 Issue 也能触发重试。`;
+            } else if (entry && publishOk) {
               body = `${marker}
             已收录到公开榜单：**${safe(entry.relay)} / ${safe(entry.model)}**，总分 **${safe(entry.overall_score)}**（${safe(entry.trust_level)}）。
             快照会在 1–2 分钟内刷新；页面不签发 pass，判定边界以报告为准。`;
+            } else if (entry && !publishOk) {
+              body = `${marker}
+            已解析成功，但公开快照这次**没有发布成功**（可能是推送冲突或网络失败）。
+            你的提交没有丢；维护者会重跑 workflow，或你编辑一次本 Issue 也能触发重试。`;
             } else {
               body = `${marker}
             这条提交**没有进入榜单**：必填字段缺失，或分数/延迟等字段无法解析。

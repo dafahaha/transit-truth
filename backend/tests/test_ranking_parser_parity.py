@@ -56,6 +56,8 @@ CASES = [
     "---\nrelay: [e.g. Example Relay]\noverall_score: 78\n---\n",
     # Both aliases present: label priority must be identical on both sides.
     "中转站: x\n总分: 78\n平均延迟: 1500ms\nAverage latency (ms): 2000",
+    # Evidence block is archived by both sides; an empty skeleton is not.
+    '中转站: x\n总分: 78\n```json\n{"checks": [{"score": 78}]}\n```',
 ]
 
 FIELDS = (
@@ -72,6 +74,7 @@ FIELDS = (
     "submitter",
     "verified",
     "issue_number",
+    "evidence",
 )
 
 
@@ -136,7 +139,7 @@ def _js_results() -> list[dict | None]:
         "    audit_mode: e.audit_mode || '', base_url: e.base_url,\n"
         "    trust_level: e.trust_level, contributor: e.contributor,\n"
         "    tested_at: e.tested_at, submitter: e.submitter, verified: e.verified,\n"
-        "    issue_number: e.issue_number};\n"
+        "    issue_number: e.issue_number, evidence: e.evidence};\n"
         "  return r;\n"
         "});\n"
         "console.log(JSON.stringify(out));\n"
@@ -169,6 +172,7 @@ def test_python_parser_agrees_with_browser_fallback_on_every_case():
         "submitter": "dafahaha",
         "verified": False,
         "issue_number": 1,
+        "evidence": None,
     }
     assert py[0] == expected, py[0]
     assert js[0] == expected, js[0]
