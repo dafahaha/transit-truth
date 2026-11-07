@@ -147,6 +147,14 @@ def parse_evidence(body: str) -> dict | None:
 def parse_issue(issue: dict) -> dict | None:
     body = issue.get("body") or ""
     fm = front_matter(body)
+    if fm is not None:
+        # Front matter is parsed from arbitrary YAML, so it has no schema
+        # enforcing a usable relay. The Markdown branch already refuses an
+        # empty name; the front-matter branch must not fall back to
+        # "unknown" or publish a template placeholder as a relay.
+        relay_raw = str(fm.get("relay") or "")
+        if not relay_raw or is_placeholder(relay_raw):
+            return None
     if fm is None:
         relay = md_field(
             body, ["中转站名称", "中转站", "Relay", "Name", "Relay Service"]
@@ -191,7 +199,7 @@ def parse_issue(issue: dict) -> dict | None:
         if not raw or raw.upper() == "N/A" or is_placeholder(raw):
             return None
         m = re.fullmatch(
-            r"\s*(-?\d+(?:\.\d+)?)(?:\s*/\s*100)?\s*(?:ms|%)?\s*", raw, re.I
+            r"\s*(-?[0-9]+(?:\.[0-9]+)?)(?:\s*/\s*100)?\s*(?:ms|%)?\s*", raw, re.I
         )
         return float(m.group(1)) if m else None
 

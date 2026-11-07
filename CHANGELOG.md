@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Security（P1-2/P2-4/P2-5/P2-6）**：仓库已开启 GitHub 私有漏洞报告，`SECURITY.md` 只保留真实可达的 `/security/advisories/new` 入口并写明表单不可用时的无细节求助方式；`?private=1` 仅在 localhost/127.0.0.1 生效，公开页不再被构造链接预勾选；私网判定补 `::ffff:7f00:1` 等 IPv4-mapped IPv6 与 `localtest.me` / `nip.io` 这类回环别名；`.gitignore` 增加 `*.pem` / `*.key` / `.env*` 等凭证模式。
 - **Docs honesty（P1-3/P0-4）**：README 中英把「17 个请求」改为「17 个逻辑探针，瞬时失败才重试，最坏 17×4 = 68 次 HTTP（`MAX_RETRIES` 可调）」；测试计数随新增回归更新为 395 passed / 7 skipped / 402 collected（0.5.9 发布说明中的 378 为该 tag 的历史值）。
 
+- **P1-1 追加（自测发现）**：前端 front-matter 分支的 `Number.parseFloat` 会接受 `78abc`，Python 会拒绝；改为共用 `parseNumber` 的整串匹配。Python 的 `\d` 会接受全角数字（`７８`），JS 不接受；改为 `[0-9]`。front-matter 缺 `relay` 或仍是 `[e.g. Example Relay]` 时两端都拒绝，不再回落成 `unknown`。parity 用例扩到 21 组，并新增 `tested_at` / `submitter` / `verified` 字段比对。`\n
 ## [0.5.9] - 2026-10-19
 
 ### 发行侧独立审查收尾（测试计数最终为 378 passed / 7 skipped / 385 collected）

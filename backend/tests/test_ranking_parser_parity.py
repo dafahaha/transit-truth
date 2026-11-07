@@ -39,6 +39,20 @@ CASES = [
     "---\nrelay: front\noverall_score: 60\n---\n",
     "---\nrelay: front\noverall_score: 990\n---\n",
     "---\nrelay: front\n---\n",
+    # Unicode digits are digits to Python's regex/int() and not to JavaScript;
+    # accepting them on one side only makes the page disagree with the snapshot.
+    "中转站: x\n总分: ７８",
+    "中转站: x\n总分: 78abc",
+    "中转站: x\n总分: +78",
+    "中转站: x\n总分: 0078",
+    "中转站: x\n总分: 78 / 100",
+    "中转站: x\n总分: `78`",
+    "---\nrelay: front\noverall_score: 78abc\n---\n",
+    "---\nrelay: front\noverall_score: 78.5extra\n---\n",
+    "---\nrelay: front\noverall_score: 78 %\n---\n",
+    "---\nrelay: front\noverall_score: 78 / 100\n---\n",
+    "---\noverall_score: 78\n---\n",
+    "---\nrelay: [e.g. Example Relay]\noverall_score: 78\n---\n",
 ]
 
 FIELDS = (

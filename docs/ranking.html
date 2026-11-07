@@ -387,7 +387,7 @@
                             fm[key.trim()] = stripField(valueParts.join(':').trim());
                         }
                     });
-                    if (isPlaceholder(fm.relay) || isPlaceholder(fm.overall_score)) fm = null;
+                    if (!fm.relay || isPlaceholder(fm.relay) || isPlaceholder(fm.overall_score)) fm = null;
                 } else {
                     fm = parseMarkdownMeta(body);
                 }
@@ -395,7 +395,9 @@
 
                 // Front matter has no schema of its own; the same 0-100 and
                 // "no invented zero" rules apply before it reaches the table.
-                const score = Number.parseFloat(String(fm.overall_score).replace(/\s*\/\s*100$/, ''));
+                // parseNumber (not parseFloat) so "78abc" cannot slip through
+                // while the Python parser rejects it.
+                const score = parseNumber(fm.overall_score);
                 if (!Number.isFinite(score) || score < 0 || score > 100) return null;
 
                 const isVerified = (issue.labels || []).some(l => (l.name || '').toLowerCase() === 'verified');
@@ -411,7 +413,7 @@
                     avg_latency_ms: parseNumber(fm.avg_latency_ms),
                     contributor: fm.contributor || '',
                     submitter: fm.submitter || (issue.user && issue.user.login) || '',
-                    tested_at: fm.tested_at || '',
+                    tested_at: fm.tested_at || issue.created_at || '',
                     verified: isVerified,
                     issue_url: issue.html_url,
                     issue_number: issue.number,
