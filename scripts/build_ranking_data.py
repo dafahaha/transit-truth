@@ -96,13 +96,13 @@ def parse_issue(issue: dict) -> dict | None:
         }
 
     def num(key: str) -> float | None:
+        # Submissions write things like "78/100" or "55.7"; take the leading
+        # number rather than feeding the whole string to float().
         raw = str(fm.get(key, "")).strip()  # type: ignore[union-attr]
         if not raw or raw.upper() == "N/A":
             return None
-        try:
-            return float(raw)
-        except ValueError:
-            return None
+        m = re.search(r"-?\d+(?:\.\d+)?", raw)
+        return float(m.group(0)) if m else None
 
     labels = [str(l.get("name", "")).lower() for l in issue.get("labels") or []]
     return {
