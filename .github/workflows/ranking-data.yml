@@ -109,7 +109,7 @@ jobs:
               data = { entries: [] };
             }
             let entry;
-            if (snapshotOk && !Array.isArray(data.entries)) {
+            if (snapshotOk && !(data && Array.isArray(data.entries))) {
               // A hand-edited/corrupt snapshot must not crash `.find` and take
               // the submitter's only feedback down with it.
               core.warning('snapshot entries is not an array');
