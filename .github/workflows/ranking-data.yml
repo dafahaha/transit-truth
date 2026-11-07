@@ -27,6 +27,13 @@ concurrency:
 
 jobs:
   build:
+    # Bug reports and feature requests also fire issues events; parsing them
+    # costs a run and writes nothing. Only audit submissions get this far.
+    if: >
+      github.event_name != 'issues' ||
+      contains(github.event.issue.labels.*.name, 'audit-result') ||
+      startsWith(toLower(github.event.issue.title), '[audit-result]') ||
+      startsWith(toLower(github.event.issue.title), '[audit]')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

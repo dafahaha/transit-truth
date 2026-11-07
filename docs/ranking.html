@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>TransitTruth - 中转站公开排行榜</title>
-    <meta name="description" content="社区驱动的 AI API 中转站信任度排名：每条结果来自一次公开审计，报告可查、可复现。">
+    <meta name="description" content="社区驱动的 AI API 中转站信任度排名：每条结果来自一次公开审计，并链接到提交它的 Issue。">
     <meta property="og:type" content="website">
     <meta property="og:title" content="TransitTruth - 中转站公开排行榜">
     <meta property="og:description" content="你付了 gpt-4o 的钱，后端真的是它吗？看别人的实测结果，或提交你自己的。">
@@ -153,7 +153,7 @@
     <header>
         <div class="container">
             <h1>🛡️ TransitTruth 中转站公开排行榜</h1>
-            <p>社区驱动的 AI API 中转站信任度排名 · 数据公开可复现</p>
+            <p>社区驱动的 AI API 中转站信任度排名 · 数据公开可查</p>
         </div>
     </header>
 
@@ -204,7 +204,7 @@
         </div>
 
         <div class="note">
-            💡 <strong>数据说明</strong>：排行榜数据来自社区用户通过 GitHub Issues 贡献的审计结果。所有数据公开可查、可复现。建议结合自身需求进行审计验证。本排行榜仅供参考，不构成对任何服务的最终评价。
+            💡 <strong>数据说明</strong>：排行榜数据来自社区用户通过 GitHub Issues 贡献的审计结果。每条记录都链接到提交它的 Issue，原始证据可在那里查到。分数取自报告里的 overall_score，不由子项重新平均。建议结合自身需求进行审计验证。本排行榜仅供参考，不构成对任何服务的最终评价。
             <p id="dataFreshness" style="margin:10px 0 0;font-size:13px;color:#6e6e73;">数据快照：加载中…</p>
         </div>
     </div>
@@ -278,8 +278,8 @@
                     if (snapshotAt) {
                         const d = new Date(snapshotAt);
                         fresh.textContent = isNaN(d.getTime())
-                            ? '数据快照：' + snapshotAt + '（GitHub Action 每日 08:15 北京时间刷新）'
-                            : '数据快照：' + d.toLocaleString() + '（GitHub Action 每日 08:15 北京时间刷新）';
+                            ? '数据快照：' + snapshotAt + '（新提交合并后自动刷新，每日 08:15 北京时间兜底）'
+                            : '数据快照：' + d.toLocaleString() + '（新提交合并后自动刷新，每日 08:15 北京时间兜底）';
                     } else {
                         fresh.textContent = '数据来源：实时读取 GitHub Issues（本次未命中静态快照）。';
                     }
@@ -307,34 +307,70 @@
         }
 
         // Older submissions (and hand-written issues) carry no YAML front
-        // matter, so read the fields out of the body. Field names and the
-        // comment stripping mirror scripts/build_ranking_data.py, otherwise a
-        // submission would parse differently in CI and in this fallback.
+        // matter, so read the fields out of the body. This must agree with
+        // scripts/build_ranking_data.py field for field: CI writes the
+        // snapshot, this page is only the fallback, and a body that parses
+        // one way in CI and another way here makes the board contradict
+        // itself.
+        /* PARSER-BLOCK-START */
+        const escapeRe = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+        const stripField = (raw) => {
+            const value = String(raw)
+                .replace(/<!--[\s\S]*?-->/g, '')
+                .replace(/\u200b/g, '')
+                .trim()
+                .replace(/^`|`$/g, '')
+                .trim();
+            // An unclosed comment must fail closed: otherwise the hint text
+            // inside it ("0-100") is read as the value.
+            return value.includes('<!--') ? '' : value;
+        };
+
+        const isPlaceholder = (raw) => {
+            const text = String(raw || '').trim();
+            if (!text) return false;
+            if (text.startsWith('[') && text.endsWith(']')) return true;
+            return /e\.g\.|例如|example/i.test(text);
+        };
+
+        const parseNumber = (raw) => {
+            const text = stripField(raw);
+            if (!text || text.toUpperCase() === 'N/A' || isPlaceholder(text)) return null;
+            const m = text.match(/(?:\s*)(-?\d+(?:\.\d+)?)(?:\s*\/\s*100)?\s*(?:ms|%)?\s*/i);
+            if (!m || m[0].trim() !== text.trim()) return null;
+            return parseFloat(m[1]);
+        };
+
+        const readField = (body, labels) => {
+            for (const label of labels) {
+                const re = new RegExp(
+                    '^\\s*(?:[-*]\\s*)?(?:\\*\\*)?\\s*' + escapeRe(label) +
+                    '\\s*(?:\\*\\*)?\\s*[:：]\\s*(.+)$', 'im'
+                );
+                const m = body.match(re);
+                const v = m ? stripField(m[1]) : '';
+                if (v && !isPlaceholder(v)) return v;
+            }
+            return '';
+        };
+
         function parseMarkdownMeta(body) {
-            const strip = (v) => v.replace(/<!--[\s\S]*?-->/g, '').replace(/\u200b/g, '').trim().replace(/^`|`$/g, '').trim();
-            const get = (labels) => {
-                for (const label of labels) {
-                    const re = new RegExp('^\\s*(?:[-*]\\s*)?(?:\\*\\*)?\\s*' + label + '\\s*(?:\\*\\*)?\\s*[:：]\\s*(.+)$', 'm');
-                    const m = body.match(re);
-                    const v = m ? strip(m[1]) : '';
-                    if (v) return v;
-                }
-                return '';
-            };
-            const relay = get(['中转站名称', '中转站', 'Relay', 'Name', 'Relay Service']);
+            const relay = readField(body, ['中转站名称', '中转站', 'Relay', 'Name', 'Relay Service']);
             if (!relay) return null;
-            const score = parseFloat(get(['信任分', '总分', 'Trust score', 'Overall score', 'Score']));
-            if (isNaN(score) || score < 0 || score > 100) return null;
+            const score = parseNumber(readField(body, ['信任分', '总分', 'Trust score', 'Overall score', 'Score']));
+            if (score === null || score < 0 || score > 100) return null;
             return {
                 relay,
-                base_url: get(['Base URL']) || '',
-                model: get(['模型名称', '模型', 'Model']) || 'unknown',
+                base_url: readField(body, ['Base URL']) || '',
+                model: readField(body, ['模型名称', '模型', 'Model', 'Model audited']) || 'unknown',
                 overall_score: score,
-                trust_level: (get(['信任等级', 'Trust level']) || 'unknown').toLowerCase(),
-                token_inflation_pct: get(['Token 膨胀率', 'Token 差异率', 'Token inflation']) || null,
-                avg_latency_ms: get(['平均延迟 (ms)', '平均延迟', 'Average latency (ms)', 'Average latency']) || null,
-                contributor: get(['GitHub 用户名', '贡献者', 'Contributor']),
-                tested_at: get(['审计时间', 'Tested at', 'Date']) || '',
+                trust_level: (readField(body, ['信任等级', 'Trust level']) || 'unknown').toLowerCase(),
+                audit_mode: (readField(body, ['审计模式', 'Audit mode']) || 'unknown').toLowerCase(),
+                token_inflation_pct: parseNumber(readField(body, ['Token 膨胀率', 'Token 差异率', 'Token inflation'])),
+                avg_latency_ms: parseNumber(readField(body, ['平均延迟 (ms)', '平均延迟', 'Average latency (ms)', 'Average latency'])),
+                contributor: readField(body, ['GitHub 用户名', '贡献者', 'Contributor', 'Submitted by']),
+                tested_at: readField(body, ['审计时间', 'Tested at', 'Date']) || '',
             };
         }
 
@@ -348,24 +384,31 @@
                     fmMatch[1].split('\n').forEach(line => {
                         const [key, ...valueParts] = line.split(':');
                         if (key && valueParts.length > 0) {
-                            fm[key.trim()] = valueParts.join(':').trim();
+                            fm[key.trim()] = stripField(valueParts.join(':').trim());
                         }
                     });
+                    if (isPlaceholder(fm.relay) || isPlaceholder(fm.overall_score)) fm = null;
                 } else {
                     fm = parseMarkdownMeta(body);
                 }
                 if (!fm) return null;
 
+                // Front matter has no schema of its own; the same 0-100 and
+                // "no invented zero" rules apply before it reaches the table.
+                const score = Number.parseFloat(String(fm.overall_score).replace(/\s*\/\s*100$/, ''));
+                if (!Number.isFinite(score) || score < 0 || score > 100) return null;
+
                 const isVerified = (issue.labels || []).some(l => (l.name || '').toLowerCase() === 'verified');
 
                 return {
-                    relay: fm.relay || 'unknown',
+                    relay: fm.relay,
                     base_url: fm.base_url || '',
                     model: fm.model || 'unknown',
-                    overall_score: parseFloat(fm.overall_score) || 0,
-                    trust_level: fm.trust_level || 'unknown',
-                    token_inflation_pct: fm.token_inflation_pct && fm.token_inflation_pct !== 'N/A' ? parseFloat(fm.token_inflation_pct) : null,
-                    avg_latency_ms: fm.avg_latency_ms && fm.avg_latency_ms !== 'N/A' ? parseFloat(fm.avg_latency_ms) : null,
+                    overall_score: score,
+                    trust_level: (fm.trust_level || 'unknown').toLowerCase(),
+                    audit_mode: (fm.audit_mode || 'unknown').toLowerCase(),
+                    token_inflation_pct: parseNumber(fm.token_inflation_pct),
+                    avg_latency_ms: parseNumber(fm.avg_latency_ms),
                     contributor: fm.contributor || '',
                     submitter: fm.submitter || (issue.user && issue.user.login) || '',
                     tested_at: fm.tested_at || '',
@@ -377,6 +420,8 @@
                 return null;
             }
         }
+
+        /* PARSER-BLOCK-END */
 
         function populateFilters() {
             const relaySelect = document.getElementById('filterRelay');
@@ -465,7 +510,9 @@
             html += '</tr></thead><tbody>';
 
             filtered.forEach((r, i) => {
-                const level = getScoreLevel(r.overall_score);
+                const level = ['high', 'medium', 'low', 'critical'].includes(r.trust_level)
+                    ? r.trust_level
+                    : getScoreLevel(r.overall_score);
                 html += `<tr>
                     <td>${i + 1}</td>
                     <td><strong>${escapeHtml(r.relay)}</strong></td>

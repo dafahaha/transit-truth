@@ -9,6 +9,8 @@ authors:
     affiliation: "Guangzhou University"
 repository-code: "https://github.com/dafahaha/transit-truth"
 url: "https://dafahaha.github.io/transit-truth/docs/online/index.html"
+version: "0.5.9"
+date-released: "2026-11-07"
 license: MIT
 keywords:
   - "LLM API relay"

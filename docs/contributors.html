@@ -234,7 +234,7 @@
                     const labelled = (issue.labels || []).some(
                         l => (l.name || '').toLowerCase() === 'audit-result'
                     );
-                    const titled = (issue.title || '').toLowerCase().startsWith('[audit-result]');
+                    const titled = (issue.title || '').toLowerCase().startsWith('[audit-result]') || (issue.title || '').toLowerCase().startsWith('[audit]');
                     if (!labelled && !titled) return;
 
                     const fm = {};

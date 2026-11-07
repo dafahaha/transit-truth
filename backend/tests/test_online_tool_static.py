@@ -7,7 +7,10 @@ patterns stay present. Runtime behavior is additionally exercised by the
 headless-Chrome self-documentation in docs/audit_round1_1022.md.
 """
 
+import json
 import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -116,10 +119,69 @@ def test_bilingual_disclosure_present(page_text):
 def test_zero_answer_is_not_suspicious(js_code):
     # A failed/blocked capability probe must not count as a wrong answer:
     # zero usable answers is insufficient evidence, not a negative verdict.
-    assert "answered" in js_code
-    assert "status === 200 && c.answer !== null" in js_code
-    assert "wrong.length === answered.length" in js_code
-    assert "fails === capResults.length" not in js_code
+    # Execution is asserted below; this guard only keeps the call site wired.
+    assert "capabilityVerdict(capResults)" in js_code
+    assert "showSuspicious" in js_code
+
+
+def test_verdict_is_a_behaviour_not_a_source_string():
+    """Feed synthetic capability results through the real decision function."""
+    node = shutil.which("node")
+    if node is None:
+        pytest.skip("node is not installed")
+
+    src = JS.read_text(encoding="utf-8")
+    start = src.index("/* VERDICT-BLOCK-START */")
+    end = src.index("/* VERDICT-BLOCK-END */")
+    block = src[start:end]
+
+    cases = {
+        "no_probe_results": [],
+        "all_transport_failures": [
+            {"status": 500, "answer": None, "passed": False},
+            {"status": 0, "answer": None, "passed": False},
+        ],
+        "empty_200_answers": [
+            {"status": 200, "answer": None, "passed": False},
+            {"status": 200, "answer": None, "passed": False},
+        ],
+        "answered_and_all_wrong": [
+            {"status": 200, "answer": "7", "passed": False},
+            {"status": 200, "answer": "heads", "passed": False},
+        ],
+        "one_wrong_one_right": [
+            {"status": 200, "answer": "7", "passed": False},
+            {"status": 200, "answer": "12", "passed": True},
+        ],
+        "one_right_one_empty": [
+            {"status": 200, "answer": "12", "passed": True},
+            {"status": 200, "answer": None, "passed": False},
+        ],
+    }
+    script = (
+        "const block = " + json.dumps(block) + ";\n"
+        "eval(block + '\\nglobalThis.__v = capabilityVerdict;');\n"
+        "const cases = " + json.dumps(cases) + ";\n"
+        "const out = {};\n"
+        "for (const [k, v] of Object.entries(cases)) out[k] = globalThis.__v(v);\n"
+        "console.log(JSON.stringify(out));\n"
+    )
+    proc = subprocess.run(
+        [node, "-e", script], capture_output=True, text=True, timeout=60
+    )
+    assert proc.returncode == 0, proc.stderr
+    got = json.loads(proc.stdout)
+
+    for key in ("no_probe_results", "all_transport_failures", "empty_200_answers"):
+        assert got[key]["answered"] == 0, (key, got[key])
+    assert got["no_probe_results"]["status"] == "insufficient_evidence"
+    assert got["all_transport_failures"]["status"] == "insufficient_evidence"
+    assert got["empty_200_answers"]["status"] == "insufficient_evidence"
+    assert got["answered_and_all_wrong"]["status"] == "suspicious"
+    assert got["answered_and_all_wrong"]["answered"] == 2
+    assert got["one_wrong_one_right"]["status"] == "insufficient_evidence"
+    assert got["one_right_one_empty"]["status"] == "insufficient_evidence"
+    assert got["one_right_one_empty"]["answered"] == 1
 
 
 def test_private_gate_not_armed_by_query_on_public_origin(js_code):

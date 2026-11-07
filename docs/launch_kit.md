@@ -24,7 +24,7 @@ Links to keep consistent:
 
 用中转站调 API 的时候，你付的是 `gpt-4o-mini` 的钱，怎么确定后端真的是 gpt-4o-mini，而不是更便宜的模型在套壳？公开研究里类似情况不少：一项 ACM CCS 2026 研究（arXiv:2603.01919）在 3 个代表性 shadow API × 8 种配置上测得 45.83%（11/24）端点过不了模型指纹；另一项恶意中介供应链攻击测量（arXiv:2604.08407《Your Agent Is Mine: Measuring Malicious Intermediary Attacks on the LLM Supply Chain》）在 428 个路由（28 付费 + 400 免费）中发现 9 起投毒、17 个触碰 AWS 金丝雀凭证、1 起 ETH 私钥 draining；另有据媒体转述的知道创宇《大模型中转站研究与测评报告（2026）》（原始报告链接待补，非一手权威）称 100 站、849 组合中 296 个（34.9%）命中至少一项模型真实性异常证据（涉 75 站，467 可疑 / 138 强证据）。但一直没有一个随手能跑的核验工具。
 
-所以我写了 TransitTruth：一个无状态 CLI，对着任意 OpenAI 兼容端点发一组有界探针（17 个请求；按公开低档定价估算一轮约 <$0.01，实际取决于模型档位与单价，代码不含计价逻辑），输出一份 JSON：
+所以我写了 TransitTruth：一个无状态 CLI，对着任意 OpenAI 兼容端点发一组有界探针（17 个逻辑探针；瞬时失败才重试，最坏 17×4=68 次 HTTP，`MAX_RETRIES` 可调；按公开低档定价估算一轮约 <$0.01，实际取决于模型档位与单价，代码不含计价逻辑），输出一份 JSON：
 
 - `pass`：观测指纹和参考一致
 - `suspicious`：差异显著（比如模型家族不对）
@@ -42,7 +42,7 @@ Links to keep consistent:
 pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.zip"
 ```
 
-MIT 协议，测试 386 passed / 7 skipped（7 skipped 为需真实 key 的 integration）。如果你拿常用的站跑了一遍，结果可以提交到公开榜单（`docs/ranking.html`），也可以在 Discussion 里贴（别贴 key）。
+MIT 协议，测试 395 passed / 7 skipped（7 skipped 为需真实 key 的 integration）。如果你拿常用的站跑了一遍，结果可以提交到公开榜单（`docs/ranking.html`），也可以在 Discussion 里贴（别贴 key）。
 
 **评论区置顶：**
 > FAQ 见 https://github.com/dafahaha/transit-truth/discussions/2 。suspicious 不等于实锤欺诈，只是值得去找 provider 要个说法。
@@ -67,7 +67,7 @@ repo：github.com/dafahaha/transit-truth；跑完可以把结果提交到公开�
 
 You pay a relay for `gpt-4o-mini`. How do you know that's what you got?
 
-I built TransitTruth: a stateless CLI that probes any OpenAI-compatible endpoint with a bounded battery (17 requests; at public low-tier list prices a full run estimates under $0.01; actual cost depends on model tier and per-token price, and the code contains no pricing logic) and returns one JSON verdict — `pass`, `suspicious`, or `insufficient_evidence`.
+I built TransitTruth: a stateless CLI that probes any OpenAI-compatible endpoint with a bounded battery (17 logical probes, retried only on transient failures — worst case 17×4 = 68 HTTP calls, tunable with MAX_RETRIES; at public low-tier list prices a full run estimates under $0.01, and the code contains no pricing logic) and returns one JSON verdict — `pass`, `suspicious`, or `insufficient_evidence`.
 
 It is deliberately honest about what it is NOT:
 
@@ -92,7 +92,7 @@ repo + demo links below. MIT.
 
 I got tired of the "am I actually getting the model I paid for?" problem with API relays, so I built a small CLI called TransitTruth.
 
-What it does: point it at any OpenAI-compatible endpoint with a claimed model. It sends a bounded battery of 17 requests (5 tokenizer probes using self-reported `usage.prompt_tokens` on a fixed prompt suite, plus 4 behavioral probes × 3 repeats — "pick a number 1–10", coin flips, that sort of distributional fingerprint), compares against a shipped reference catalog with chi-square / KS tests and a Bayesian posterior, and returns one JSON:
+What it does: point it at any OpenAI-compatible endpoint with a claimed model. It sends a bounded battery of 17 logical probes (5 tokenizer probes using self-reported `usage.prompt_tokens` on a fixed prompt suite, plus 4 behavioral probes × 3 repeats — "pick a number 1–10", coin flips, that sort of distributional fingerprint), compares against a shipped reference catalog with chi-square / KS tests and a Bayesian posterior, and returns one JSON:
 
 - `pass` — observed fingerprint statistically consistent with reference
 - `suspicious` — significant mismatch (e.g. wrong model family)
@@ -113,7 +113,7 @@ Install (PyPI is still pending, so this pulls the repo archive; verified in a cl
 pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.zip"
 ```
 
-MIT, 386 passed / 7 skipped (7 skipped = integration tests needing a real key). If you audit a relay you use, I set up a discussion thread to post results — please never paste keys.
+MIT, 395 passed / 7 skipped (7 skipped = integration tests needing a real key). If you audit a relay you use, I set up a discussion thread to post results — please never paste keys.
 
 ---
 
@@ -129,7 +129,7 @@ pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.z
 export TRANSIT_TRUTH_API_KEY=你的key
 transit-truth verify --base-url https://你的站/v1 --model gpt-4o-mini
 ```
-一次 17 个请求；按公开低档定价估算一轮约 <$0.01（实际取决于模型档位与单价，代码不含计价逻辑），输出 pass / suspicious / insufficient_evidence。
+17 个逻辑探针（瞬时失败才重试，最坏 17×4=68 次 HTTP）；按公开低档定价估算一轮约 <$0.01（实际取决于模型档位与单价，代码不含计价逻辑），输出 pass / suspicious / insufficient_evidence。
 
 对站长：这个工具不会搞事——suspicious 只是"证据值得复核对质"，不是定罪；报告里自带 disclaimer。欢迎把它当自我核验的基线：先自己跑一遍自家站，确认声称的模型都过得了，再给用户一个可自查的说法。
 

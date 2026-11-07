@@ -45,5 +45,5 @@ Licenses were verified against each project's canonical source.
 
 ## Baseline third-party runtime dependencies
 
-- FastAPI (MIT), httpx (BSD-3-Clause), SciPy (BSD-3-Clause), NumPy (BSD-3),
-  tiktoken (MIT), uvicorn (BSD-3-Clause). See `backend/requirements.txt`.
+- FastAPI (MIT), pydantic (MIT), httpx (BSD-3-Clause), SciPy (BSD-3-Clause),
+  NumPy (BSD-3), tiktoken (MIT), uvicorn (BSD-3-Clause). See `backend/requirements.txt`.

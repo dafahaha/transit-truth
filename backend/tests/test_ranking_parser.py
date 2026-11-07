@@ -127,6 +127,83 @@ def test_english_template_is_parsed():
     assert entry["trust_level"] == "high"
 
 
+def test_untouched_english_template_is_never_published():
+    """A submitter who leaves the examples in place must not create a row.
+
+    The old parser read ``[0-100, e.g. 55.7]`` by taking the first number in
+    the string and published relay="[e.g. Example Relay]" with score 0.0.
+    """
+    brd = _load()
+    template = (REPO_ROOT / ".github" / "ISSUE_TEMPLATE" / "audit_result.md").read_text(
+        encoding="utf-8"
+    )
+    assert brd.parse_issue(_issue(template)) is None
+
+
+def test_placeholder_values_are_missing_values():
+    brd = _load()
+    # Bracket examples are template text, not a relay name or a score.
+    assert brd.parse_issue(_issue("中转站: [e.g. Example Relay]\n总分: 78")) is None
+    assert brd.parse_issue(_issue("中转站: x\n总分: [0-100, e.g. 55.7]")) is None
+    # "N/A" stays a legitimate empty value for optional fields.
+    entry = brd.parse_issue(_issue("中转站: x\n总分: 78\nToken 膨胀率: N/A"))
+    assert entry is not None and entry["token_inflation_pct"] is None
+
+
+def test_numbers_are_whole_strings_not_first_digits():
+    brd = _load()
+    assert brd.parse_issue(_issue("中转站: x\n总分: about 78")) is None
+    assert brd.parse_issue(_issue("中转站: x\n总分: 78 out of 100")) is None
+    # The documented written forms still work, including units.
+    entry = brd.parse_issue(
+        _issue("中转站: x\n总分: 78/100\nToken 差异率: -17.2%\n平均延迟: 1571ms")
+    )
+    assert entry is not None
+    assert entry["overall_score"] == 78.0
+    assert entry["token_inflation_pct"] == -17.2
+    assert entry["avg_latency_ms"] == 1571.0
+
+
+def test_unclosed_comment_fails_closed():
+    brd = _load()
+    assert brd.parse_issue(_issue("中转站: x\n总分: <!-- 0-100")) is None
+
+
+def test_field_names_are_case_insensitive():
+    brd = _load()
+    entry = brd.parse_issue(_issue("- **name**: LowRelay\n- **overall score**: 60"))
+    assert entry is not None
+    assert entry["relay"] == "LowRelay"
+    assert entry["overall_score"] == 60.0
+
+
+def test_evidence_block_is_archived_not_dropped():
+    """The snapshot must carry the raw numbers, not just the scores.
+
+    Otherwise -17.2% exists only in the issue, and the repository cannot
+    reproduce it after the issue link dies.
+    """
+    brd = _load()
+    body = PLAIN + (
+        '\n```json\n{"audit_id": "a1", "checks": [{"name": "tokenizer", "score": 90}]}\n```\n'
+    )
+    entry = brd.parse_issue(_issue(body))
+    assert entry is not None
+    assert entry["evidence"]["audit_id"] == "a1"
+    assert entry["evidence"]["checks"][0]["score"] == 90
+
+
+def test_template_evidence_skeleton_is_not_archived():
+    """An untouched template carries an empty JSON skeleton; it is not data."""
+    brd = _load()
+    template = (
+        REPO_ROOT / ".github" / "ISSUE_TEMPLATE" / "audit_result.yml"
+    ).read_text(encoding="utf-8")
+    assert brd.parse_issue(_issue(template)) is None
+    entry = brd.parse_issue(_issue(PLAIN))
+    assert entry is not None and entry["evidence"] is None
+
+
 def test_score_must_be_in_range():
     brd = _load()
     assert brd.parse_issue(_issue("中转站: x\n信任分: 990")) is None

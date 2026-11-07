@@ -7,13 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### 第三轮独立审查修复
+
+- **P0-1 占位符不再变成 0 分（`scripts/build_ranking_data.py`）**：`num()` 从「在任意位置取第一个数字」改为整串匹配（接受 `78`、`78/100`、`-17.2%`、`1571ms`），`about 78`、`990`、`[0-100, e.g. 55.7]` 一律返回 `None`；`md_field` 对方括号占位符与含 `e.g.`/`例如` 的值判为未填写；`clean_value` 对未闭合注释 fail-closed；字段名加 `IGNORECASE`。英文模板原样提交、中文模板原样提交都不再产生假榜单项。
+- **P0-2 模板承诺与实现对齐（`.github/ISSUE_TEMPLATE/audit_result.yml`）**：删掉无法兑现的「格式不正确的提交将被自动关闭」，改为「字段缺失或无法解析的提交不会进入榜单，可在 Issue 下留言补全」；补上有限样本会随时间波动的免责说明。
+- **P1-1 双解析器行为一致（`docs/ranking.html` + 新测试）**：浏览器 fallback 改用与 Python 相同的整串数字匹配、占位符门、未闭合注释 fail-closed、字段名大小写不敏感、正则标签转义（`平均延迟 (ms)` 不再被吞）、front-matter 补 0–100 门并删除 `|| 0`；新增 `backend/tests/test_ranking_parser_parity.py`，对同一组 15 个 body 要求两端逐字段一致（无 node 时跳过）。
+- **P1-2/P1-3 数据血缘与文案**：解析器把提交里的 ```json 证据块存进 `entry.evidence`（空骨架不存），快照不再只有标量；榜单页把「所有数据公开可查、可复现」改为「每条记录链接到提交它的 Issue，原始证据可在那里查到」，并注明分数取自 `overall_score`、不由子项平均；快照文案改为「新提交合并后自动刷新，每日 08:15 北京时间兜底」。
+- **P1-5/P1-6 标题前缀与触发面**：workflow 改为 `toLower` + `startsWith('[audit-result]')`/`'[audit]'`，与 Python、contributors 页一致；`ranking-data.yml` 在 job 级跳过非审计 issue，bug/feature issue 不再触发解析。
+- **P1-7/P1-8/P1-9**：`docs/launch_kit.md` 五处「17 个请求」改为「17 个逻辑探针 / 最坏 68 次 HTTP」；`CITATION.cff` 补 `version: 0.5.9` 与 `date-released: 2026-11-07`；`THIRD_PARTY_NOTICES.md` 补 pydantic。
+- **P2-1/P2-3/P2-4/P2-5/P2-6/P2-11/P2-14**：`ci.yml` 加 `permissions: contents: read`；`?private=1` 的 loopback 判定补 `::1` / `[::1]`；徽章颜色优先按 `trust_level`；新增 `capabilityVerdict()` 纯函数并用 node 跑 6 种输入的行为断言，替代只看源码字符串的断言。
+- **测试计数**：395 passed / 7 skipped / 402 collected（+7 解析器回归、+1 双解析器一致性、+1 verdict 行为断言）。
 ### 第二轮独立审查修复（公开路径，不含版本号变更）
 
 - **Leaderboard parser（P0-2/P0-3）**：`scripts/build_ranking_data.py` 先剥 HTML 注释再取值（未改的表单提示 `<!-- 0-100 -->` 不再被当成 0 分），字段行支持 `- **总分**:`、`总分:` 与英文 `- **Overall score**:` 三种写法；relay/score/model 别名补齐 `Name`/`Overall score`/`Model`；总分必须落在 0–100，否则该条不入榜并在 Action 日志打 `::warning::`（不再静默丢弃）。Markdown 路径补读 `Token 差异率` 与 `平均延迟`。英文模板改为解析器可读的字段格式。新增 `backend/tests/test_ranking_parser.py`（5 条）。
 - **Online page verdict（P1-1）**：浏览器版把「没拿到任何回答」与「拿到回答且答错」分开：零回答显示证据不足，只有已获回答的能力题全错才给 `suspicious`，不再出现零证据下的负面结论。
 - **Ranking page（P1-4/P2-2/P2-3）**：浏览器 fallback 解析器与 Python 版对齐（同一批别名、剥注释、`verified` 大小写不敏感、0–100 门）；新增「模式」列与数据快照时间（读取 `generated_at`，注明 Action 每日 08:15 北京时间刷新）。
 - **Security（P1-2/P2-4/P2-5/P2-6）**：仓库已开启 GitHub 私有漏洞报告，`SECURITY.md` 只保留真实可达的 `/security/advisories/new` 入口并写明表单不可用时的无细节求助方式；`?private=1` 仅在 localhost/127.0.0.1 生效，公开页不再被构造链接预勾选；私网判定补 `::ffff:7f00:1` 等 IPv4-mapped IPv6 与 `localtest.me` / `nip.io` 这类回环别名；`.gitignore` 增加 `*.pem` / `*.key` / `.env*` 等凭证模式。
-- **Docs honesty（P1-3/P0-4）**：README 中英把「17 个请求」改为「17 个逻辑探针，瞬时失败才重试，最坏 17×4 = 68 次 HTTP（`MAX_RETRIES` 可调）」；测试计数随新增回归更新为 386 passed / 7 skipped / 393 collected（0.5.9 发布说明中的 378 为该 tag 的历史值）。
+- **Docs honesty（P1-3/P0-4）**：README 中英把「17 个请求」改为「17 个逻辑探针，瞬时失败才重试，最坏 17×4 = 68 次 HTTP（`MAX_RETRIES` 可调）」；测试计数随新增回归更新为 395 passed / 7 skipped / 402 collected（0.5.9 发布说明中的 378 为该 tag 的历史值）。
 
 ## [0.5.9] - 2026-10-19
 

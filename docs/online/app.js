@@ -265,12 +265,11 @@
       // Separate "no answer at all" from "answered and wrong". A throttled
       // or empty endpoint gives us zero evidence; rendering that as
       // "suspicious" would be the exact opposite of the fail-closed promise.
-      const answered = capResults.filter((c) => c.status === 200 && c.answer !== null);
-      const wrong = answered.filter((c) => !c.passed);
-      if (answered.length === 0) {
+      const verdict = capabilityVerdict(capResults);
+      if (verdict.answered === 0) {
         showInsufficient(evidence, '两个能力题都没有拿到可用回答（限流、空响应或非 JSON）：没有任何证据，本页不下结论。可稍后重试，或用本地 CLI 做完整核验。');
-      } else if (wrong.length === answered.length) {
-        showSuspicious(evidence, `已拿到回答的 ${answered.length} 个能力问题全部答错：表面能力异常（弱信号，必须用本地 CLI 行为指纹复核，本页不下最终结论）。`);
+      } else if (verdict.status === 'suspicious') {
+        showSuspicious(evidence, `已拿到回答的 ${verdict.answered} 个能力问题全部答错：表面能力异常（弱信号，必须用本地 CLI 行为指纹复核，本页不下最终结论）。`);
       } else {
         showInsufficient(evidence, '端点可达、协议基本正常；浏览器版无行为参考分布，证据不足以判定真伪（不会签发 pass）。');
       }
@@ -544,12 +543,30 @@
     run();
   });
 
+  /* VERDICT-BLOCK-START */
+  // Pure decision table so headless tests can assert input -> verdict instead
+  // of matching source strings that a refactor would silently invalidate.
+  function capabilityVerdict(capResults) {
+    const answered = (capResults || []).filter(
+      (c) => c.status === 200 && c.answer !== null
+    );
+    const wrong = answered.filter((c) => !c.passed);
+    if (answered.length === 0) {
+      return { status: 'insufficient_evidence', answered: 0, wrong: 0 };
+    }
+    if (wrong.length === answered.length) {
+      return { status: 'suspicious', answered: answered.length, wrong: wrong.length };
+    }
+    return { status: 'insufficient_evidence', answered: answered.length, wrong: wrong.length };
+  }
+  /* VERDICT-BLOCK-END */
   // Expose pure predicates only (never the key) for headless self-tests.
   window.TT = {
     isPrivateHost: isPrivateHost,
     parseAndValidate: parseAndValidate,
     candidateRoots: candidateRoots,
     normalizeAnswer: normalizeAnswer,
+    capabilityVerdict: capabilityVerdict,
   };
 
   // Read-only deep-link prefill (?url=, ?model=, ?auto=1). The API key is
@@ -564,7 +581,9 @@
     // Self-test only. A shared link must never pre-arm the private-host
     // gate: on a public origin ?private=1 would let a crafted URL make the
     // visitor's browser probe their own intranet.
-    const loopbackOrigin = location.hostname === 'localhost' || location.hostname === '127.0.0.1';
+    const host0 = location.hostname;
+    const loopbackOrigin = host0 === 'localhost' || host0 === '127.0.0.1' ||
+      host0 === '::1' || host0 === '[::1]';
     if (loopbackOrigin && q.get('private') === '1') allowPrivate.checked = true;
     // Local-only key injection for headless self-test / screenshots. On any
     // non-loopback origin (including the published Pages site) the ?key=

@@ -69,6 +69,22 @@ def front_matter(body: str) -> dict[str, str] | None:
 
 
 COMMENT_RE = re.compile(r"<!--.*?-->", re.S)
+PLACEHOLDER_RE = re.compile(r"(?:e\.g\.|例如|example)", re.I)
+
+
+def is_placeholder(raw: str) -> bool:
+    """True when the value is still the template's example text.
+
+    A submitter who does not delete `[e.g. Example Relay]` or
+    `[0-100, e.g. 55.7]` must not be ranked: the literal is not a name, and
+    the first number in that hint is 0.
+    """
+    text = raw.strip()
+    if not text:
+        return False
+    if text.startswith("[") and text.endswith("]"):
+        return True
+    return bool(PLACEHOLDER_RE.search(text))
 
 
 def clean_value(raw: str) -> str:
@@ -77,8 +93,12 @@ def clean_value(raw: str) -> str:
     GitHub renders `<!-- ... -->` as nothing, but it is still in the issue
     body. A submitter who leaves a hint untouched would otherwise have the
     hint parsed as the value: the score hint "0-100, e.g. 55.7" yields 0.
+    An unclosed comment is the same failure with no closing tag, so it fails
+    closed instead of leaking the digits inside the hint.
     """
     value = COMMENT_RE.sub("", raw)
+    if "<!--" in value:
+        return ""
     return value.replace("\u200b", "").strip().strip("`").strip()
 
 
@@ -87,15 +107,41 @@ def md_field(body: str, names: list[str]) -> str:
 
     Issuers write both `- **总分**: 78` (forms) and `信任分: 78/100` (hand
     written). Both must parse; the bold markers and the bullet are optional.
+    Values still holding the template example are treated as missing.
     """
     for name in names:
-        pattern = rf"(?m)^\s*(?:[-*]\s*)?(?:\*\*)?\s*{re.escape(name)}\s*(?:\*\*)?\s*[:：]\s*(.+)$"
+        pattern = (
+            rf"(?im)^\s*(?:[-*]\s*)?(?:\*\*)?\s*{re.escape(name)}"
+            rf"\s*(?:\*\*)?\s*[:：]\s*(.+)$"
+        )
         m = re.search(pattern, body)
         if m:
             value = clean_value(m.group(1))
-            if value:
+            if value and not is_placeholder(value):
                 return value
     return ""
+
+
+def parse_evidence(body: str) -> dict | None:
+    """Keep the ``json`` block a submission is asked to paste.
+
+    The snapshot used to store only scalars, so the headline numbers existed
+    nowhere in the repository once the issue link died. The template already
+    requires the block; archive it when it carries real content, and ignore
+    the empty skeleton that ships in the template.
+    """
+    m = re.search(r"```json\s*([\s\S]*?)```", body, re.I)
+    if not m:
+        return None
+    try:
+        data = json.loads(m.group(1))
+    except (json.JSONDecodeError, ValueError):
+        return None
+    if not isinstance(data, dict):
+        return None
+    if not data.get("audit_id") and not data.get("checks"):
+        return None
+    return data
 
 
 def parse_issue(issue: dict) -> dict | None:
@@ -137,13 +183,17 @@ def parse_issue(issue: dict) -> dict | None:
         }
 
     def num(key: str) -> float | None:
-        # Submissions write things like "78/100" or "55.7"; take the leading
-        # number rather than feeding the whole string to float().
+        # Submissions write things like "78/100", "55.7", "1571ms" or
+        # "-17.2%". Accept those exact shapes only: "about 78", "abc 42 def"
+        # and template hints like "[0-100, e.g. 55.7]" must not produce a
+        # number, or a half-filled form becomes a real 0 on the board.
         raw = clean_value(str(fm.get(key, "")))  # type: ignore[union-attr]
-        if not raw or raw.upper() == "N/A":
+        if not raw or raw.upper() == "N/A" or is_placeholder(raw):
             return None
-        m = re.search(r"-?\d+(?:\.\d+)?", raw)
-        return float(m.group(0)) if m else None
+        m = re.fullmatch(
+            r"\s*(-?\d+(?:\.\d+)?)(?:\s*/\s*100)?\s*(?:ms|%)?\s*", raw, re.I
+        )
+        return float(m.group(1)) if m else None
 
     score = num("overall_score")
     if score is None or not 0.0 <= score <= 100.0:
@@ -168,6 +218,7 @@ def parse_issue(issue: dict) -> dict | None:
         "verified": "verified" in labels,
         "issue_url": issue.get("html_url", ""),
         "issue_number": issue.get("number", 0),
+        "evidence": parse_evidence(body),
     }
 
 
