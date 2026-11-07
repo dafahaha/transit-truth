@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-11-07T07:05:20Z",
+  "generated_at": "2026-11-07T07:10:14Z",
   "repo": "dafahaha/transit-truth",
   "count": 1,
   "entries": [
@@ -7,7 +7,7 @@
       "relay": "wolfai",
       "base_url": "https://wolfai.top/v1",
       "model": "gpt-4o",
-      "overall_score": 0.0,
+      "overall_score": 78.0,
       "trust_level": "medium",
       "audit_mode": "quick",
       "token_inflation_pct": null,
