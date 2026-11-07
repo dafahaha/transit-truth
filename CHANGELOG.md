@@ -60,7 +60,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **P2-4 评论 API 失败不再让最后一步变红（`ranking-data.yml`）**：`listComments` / `updateComment` / `createComment` 整段包 `try/catch`，403/422/限流等情况只打 `core.error`，不再把唯一的反馈步骤变成红色失败。
 - **P2-1 非数组快照不再崩 `.find`**：评论脚本先判 `data && Array.isArray(data.entries)`；对象、字符串、`null` 等结构异常按「没有读到公开快照」处理，不再抛 `find is not a function` 或读 `null.entries`。
 - **P2-3 文案拆开 rebuild 失败与快照损坏**：`!rebuildOk` 说「没有跑完」，`!snapshotOk` 说「没有读到公开快照（文件缺失/JSON 损坏/结构异常）」，不再把 rebuild 成功但快照坏了说成没跑完。
-- **P2-2 超时不再吃掉评论**：`Rebuild snapshot` 加 `timeout-minutes: 10`，`Commit if changed` 加 `timeout-minutes: 5`，job 上限放宽到 20 分钟；超时只杀掉该步，`if: always()` 的评论步仍有时间执行。没有用 `continue-on-error`，失败仍会让 run 变红，不被伪装成绿色。
+- **P2-2 超时不再吃掉评论**：`Rebuild snapshot` 加 `timeout-minutes: 10`，`Commit if changed` 加 `timeout-minutes: 5`，评论步加 3 分钟，job 上限放宽到 20 分钟；10+5+3 仍留有余量，任一步超时只杀掉该步，`if: always()` 的评论步仍有时间执行。没有用 `continue-on-error`，失败仍会让 run 变红，不被伪装成绿色。
 - **安装口径**：README 中英补「复现 400 passed 必须在源码树跑 `pytest backend/tests/`，`pip install` 不带测试套件」。
 - **未改**：main 与 v0.5.9 wheel 仍共用 `__version__ = "0.5.9"`；本轮判定为发版流程卫生问题，等下一次真正发版时一并切版本号，避免现在改版本号却发不出去。
 - **测试计数**：仍为 400 passed / 7 skipped / 407 collected（本轮只改 workflow/文档，未新增 Python 测试）。
