@@ -52,6 +52,7 @@ CASES = [
     "---\nrelay: front\noverall_score: 78 %\n---\n",
     "---\nrelay: front\noverall_score: 78 / 100\n---\n",
     "---\noverall_score: 78\n---\n",
+    "---\nrelay: front\noverall_score: 78\nsubmitter: someone-else\n---\n",
     "---\nrelay: [e.g. Example Relay]\noverall_score: 78\n---\n",
 ]
 

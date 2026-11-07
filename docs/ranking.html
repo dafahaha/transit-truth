@@ -412,7 +412,10 @@
                     token_inflation_pct: parseNumber(fm.token_inflation_pct),
                     avg_latency_ms: parseNumber(fm.avg_latency_ms),
                     contributor: fm.contributor || '',
-                    submitter: fm.submitter || (issue.user && issue.user.login) || '',
+                    // `submitter` is the GitHub account that opened the issue,
+                    // never a string the body can set; otherwise anyone can
+                    // attribute a result to someone else.
+                    submitter: (issue.user && issue.user.login) || '',
                     tested_at: fm.tested_at || issue.created_at || '',
                     verified: isVerified,
                     issue_url: issue.html_url,
