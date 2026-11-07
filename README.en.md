@@ -49,6 +49,11 @@ pip install https://github.com/dafahaha/transit-truth/releases/download/v0.5.9/t
 transit-truth --help   # should list 8 subcommands
 ```
 
+**Version caveat**: that wheel was built from tag `v0.5.9` (`e8558a1`), more than
+18 commits behind `main`; the fixes and the 400-passed count described in this
+README are not in it. Use the archive below to install current source; use the
+wheel only when you want to reproduce the release build.
+
 If the release download is blocked, fall back to the repo archive:
 
 ```text
