@@ -47,6 +47,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **P2-6 抓取上限不再静默**：`fetch_issues` 读满 10 页（1000 条）时向 stderr 打 `::warning::`，明确说明更旧的提交可能未入榜。
 - **N1 评论正文压平换行**：`safe()` 先把 `\r?\n` 换成空格，再做 Markdown 转义，避免多行 relay 名把评论排版拆开。
 
+### 第五轮独立审查修复（2026-11-08）
+
+- **P1-1 checkout 失败也能收到回复（`ranking-data.yml`）**：评论脚本读取快照改为 `try/catch`；文件缺失或 JSON 损坏时打 `::warning::` 并继续发「这次没有跑完，提交没丢」的评论，不再因 `ENOENT` 直接变红、零反馈。
+- **P2-1 队列不再被单个 run 拖住六小时**：`build` job 加 `timeout-minutes: 15`。正常路径不到两分钟，网络挂起时 15 分钟即释放队列。
+- **P2-3 榜单冷启动文案**：公开条目少于 3 条时，表格上方显示「榜单刚起步」说明，避免陌生人把空榜误读成项目无人使用。
+- **证据空骨架双端拒绝**：`parseEvidence` 与 Python 一样拒绝 `{"checks":[]}` / `{"checks":{}}`；parity 新增该用例（31 组），并给证据块与空骨架各加一条手写期望值，避免两端同步出错还互相证明。
+- **测试计数**：仍为 400 passed / 7 skipped / 407 collected（新增断言落在同一条 parity 测试内）。
+
 ## [0.5.9] - 2026-10-19
 
 ### 发行侧独立审查收尾（测试计数最终为 378 passed / 7 skipped / 385 collected）

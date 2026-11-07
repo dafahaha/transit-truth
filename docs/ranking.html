@@ -529,7 +529,11 @@
                 return;
             }
 
-            let html = '<table><thead><tr>';
+            let html = '';
+            if (allEntries.length < 3) {
+                html += `<div class="note" style="margin-bottom:14px;">榜单刚起步：目前只有 ${allEntries.length} 条公开审计。第一条真实提交比任何宣传都更能说明这个工具值得用。</div>`;
+            }
+            html += '<table><thead><tr>';
             html += '<th>#</th><th>中转站</th><th>模型</th><th>模式</th><th>信任分</th><th>状态</th><th>Token膨胀</th><th>平均延迟</th><th>贡献者</th><th>审计时间</th><th>详情</th>';
             html += '</tr></thead><tbody>';
 

@@ -38,6 +38,9 @@ jobs:
       github.event_name != 'issues' ||
       contains(github.event.issue.labels.*.name, 'audit-result')
     runs-on: ubuntu-latest
+    # Normal path is under two minutes. Cap it so one hung run cannot block
+    # every queued submission for GitHub's default six hours.
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -86,17 +89,27 @@ jobs:
               .replace(/\r?\n/g, ' ')
               .replace(/[\\`*_{}[\]()#+\-.!|<>]/g, '\\$&')
               .replace(/@/g, '@\u200b');
-            const data = JSON.parse(
-              fs.readFileSync('docs/data/audit_results.json', 'utf8')
-            );
+            let snapshotOk = true;
+            let data;
+            try {
+              data = JSON.parse(
+                fs.readFileSync('docs/data/audit_results.json', 'utf8')
+              );
+            } catch (err) {
+              // checkout failed or the snapshot is unreadable: still reply,
+              // instead of dying before the comment is posted.
+              core.warning(`snapshot unavailable: ${err.message}`);
+              snapshotOk = false;
+              data = { entries: [] };
+            }
             const entry = (data.entries || []).find(e => e.issue_number === number);
             const rebuildOk = process.env.REBUILD_OUTCOME === 'success';
             const publishOk = process.env.PUBLISH_OUTCOME === 'success';
 
             let body;
-            if (!rebuildOk) {
+            if (!rebuildOk || !snapshotOk) {
               body = `${marker}
-            这次**解析没有跑完**（脚本报错，通常是 GitHub API 限流或网络问题）。
+            这次**没有跑完**（脚本或运行环境报错，常见原因是 GitHub API 限流、网络或 checkout 失败）。
             你的提交没有丢；维护者会重跑，或你编辑一次本 Issue 也能触发重试。`;
             } else if (entry && publishOk) {
               body = `${marker}

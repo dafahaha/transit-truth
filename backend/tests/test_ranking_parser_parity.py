@@ -177,6 +177,12 @@ def test_python_parser_agrees_with_browser_fallback_on_every_case():
     }
     assert py[0] == expected, py[0]
     assert js[0] == expected, js[0]
+    # Two more hand-written evidence expectations: agreement alone would let
+    # both sides archive an empty skeleton or drop a real block in lockstep.
+    assert py[-2]["evidence"] == {"checks": [{"score": 78}]}, py[-2]
+    assert js[-2]["evidence"] == {"checks": [{"score": 78}]}, js[-2]
+    assert py[-1]["evidence"] is None, py[-1]
+    assert js[-1]["evidence"] is None, js[-1]
     for body, left, right in zip(CASES, py, js):
         if left is None or right is None:
             assert left is None and right is None, (body, left, right)
