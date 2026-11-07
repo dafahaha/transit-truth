@@ -55,6 +55,9 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add docs/data/audit_results.json
           git commit -m "chore: refresh leaderboard snapshot"
+          # A human push can land between checkout and push; rebase keeps the
+          # run from failing (and skipping the submitter comment) on that race.
+          git pull --rebase origin main
           git push
 
       # The template used to promise automatic closure and then say nothing;
@@ -68,6 +71,13 @@ jobs:
             const fs = require('fs');
             const marker = '<!-- tt-ranking-bot -->';
             const number = context.payload.issue.number;
+            // The entry text comes from a user-controlled issue body. Escape
+            // Markdown punctuation and break @-mentions so a relay name can
+            // neither inject formatting nor ping a real account.
+            const safe = (value) => String(value ?? '')
+              .slice(0, 80)
+              .replace(/[\\`*_{}[\]()#+\-.!|<>]/g, '\\$&')
+              .replace(/@/g, '@\u200b');
             const data = JSON.parse(
               fs.readFileSync('docs/data/audit_results.json', 'utf8')
             );
@@ -76,7 +86,7 @@ jobs:
             let body;
             if (entry) {
               body = `${marker}
-            已收录到公开榜单：**${entry.relay} / ${entry.model}**，总分 **${entry.overall_score}**（${entry.trust_level}）。
+            已收录到公开榜单：**${safe(entry.relay)} / ${safe(entry.model)}**，总分 **${safe(entry.overall_score)}**（${safe(entry.trust_level)}）。
             快照会在 1–2 分钟内刷新；页面不签发 pass，判定边界以报告为准。`;
             } else {
               body = `${marker}

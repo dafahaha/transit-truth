@@ -16,16 +16,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **P1-5/P1-6 标题前缀与触发面**：workflow 改为 `toLower` + `startsWith('[audit-result]')`/`'[audit]'`，与 Python、contributors 页一致；`ranking-data.yml` 在 job 级跳过非审计 issue，bug/feature issue 不再触发解析。
 - **P1-7/P1-8/P1-9**：`docs/launch_kit.md` 五处「17 个请求」改为「17 个逻辑探针 / 最坏 68 次 HTTP」；`CITATION.cff` 补 `version: 0.5.9` 与 `date-released: 2026-11-07`；`THIRD_PARTY_NOTICES.md` 补 pydantic。
 - **P2-1/P2-3/P2-4/P2-5/P2-6/P2-11/P2-14**：`ci.yml` 加 `permissions: contents: read`；`?private=1` 的 loopback 判定补 `::1` / `[::1]`；徽章颜色优先按 `trust_level`；新增 `capabilityVerdict()` 纯函数并用 node 跑 6 种输入的行为断言，替代只看源码字符串的断言。
-- **测试计数**：395 passed / 7 skipped / 402 collected（+7 解析器回归、+1 双解析器一致性、+1 verdict 行为断言）。
+- **测试计数**：398 passed / 7 skipped / 405 collected（+7 解析器回归、+1 双解析器一致性、+1 verdict 行为断言）。
 ### 第二轮独立审查修复（公开路径，不含版本号变更）
 
 - **Leaderboard parser（P0-2/P0-3）**：`scripts/build_ranking_data.py` 先剥 HTML 注释再取值（未改的表单提示 `<!-- 0-100 -->` 不再被当成 0 分），字段行支持 `- **总分**:`、`总分:` 与英文 `- **Overall score**:` 三种写法；relay/score/model 别名补齐 `Name`/`Overall score`/`Model`；总分必须落在 0–100，否则该条不入榜并在 Action 日志打 `::warning::`（不再静默丢弃）。Markdown 路径补读 `Token 差异率` 与 `平均延迟`。英文模板改为解析器可读的字段格式。新增 `backend/tests/test_ranking_parser.py`（5 条）。
 - **Online page verdict（P1-1）**：浏览器版把「没拿到任何回答」与「拿到回答且答错」分开：零回答显示证据不足，只有已获回答的能力题全错才给 `suspicious`，不再出现零证据下的负面结论。
 - **Ranking page（P1-4/P2-2/P2-3）**：浏览器 fallback 解析器与 Python 版对齐（同一批别名、剥注释、`verified` 大小写不敏感、0–100 门）；新增「模式」列与数据快照时间（读取 `generated_at`，注明 Action 每日 08:15 北京时间刷新）。
 - **Security（P1-2/P2-4/P2-5/P2-6）**：仓库已开启 GitHub 私有漏洞报告，`SECURITY.md` 只保留真实可达的 `/security/advisories/new` 入口并写明表单不可用时的无细节求助方式；`?private=1` 仅在 localhost/127.0.0.1 生效，公开页不再被构造链接预勾选；私网判定补 `::ffff:7f00:1` 等 IPv4-mapped IPv6 与 `localtest.me` / `nip.io` 这类回环别名；`.gitignore` 增加 `*.pem` / `*.key` / `.env*` 等凭证模式。
-- **Docs honesty（P1-3/P0-4）**：README 中英把「17 个请求」改为「17 个逻辑探针，瞬时失败才重试，最坏 17×4 = 68 次 HTTP（`MAX_RETRIES` 可调）」；测试计数随新增回归更新为 395 passed / 7 skipped / 402 collected（0.5.9 发布说明中的 378 为该 tag 的历史值）。
+- **Docs honesty（P1-3/P0-4）**：README 中英把「17 个请求」改为「17 个逻辑探针，瞬时失败才重试，最坏 17×4 = 68 次 HTTP（`MAX_RETRIES` 可调）」；测试计数随新增回归更新为 398 passed / 7 skipped / 405 collected（0.5.9 发布说明中的 378 为该 tag 的历史值）。
 
-- **P1-1 追加（自测发现）**：前端 front-matter 分支的 `Number.parseFloat` 会接受 `78abc`，Python 会拒绝；改为共用 `parseNumber` 的整串匹配。Python 的 `\d` 会接受全角数字（`７８`），JS 不接受；改为 `[0-9]`。front-matter 缺 `relay` 或仍是 `[e.g. Example Relay]` 时两端都拒绝，不再回落成 `unknown`。parity 用例扩到 21 组，并新增 `tested_at` / `submitter` / `verified` 字段比对。`\n
+- **P1-1 追加（自测发现）**：前端 front-matter 分支的 `Number.parseFloat` 会接受 `78abc`，Python 会拒绝；改为共用 `parseNumber` 的整串匹配。Python 的 `\d` 会接受全角数字（`７８`），JS 不接受；改为 `[0-9]`。front-matter 缺 `relay` 或仍是 `[e.g. Example Relay]` 时两端都拒绝，不再回落成 `unknown`。parity 用例扩到 22 组，并新增 `tested_at` / `submitter` / `verified` 字段比对。
+
+### 第三轮修复批次（2026-11-08）
+
+- **CLI**：新增 `--version`（`transit-truth 0.5.9`，exit 0）；陌生人安装后的第二个命令不再报 unrecognized arguments。
+- **快照不再空转**：`build_ranking_data.py` 仅在 `entries` 变化时写盘，`generated_at` 恢复「数据最后变化时间」的含义；`ranking-data.yml` 在 commit 后 `git pull --rebase`，避免人工 push 落在 checkout 与 push 之间时整个 run 失败。
+- **抓取上限**：`fetch_issues` 固定读 10 页（最多 1000 条）并在 docstring 写明这是刻意上限；`test_fetch_issues_reads_every_page` 锁住翻页。
+- **解析器一致性**：延迟标签顺序两端统一；parity 用例 22 组、比对 13 个字段，并加入一条手写期望值，避免两端同时错还互相证明。
+- **模板**：删除永远不被解析的「模型指纹家族」「家族匹配」两栏；注释明确「中转站名称和总分必填，其余缺失不影响收录」。
+- **机器人评论**：对 relay/model 做长度截断与 Markdown 转义，`@` 用零宽空格断开，用户可控文本不再能注入格式或 ping 真人。
+- **页面与可发现性**：榜单数据说明补「总分不由子项重算、历史权重未必保存、取整口径」；补 `robots.txt`、`sitemap.xml`、Apple 风 `404.html`；首页演示 GIF 加 `loading="lazy"` 与显式宽高；修正贡献者页裸链接缺 `/docs/`。
+
 ## [0.5.9] - 2026-10-19
 
 ### 发行侧独立审查收尾（测试计数最终为 378 passed / 7 skipped / 385 collected）

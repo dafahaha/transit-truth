@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://dafahaha.github.io/transit-truth/sitemap.xml

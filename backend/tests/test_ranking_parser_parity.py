@@ -54,6 +54,8 @@ CASES = [
     "---\noverall_score: 78\n---\n",
     "---\nrelay: front\noverall_score: 78\nsubmitter: someone-else\n---\n",
     "---\nrelay: [e.g. Example Relay]\noverall_score: 78\n---\n",
+    # Both aliases present: label priority must be identical on both sides.
+    "中转站: x\n总分: 78\n平均延迟: 1500ms\nAverage latency (ms): 2000",
 ]
 
 FIELDS = (
@@ -63,6 +65,13 @@ FIELDS = (
     "token_inflation_pct",
     "avg_latency_ms",
     "audit_mode",
+    "base_url",
+    "trust_level",
+    "contributor",
+    "tested_at",
+    "submitter",
+    "verified",
+    "issue_number",
 )
 
 
@@ -118,12 +127,16 @@ def _js_results() -> list[dict | None]:
         "const out = bodies.map(b => {\n"
         "  const issue = {body: b, labels: [], user: {login: 'dafahaha'},\n"
         "    html_url: 'https://github.com/dafahaha/transit-truth/issues/1',\n"
-        "    number: 1, title: '[audit-result] relay / model'};\n"
+        "    number: 1, title: '[audit-result] relay / model',\n"
+        "    created_at: '2026-01-01T00:00:00Z'};\n"
         "  const e = sandbox.__parseIssue(issue);\n"
         "  if (!e) return null;\n"
         "  const r = {relay: e.relay, model: e.model, overall_score: e.overall_score,\n"
         "    token_inflation_pct: e.token_inflation_pct, avg_latency_ms: e.avg_latency_ms,\n"
-        "    audit_mode: e.audit_mode || ''};\n"
+        "    audit_mode: e.audit_mode || '', base_url: e.base_url,\n"
+        "    trust_level: e.trust_level, contributor: e.contributor,\n"
+        "    tested_at: e.tested_at, submitter: e.submitter, verified: e.verified,\n"
+        "    issue_number: e.issue_number};\n"
         "  return r;\n"
         "});\n"
         "console.log(JSON.stringify(out));\n"
@@ -140,6 +153,25 @@ def test_python_parser_agrees_with_browser_fallback_on_every_case():
     py = [_normalise(brd.parse_issue(_issue(body))) for body in CASES]
     js = _js_results()
     assert len(py) == len(js)
+    # One hand-written expectation, so both parsers cannot drift together
+    # and still pass by agreeing with each other.
+    expected = {
+        "relay": "wolfai",
+        "model": "gpt-4o",
+        "overall_score": 78.0,
+        "token_inflation_pct": -17.2,
+        "avg_latency_ms": 1571.0,
+        "audit_mode": "unknown",
+        "base_url": "",
+        "trust_level": "unknown",
+        "contributor": "",
+        "tested_at": "2026-01-01T00:00:00Z",
+        "submitter": "dafahaha",
+        "verified": False,
+        "issue_number": 1,
+    }
+    assert py[0] == expected, py[0]
+    assert js[0] == expected, js[0]
     for body, left, right in zip(CASES, py, js):
         if left is None or right is None:
             assert left is None and right is None, (body, left, right)

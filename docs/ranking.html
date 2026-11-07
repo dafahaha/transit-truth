@@ -204,7 +204,7 @@
         </div>
 
         <div class="note">
-            💡 <strong>数据说明</strong>：排行榜数据来自社区用户通过 GitHub Issues 贡献的审计结果。每条记录都链接到提交它的 Issue，原始证据可在那里查到。分数取自报告里的 overall_score，不由子项重新平均。建议结合自身需求进行审计验证。本排行榜仅供参考，不构成对任何服务的最终评价。
+            💡 <strong>数据说明</strong>：排行榜数据来自社区用户通过 GitHub Issues 贡献的审计结果。每条记录都链接到提交它的 Issue，原始证据可在那里查到。分数取自报告里的 overall_score，不由子项重新平均；历史提交使用的权重未必保存在仓库里，因此子分均值可能与总分不同，请以报告和 evidence 为准。延迟与差异率按提交正文显示，页面分别取整到整数和一位小数，完整精度见 evidence。建议结合自身需求进行审计验证。本排行榜仅供参考，不构成对任何服务的最终评价。
             <p id="dataFreshness" style="margin:10px 0 0;font-size:13px;color:#6e6e73;">数据快照：加载中…</p>
         </div>
     </div>
@@ -368,7 +368,7 @@
                 trust_level: (readField(body, ['信任等级', 'Trust level']) || 'unknown').toLowerCase(),
                 audit_mode: (readField(body, ['审计模式', 'Audit mode']) || 'unknown').toLowerCase(),
                 token_inflation_pct: parseNumber(readField(body, ['Token 膨胀率', 'Token 差异率', 'Token inflation'])),
-                avg_latency_ms: parseNumber(readField(body, ['平均延迟 (ms)', '平均延迟', 'Average latency (ms)', 'Average latency'])),
+                avg_latency_ms: parseNumber(readField(body, ['平均延迟 (ms)', '平均延迟', 'Average latency', 'Average latency (ms)'])),
                 contributor: readField(body, ['GitHub 用户名', '贡献者', 'Contributor', 'Submitted by']),
                 tested_at: readField(body, ['审计时间', 'Tested at', 'Date']) || '',
             };
@@ -392,6 +392,7 @@
                     fm = parseMarkdownMeta(body);
                 }
                 if (!fm) return null;
+                if (!fm.tested_at) fm.tested_at = issue.created_at || '';
 
                 // Front matter has no schema of its own; the same 0-100 and
                 // "no invented zero" rules apply before it reaches the table.

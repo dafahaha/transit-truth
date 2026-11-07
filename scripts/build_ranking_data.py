@@ -43,7 +43,14 @@ def _get(url: str, token: str | None) -> object:
         return json.loads(resp.read().decode("utf-8"))
 
 
-def fetch_issues(token: str | None, pages: int = 3) -> list[dict]:
+def fetch_issues(token: str | None, pages: int = 10) -> list[dict]:
+    """Read every issue page, not just the newest 300.
+
+    ``state=all`` is ordered by creation date, so a fixed page cap silently
+    drops the oldest submissions from the board once the repo passes it.
+    Ten pages is a deliberate ceiling: enough for a growing leaderboard,
+    bounded enough that a runaway API response cannot hang the job.
+    """
     items: list[dict] = []
     for page in range(1, pages + 1):
         batch = _get(f"{API}?state=all&per_page=100&page={page}", token)
@@ -270,6 +277,26 @@ def main() -> int:
         "count": len(entries),
         "entries": entries,
     }
+
+    # `generated_at` used to change on every run, which made the workflow's
+    # "Commit if changed" check dead code: every scheduled run produced a
+    # timestamp-only commit. Keep the old file when the data itself is
+    # unchanged, so `generated_at` means "when the data last changed" and
+    # git history stays readable.
+    if OUT.exists():
+        try:
+            previous = json.loads(OUT.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            previous = {}
+        if (
+            isinstance(previous, dict)
+            and previous.get("entries") == entries
+            and previous.get("count") == len(entries)
+            and previous.get("repo") == REPO
+        ):
+            print(f"no change: {OUT} already has {len(entries)} entries")
+            return 0
+
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(
         json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"

@@ -18,6 +18,8 @@ Two independently-reviewed issues:
 from __future__ import annotations
 
 import re
+import subprocess
+import sys
 from pathlib import Path
 
 from app import __version__
@@ -132,3 +134,16 @@ def test_low_overlap_still_insufficient_and_divergence_still_mismatch():
     assert tc["overlap"] == 5, tc
     assert tc["consistent"] == 2, tc
     assert tc["verdict"] == "mismatch", tc
+
+
+def test_cli_accepts_version_flag():
+    """A stranger runs `--version` before anything else; it must not exit 2."""
+    result = subprocess.run(
+        [sys.executable, "-m", "app.cli", "--version"],
+        cwd=REPO / "backend",
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert result.stdout.strip() == f"transit-truth {__version__}"

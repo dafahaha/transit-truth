@@ -217,3 +217,39 @@ def test_markdown_parser_matches_python_parser_fields():
     ranking = (REPO_ROOT / "docs" / "ranking.html").read_text(encoding="utf-8")
     for alias in ("中转站名称", "信任分", "总分", "模型名称", "Overall score", "Name"):
         assert alias in ranking, f"ranking.html fallback lost alias {alias}"
+
+
+def test_fetch_issues_reads_every_page(monkeypatch):
+    mod = _load()
+    calls = []
+
+    def fake_get(url, token):
+        calls.append(url)
+        page = int(url.rsplit("page=", 1)[1])
+        if page == 1:
+            return [{"number": i} for i in range(100)]
+        if page == 2:
+            return [{"number": 100}]
+        raise AssertionError(f"should stop after a short page, saw {page}")
+
+    monkeypatch.setattr(mod, "_get", fake_get)
+    assert len(mod.fetch_issues(None)) == 101
+    assert len(calls) == 2
+
+
+def test_main_does_not_rewrite_when_entries_are_unchanged(monkeypatch, tmp_path):
+    """A scheduled run with no new submission must not create a timestamp-only
+    commit. The file keeps the generated_at of the last real data change."""
+    import json
+
+    mod = _load()
+    out = tmp_path / "audit_results.json"
+    monkeypatch.setattr(mod, "OUT", out)
+    monkeypatch.setattr(mod, "fetch_issues", lambda token: [_issue(PLAIN)])
+
+    assert mod.main() == 0
+    first = json.loads(out.read_text(encoding="utf-8"))
+
+    assert mod.main() == 0
+    second = json.loads(out.read_text(encoding="utf-8"))
+    assert second == first

@@ -141,7 +141,7 @@ GitHub主仓库 ←→ 同步脚本 ←→ Gitee镜像仓库
 ```
 
 #### 贡献者页面（网站）
-- 独立的贡献者页面：https://dafahaha.github.io/transit-truth/contributors.html
+- 独立的贡献者页面：https://dafahaha.github.io/transit-truth/docs/contributors.html
 - 按贡献类型分类展示
 - 每个贡献者显示：头像、名字、贡献类型、等级、贡献数量、首次贡献时间
 - 支持搜索和筛选

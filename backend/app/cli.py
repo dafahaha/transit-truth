@@ -28,6 +28,7 @@ import sys
 from datetime import datetime
 from pathlib import Path
 
+from . import __version__
 from .core.auditor import AuditEngine
 from .database import get_audit, list_audits
 from .models import AuditRequest, AuditStatus
@@ -488,6 +489,11 @@ Environment variables:
   TRANSIT_TRUTH_BASE_URL   Default base URL
   TRANSIT_TRUTH_MODEL      Default model
         """,
+    )
+    # A stranger's first two commands are usually `--help` and `--version`;
+    # the latter used to exit 2 with "unrecognized arguments".
+    parser.add_argument(
+        "--version", action="version", version=f"%(prog)s {__version__}"
     )
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
 
