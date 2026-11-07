@@ -38,9 +38,9 @@ jobs:
       github.event_name != 'issues' ||
       contains(github.event.issue.labels.*.name, 'audit-result')
     runs-on: ubuntu-latest
-    # Normal path is under two minutes. Cap it so one hung run cannot block
-    # every queued submission for GitHub's default six hours.
-    timeout-minutes: 15
+    # Normal path is under two minutes. Step caps (10 + 5) stay below this job
+    # cap so a hung step cannot consume the time reserved for the comment.
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -48,11 +48,17 @@ jobs:
           python-version: "3.11"
       - name: Rebuild snapshot
         id: rebuild
+        # Cap the step below the job cap: on a step timeout the job survives and
+        # the `if: always()` comment step still runs. `continue-on-error` keeps a
+        # failed rebuild from skipping the publish/comment steps.
+        timeout-minutes: 10
+        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python scripts/build_ranking_data.py
       - name: Commit if changed
         id: publish
+        timeout-minutes: 5
         run: |
           if git diff --quiet -- docs/data/audit_results.json; then
             echo "no change"
@@ -102,14 +108,26 @@ jobs:
               snapshotOk = false;
               data = { entries: [] };
             }
-            const entry = (data.entries || []).find(e => e.issue_number === number);
+            let entry;
+            if (snapshotOk && !Array.isArray(data.entries)) {
+              // A hand-edited/corrupt snapshot must not crash `.find` and take
+              // the submitter's only feedback down with it.
+              core.warning('snapshot entries is not an array');
+              snapshotOk = false;
+            } else if (snapshotOk) {
+              entry = data.entries.find(e => e.issue_number === number);
+            }
             const rebuildOk = process.env.REBUILD_OUTCOME === 'success';
             const publishOk = process.env.PUBLISH_OUTCOME === 'success';
 
             let body;
-            if (!rebuildOk || !snapshotOk) {
+            if (!rebuildOk) {
               body = `${marker}
             这次**没有跑完**（脚本或运行环境报错，常见原因是 GitHub API 限流、网络或 checkout 失败）。
+            你的提交没有丢；维护者会重跑，或你编辑一次本 Issue 也能触发重试。`;
+            } else if (!snapshotOk) {
+              body = `${marker}
+            这次**没有读到公开快照**（文件缺失、JSON 损坏或结构异常）；重跑能修好，不是你的提交有问题。
             你的提交没有丢；维护者会重跑，或你编辑一次本 Issue 也能触发重试。`;
             } else if (entry && publishOk) {
               body = `${marker}
@@ -125,20 +143,26 @@ jobs:
             请按模板补齐后直接编辑本 Issue；不会自动关闭，也不需要重新开一条。`;
             }
 
-            const comments = await github.paginate(
-              github.rest.issues.listComments,
-              { owner: context.repo.owner, repo: context.repo.repo, issue_number: number, per_page: 100 }
-            );
-            const old = comments.find(c => (c.body || '').includes(marker));
-            if (old) {
-              await github.rest.issues.updateComment({
-                owner: context.repo.owner, repo: context.repo.repo,
-                comment_id: old.id, body,
-              });
-            } else {
-              await github.rest.issues.createComment({
-                owner: context.repo.owner, repo: context.repo.repo,
-                issue_number: number, body,
-              });
+            try {
+              const comments = await github.paginate(
+                github.rest.issues.listComments,
+                { owner: context.repo.owner, repo: context.repo.repo, issue_number: number, per_page: 100 }
+              );
+              const old = comments.find(c => (c.body || '').includes(marker));
+              if (old) {
+                await github.rest.issues.updateComment({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  comment_id: old.id, body,
+                });
+              } else {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner, repo: context.repo.repo,
+                  issue_number: number, body,
+                });
+              }
+            } catch (err) {
+              // The last step must not turn red on a transient 403/422 and
+              // leave the submitter with nothing; log it for the maintainer.
+              core.error(`could not post submitter comment: ${err.message}`);
             }
 

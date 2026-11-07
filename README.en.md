@@ -60,6 +60,10 @@ If the release download is blocked, fall back to the repo archive:
 pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.zip"
 ```
 
+To reproduce the test count, run `pytest backend/tests/` from a source tree
+(`git clone` or the unzipped archive); `pip install` ships only the runtime
+package and does not include `backend/tests/`.
+
 To edit the source instead, clone it:
 
 ```text
