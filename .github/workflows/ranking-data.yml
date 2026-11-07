@@ -49,10 +49,9 @@ jobs:
       - name: Rebuild snapshot
         id: rebuild
         # Cap the step below the job cap: on a step timeout the job survives and
-        # the `if: always()` comment step still runs. `continue-on-error` keeps a
-        # failed rebuild from skipping the publish/comment steps.
+        # the `if: always()` comment step still runs. Do not use
+        # `continue-on-error` here: it would mark a failed rebuild green.
         timeout-minutes: 10
-        continue-on-error: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python scripts/build_ranking_data.py
