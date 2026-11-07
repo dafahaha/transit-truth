@@ -216,23 +216,43 @@
             content.innerHTML = '<div class="loading"><div class="spinner"></div><p>正在加载排行榜数据...</p></div>';
 
             try {
-                // Pull every issue and filter client-side: an audit submission is
-                // either labelled `audit-result` or titled `[audit-result] ...`.
-                // Requiring the label alone silently emptied the board whenever the
-                // label was missing or a submission had been closed.
-                const response = await fetch(
-                    `https://api.github.com/repos/${REPO}/issues?state=all&per_page=100&sort=created&direction=desc`
-                );
+                // 1) Prefer the committed snapshot (built by ranking-data.yml).
+                //    Every visitor then reads one static file on the same host, so
+                //    the board no longer depends on a visitor's GitHub API quota
+                //    (60 req/hour per IP — shared networks hit it immediately).
+                // 2) Fall back to the live API only if the snapshot is missing.
+                let entries = null;
+                try {
+                    const snap = await fetch(`./data/audit_results.json?v=${Date.now()}`);
+                    if (snap.ok) {
+                        const payload = await snap.json();
+                        if (Array.isArray(payload.entries) && payload.entries.length) {
+                            entries = payload.entries;
+                        }
+                    }
+                } catch { /* fall back to live API */ }
 
-                if (!response.ok) {
-                    throw new Error(`GitHub API error: ${response.status}`);
+                if (!entries) {
+                    // Pull every issue and filter client-side: an audit submission is
+                    // either labelled `audit-result` or titled `[audit-result] ...`.
+                    // Requiring the label alone silently emptied the board whenever the
+                    // label was missing or a submission had been closed.
+                    const response = await fetch(
+                        `https://api.github.com/repos/${REPO}/issues?state=all&per_page=100&sort=created&direction=desc`
+                    );
+
+                    if (!response.ok) {
+                        throw new Error(`GitHub API error: ${response.status}`);
+                    }
+
+                    const raw = await response.json();
+                    const issues = raw
+                        .filter(item => !item.pull_request)
+                        .filter(isAuditIssue);
+                    entries = issues.map(parseIssue).filter(e => e);
                 }
 
-                const raw = await response.json();
-                const issues = raw
-                    .filter(item => !item.pull_request)
-                    .filter(isAuditIssue);
-                allEntries = issues.map(parseIssue).filter(e => e);
+                allEntries = entries;
 
                 populateFilters();
                 updateStats();

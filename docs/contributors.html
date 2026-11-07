@@ -180,6 +180,38 @@
             content.innerHTML = '<div class="loading"><div class="spinner"></div><p>正在加载贡献者榜单...</p></div>';
 
             try {
+                // Static snapshot first (same file the leaderboard reads), so this
+                // page does not burn the visitor's 60 req/hour GitHub API quota.
+                let entries = null;
+                try {
+                    const snap = await fetch(`./data/audit_results.json?v=${Date.now()}`);
+                    if (snap.ok) {
+                        const payload = await snap.json();
+                        if (Array.isArray(payload.entries) && payload.entries.length) {
+                            entries = payload.entries;
+                        }
+                    }
+                } catch { /* fall back to live API */ }
+
+                const contributors = {};
+
+                if (entries) {
+                    entries.forEach(e => {
+                        const credit = e.contributor || e.submitter || '';
+                        if (!credit || credit === '匿名') {
+                            /* no usable credit */
+                        } else {
+                            const username = credit.replace('@', '');
+                            if (!contributors[username]) {
+                                contributors[username] = { count: 0, verified: 0, relays: new Set() };
+                            }
+                            contributors[username].count++;
+                            if (e.verified) contributors[username].verified++;
+                            if (e.relay) contributors[username].relays.add(e.relay);
+                        }
+                    });
+                } else {
+
                 const response = await fetch(
                     `https://api.github.com/repos/${REPO}/issues?state=all&per_page=100&sort=created&direction=desc`
                 );
@@ -244,6 +276,7 @@
 
                     if (fm.relay) contributors[username].relays.add(fm.relay);
                 });
+                }
 
                 const sorted = Object.entries(contributors)
                     .map(([name, data]) => ({

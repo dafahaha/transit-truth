@@ -1,0 +1,50 @@
+name: ranking-data
+
+# Regenerates docs/data/audit_results.json so the public leaderboard can be a
+# static file. The browser never calls api.github.com: unauthenticated GitHub
+# allows 60 req/hour per IP, and on shared networks that turned the board into
+# a rate-limit error for real visitors.
+
+on:
+  issues:
+    types: [opened, edited, labeled, unlabeled, reopened, closed]
+  schedule:
+    - cron: "15 0 * * *"
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/build_ranking_data.py"
+      - ".github/workflows/ranking-data.yml"
+
+permissions:
+  contents: write
+  issues: read
+
+concurrency:
+  group: ranking-data
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Rebuild snapshot
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python scripts/build_ranking_data.py
+      - name: Commit if changed
+        run: |
+          if git diff --quiet -- docs/data/audit_results.json; then
+            echo "no change"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add docs/data/audit_results.json
+          git commit -m "chore: refresh leaderboard snapshot"
+          git push

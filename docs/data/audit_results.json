@@ -1,0 +1,23 @@
+{
+  "generated_at": "2026-11-07T07:05:00Z",
+  "repo": "dafahaha/transit-truth",
+  "count": 1,
+  "entries": [
+    {
+      "relay": "wolfai",
+      "base_url": "https://wolfai.top/v1",
+      "model": "gpt-4o",
+      "overall_score": 78.0,
+      "trust_level": "medium",
+      "audit_mode": "quick",
+      "token_inflation_pct": null,
+      "avg_latency_ms": null,
+      "contributor": "",
+      "submitter": "dafahaha",
+      "tested_at": "2026-09-14T17:19:32.537Z",
+      "verified": false,
+      "issue_url": "https://github.com/dafahaha/transit-truth/issues/1",
+      "issue_number": 1
+    }
+  ]
+}
