@@ -29,11 +29,12 @@ jobs:
   build:
     # Bug reports and feature requests also fire issues events; parsing them
     # costs a run and writes nothing. Only audit submissions get this far.
+    # GitHub Actions expressions have no toLower(); the template auto-applies
+    # the label, and a mis-titled issue gets it from audit-issue-label.yml,
+    # whose `labeled` event re-enters here.
     if: >
       github.event_name != 'issues' ||
-      contains(github.event.issue.labels.*.name, 'audit-result') ||
-      startsWith(toLower(github.event.issue.title), '[audit-result]') ||
-      startsWith(toLower(github.event.issue.title), '[audit]')
+      contains(github.event.issue.labels.*.name, 'audit-result')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
