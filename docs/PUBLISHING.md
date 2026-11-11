@@ -18,8 +18,8 @@
 >
 > | file | bytes | sha256 |
 > |---|---|---|
-> | `transit_truth-0.5.9-py3-none-any.whl` | 193244 | `663106cc5d2517309ada38cf15c7a3a72470dc7fc638890bdab443f7d012f334` |
-> | `transit_truth-0.5.9.tar.gz` | 227859 | `1675073380b7f0128d6cf3652267a48212314e959a489e53a9b6ad6b7f82410e` |
+> | `transit_truth-0.5.9-py3-none-any.whl` | 193232 | `e2aa2dec5317da83b03a41fc6e77957af9c9c1b5593302a02aafb527e429bbe8` |
+> | `transit_truth-0.5.9.tar.gz` | 227852 | `bfd209cb71eab6b52a83736b7fb8223abdd486f1d026a20c21013cb51b1355f9` |
 >
 > The only remaining step is the PyPI upload, which requires your own PyPI account
 > and 2FA token — this is the part only you can do. Do it in order; do not skip
@@ -104,8 +104,8 @@ If PyPI ever rejects the name on upload, candidates are `transit-truth-cli`,
    - PyPI project name: `transit-truth`
    - Owner: `dafahaha`
    - Repository name: `transit-truth`
-   - Workflow name: `release.yml` (create this workflow — see step 4)
-   - Environment name: leave blank unless you set one.
+   - Workflow name: `publish.yml`
+   - Environment name: `pypi`
 
    This removes secrets entirely: GitHub's OIDC token does the upload. If you
    would rather use a token instead: PyPI → API tokens → Add token, scope it
@@ -139,23 +139,19 @@ python -m twine upload dist/*
 
 ## 4. (Recommended) Automate with GitHub Actions
 
-Once step 1 works manually, add `.github/workflows/release.yml`: on a
-`v*` tag push, set up Python, run `python -m build`, and upload with
-`pypa/gh-action-pypi-publish@release/v1` (OIDC trusted publisher, no secret to
-manage). Trigger by pushing the tag that matches the CHANGELOG version.
+`.github/workflows/publish.yml` is already in the repo: it builds, runs
+`twine check`, and publishes with `pypa/gh-action-pypi-publish@release/v1`
+(OIDC trusted publisher, no secret to manage). Trigger it from
+Actions → Publish → Run workflow, or publish a GitHub Release whose tag matches
+the package version.
 
 ## 5. Post-publish checklist
 
 - [ ] Confirm <https://pypi.org/project/transit-truth/> renders the README
-      (long_description = README.en.md).
-- [ ] Edit `README.en.md` / `README.md`: both files contain explicit
-      `PYPI-FLIP` HTML comments. In `README.en.md`, replace the Quickstart
-      install block (currently source install) with `pip install transit-truth`
-      and `pip install "transit-truth[reference]"`, and rename the
-      "Installing from source" section per its `PYPI-FLIP` comment. In
-      `README.md`, replace the "PyPI 上**尚未发布**" block with the pip
-      command. The build's `long_description` is README.en.md, so the English
-      side must be flipped first.
-- [ ] Search both READMEs for `PYPI-FLIP` and resolve every marker.
-- [ ] Create a GitHub Release with the CHANGELOG notes and the same tag.
+      (long_description = README.en.md). Both READMEs already advertise
+      `pip install transit-truth` and carry no `PYPI-FLIP` markers, so nothing
+      needs editing after publish.
+- [ ] Confirm the published metadata carries no "not yet published" wording.
+- [ ] Create a GitHub Release with the CHANGELOG notes and the same tag (if not
+      already published).
 - [ ] Announce via `docs/launch_kit.md`.
