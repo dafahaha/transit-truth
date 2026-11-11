@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+> 下面这些改动在 2026-11-11 从当前 `main` 重建的 `transit-truth 0.5.9`（准备上传 PyPI）里；
+> GitHub Release v0.5.9 附带的 wheel 构建于 2026-10-19，不包含它们。下一个 PyPI 版本请重新 bump。
+
 ### 第三轮独立审查修复
 
 - **P0-1 占位符不再变成 0 分（`scripts/build_ranking_data.py`）**：`num()` 从「在任意位置取第一个数字」改为整串匹配（接受 `78`、`78/100`、`-17.2%`、`1571ms`），`about 78`、`990`、`[0-100, e.g. 55.7]` 一律返回 `None`；`md_field` 对方括号占位符与含 `e.g.`/`例如` 的值判为未填写；`clean_value` 对未闭合注释 fail-closed；字段名加 `IGNORECASE`。英文模板原样提交、中文模板原样提交都不再产生假榜单项。

@@ -1,6 +1,6 @@
 # Launch kit
 
-> **状态（2026-11-07，v0.5.9）**：已按当前实现校对。在线 demo 只做浏览器可达性 / 协议 / 基础能力快检，**不出 `pass`**；完整核验必须本地或自托管跑 `transit-truth serve` / CLI（浏览器跨域直连受 CORS 限制）。测试与功能口径以 README 为准。
+> **状态（2026-11-11，v0.5.9）**：已按当前实现校对。所有安装命令统一为 `pip install transit-truth`，因此**必须先完成 `docs/PUBLISHING.md` 里的 PyPI 首发，再发下面这些帖子**（包还没上线时 `pip install` 会 404）。在线 demo 只做浏览器可达性 / 协议 / 基础能力快检，**不出 `pass`**；完整核验必须本地或自托管跑 `transit-truth serve` / CLI（浏览器跨域直连受 CORS 限制）。测试与功能口径以 README 为准。
 
 Copy-paste launch posts for each channel. Nothing here is scheduled or sent by anyone but you.
 All claims match the current README/verify.md — do not upgrade the tone. This tool outputs
@@ -9,10 +9,10 @@ All claims match the current README/verify.md — do not upgrade the tone. This 
 Links to keep consistent:
 
 - Repo: https://github.com/dafahaha/transit-truth
-- Install (one line, no PyPI yet): `pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.zip"`
+- Install (one line): `pip install transit-truth`
 - Online check: https://dafahaha.github.io/transit-truth/docs/online/index.html
 - Leaderboard: https://dafahaha.github.io/transit-truth/docs/ranking.html
-- PyPI (once published): https://pypi.org/project/transit-truth/
+- PyPI: https://pypi.org/project/transit-truth/
 
 ---
 
@@ -37,9 +37,9 @@ Links to keep consistent:
 
 没有付费 key 也能跑：自带一个本地 reference-server，dummy key 就能把整条链路跑一遍自检。在线页（GitHub Pages）只做浏览器侧的可达性/协议快检、不出 `pass`；真实核验请在本地/自托管跑 `transit-truth serve`。
 
-一行安装（PyPI 还没发，先从仓库 zip 装，已在干净 venv 验证）：
+一行安装：
 ```
-pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.zip"
+pip install transit-truth
 ```
 
 MIT 协议，测试 400 passed / 7 skipped（7 skipped 为需真实 key 的 integration）。如果你拿常用的站跑了一遍，结果可以提交到公开榜单（`docs/ranking.html`），也可以在 Discussion 里贴（别贴 key）。
@@ -56,7 +56,7 @@ MIT 协议，测试 400 passed / 7 skipped（7 skipped 为需真实 key 的 inte
 做了个小工具 TransitTruth：给 OpenAI 兼容中转站做模型身份核验。
 17 个探针；按公开低档定价估算一轮约 <$0.01（实际取决于模型档位与单价，代码不含计价逻辑），输出 pass / suspicious / insufficient_evidence 三态 JSON。
 诚实声明：这是概率性辅助证据不是密码学证明；目前只内置了 Qwen tokenizer 指纹和单站 GPT 基线。没 key 也能跑，自带本地 reference-server。
-装：pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.zip"
+装：pip install transit-truth
 repo：github.com/dafahaha/transit-truth；跑完可以把结果提交到公开榜单。
 
 ---
@@ -77,8 +77,8 @@ It is deliberately honest about what it is NOT:
 
 No paid key needed: ships a local reference server, so you can exercise the whole pipeline locally. There is a browser page for a lighter reachability check (it never issues `pass`).
 
-Install (PyPI pending; pulls the repo archive, verified in a clean venv):
-`pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.zip"`
+Install:
+`pip install transit-truth`
 
 repo + demo links below. MIT.
 
@@ -107,10 +107,10 @@ Important, stated up front in the README:
 
 You can run the whole thing without a paid key — it ships a local reference server (dummy key, loopback, `--allow-local`). There's also a browser page that does a lighter reachability/protocol check only; it never issues `pass`.
 
-Install (PyPI is still pending, so this pulls the repo archive; verified in a clean venv):
+Install:
 
 ```
-pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.zip"
+pip install transit-truth
 ```
 
 MIT, 400 passed / 7 skipped (7 skipped = integration tests needing a real key). If you audit a relay you use, I set up a discussion thread to post results — please never paste keys.
@@ -123,9 +123,9 @@ MIT, 400 passed / 7 skipped (7 skipped = integration tests needing a real key). 
 
 各位站长/用户，分享一个刚开源的小工具 TransitTruth（MIT）：核验 OpenAI 兼容端点声称的模型和实际跑的是否一致。
 
-用法（PyPI 尚未发布，先用已验证的一行装；发布后替换成 `pip install transit-truth`）：
+用法：
 ```
-pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.zip"
+pip install transit-truth
 export TRANSIT_TRUTH_API_KEY=你的key
 transit-truth verify --base-url https://你的站/v1 --model gpt-4o-mini
 ```
