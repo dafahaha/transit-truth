@@ -10,14 +10,13 @@
 
 > **AI API 模型真实性核验 / 路由层可信度监控** — 无状态验证你用的模型是否货真价实。
 
-> **⚡ 一行安装（已在干净 venv 验证）**：需 **Python 3.10+（3.10–3.13 实测）**。PyPI 尚未发布，可直接从 GitHub Release 拿 wheel（不依赖 git、不重新构建）：
+> **⚡ 一行安装**：需 **Python 3.10+（3.10–3.13 实测）**：
 > ```
-> pip install https://github.com/dafahaha/transit-truth/releases/download/v0.5.9/transit_truth-0.5.9-py3-none-any.whl
+> pip install transit-truth
 > ```
-> **注意口径**：这个 wheel 构建自 `v0.5.9` tag（`e8558a1`），比当前 `main` 落后 18 个以上提交；README 里的后续修复与 400 passed 不在 wheel 内。要装当前源码，用下面的 main.zip；要复现 Release 口径，再用 wheel。
-> 没有 Release 下载权限时，可退回到仓库 zip 装：`pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.zip"`。
-> 装完 `transit-truth --help` 应列出 8 个子命令；找不到就重开终端/激活 venv。要改源码则改用 `git clone` + `pip install -e .`，完整说明见下方「📦 从源码安装」。
-> 复现测试计数要在源码树里跑（`git clone` 或解压 `main.zip` 后 `pytest backend/tests/`）；`pip install` 只装运行时包，不带 `backend/tests/`。
+> 需要真实 tokenizer（reference 指纹路径）时：`pip install "transit-truth[reference]"`。
+> 装完 `transit-truth --help` 应列出 8 个子命令；找不到就重开终端/激活 venv。要改源码则用 `git clone` + `pip install -e .`，完整说明见下方「📦 安装」。
+> 复现测试计数要在源码树里跑（`git clone` 后 `pytest backend/tests/`）；`pip install` 只装运行时包，不带 `backend/tests/`。
 
 ---
 
@@ -278,12 +277,18 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 > ⚠️ **公开绑定风险（legacy `app.main`）**：上面的 `--host 0.0.0.0` 会把服务发布到**所有网卡**，任何能访问该端口的人都可触达——默认应只绑 `127.0.0.1`。确需公开暴露时，你必须自行承担鉴权、暴露与被当作探测代理的风险，并显式开启对应公开门控（不要裸 `0.0.0.0` 直接对外）。注意：这是早期 legacy web 平台的启动方式，与当前无状态 `verify` / 本地 `transit-truth serve`（默认仅 `127.0.0.1`、`--allow-public` 才放开）是两条独立路径。
 
-### 📦 从源码安装（CLI）
+### 📦 安装（CLI）
 
-<!-- PYPI-FLIP：发布到 PyPI 后，把下面整段替换为 `pip install transit-truth`
-     （真实 tokenizer 用 `pip install "transit-truth[reference]"`），并删除
-     "PyPI 上没有"这句话；具体清单见 docs/PUBLISHING.md 的 post-publish checklist。 -->
-PyPI 上**尚未发布** `transit-truth` 包，当前请从源码安装。**需要 Python 3.10 及以上（3.10–3.13 实测）**：
+**需要 Python 3.10 及以上（3.10–3.13 实测）**：
+
+```text
+pip install transit-truth
+# 需要真实 tokenizer（reference 指纹路径）时：
+pip install "transit-truth[reference]"
+```
+
+<details>
+<summary>从源码安装（开发 / 贡献者）</summary>
 
 ```text
 git clone https://github.com/dafahaha/transit-truth.git
@@ -295,6 +300,8 @@ python -m venv .venv
 # 普通用户：pip install .
 # 贡献者（可编辑）：pip install -e .
 ```
+
+</details>
 
 key 从环境变量读（位置传 sk-xxx / --api-key sk-xxx 会在进程列表可见，仅兼容告警）：
 

@@ -39,30 +39,18 @@ No Python needed: open the GitHub Pages build, paste your own relay Base URL (op
 
 ## Quickstart
 
-> **PyPI is not published yet.** There is no `pip install transit-truth` from
-> PyPI yet (a `pip install transit-truth` today would 404). Install the prebuilt
-> wheel straight from the GitHub Release (verified in a clean venv, no git and
-> no local build):
+**Install from PyPI** (Python 3.10–3.13 tested):
 
 ```text
-pip install https://github.com/dafahaha/transit-truth/releases/download/v0.5.9/transit_truth-0.5.9-py3-none-any.whl
-transit-truth --help   # should list 8 subcommands
+pip install transit-truth
+# for the self-hosted reference-server's REAL local tokenizer (the no-key path
+# below degrades to an honest plumbing stub without this extra):
+pip install "transit-truth[reference]"
 ```
 
-**Version caveat**: that wheel was built from tag `v0.5.9` (`e8558a1`), more than
-18 commits behind `main`; the fixes and the 400-passed count described in this
-README are not in it. Use the archive below to install current source; use the
-wheel only when you want to reproduce the release build.
-
-If the release download is blocked, fall back to the repo archive:
-
-```text
-pip install "https://github.com/dafahaha/transit-truth/archive/refs/heads/main.zip"
-```
-
-To reproduce the test count, run `pytest backend/tests/` from a source tree
-(`git clone` or the unzipped archive); `pip install` ships only the runtime
-package and does not include `backend/tests/`.
+`pip install` ships only the runtime package; it does not include
+`backend/tests/`. To reproduce the test count, run `pytest backend/tests/` from a
+source tree.
 
 To edit the source instead, clone it:
 
@@ -74,8 +62,7 @@ python -m venv .venv
 #   bash / macOS / Linux: source .venv/bin/activate
 #   Windows PowerShell:   .venv\Scripts\Activate.ps1
 pip install .
-# for the self-hosted reference-server's REAL local tokenizer (the no-key path
-# below degrades to an honest plumbing stub without this extra):
+# for the reference-server's real local tokenizer when running from source:
 pip install ".[reference]"
 ```
 
@@ -85,8 +72,6 @@ pip install ".[reference]"
 > terminal, ensure the venv is activated, or invoke the module directly:
 > `python -m app.cli --help`.
 
-<!-- PYPI-FLIP: switch this block back to `pip install transit-truth` +
-`pip install "transit-truth[reference]"` only once the package is actually on PyPI. -->
 
 
 Point it at a relay and the model it claims to serve. The API key is read from

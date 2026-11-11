@@ -1,18 +1,25 @@
 # Publishing transit-truth to PyPI
 
-> **Status: GitHub Release published; PyPI NOT published (verified 2026-11-07).**
+> **Status: GitHub Release v0.5.9 published; PyPI not published yet — the package
+> and the publish pipeline are ready (verified 2026-11-07, re-verified 2026-11-11).**
+> `README.md` / `README.en.md` already advertise `pip install transit-truth`
+> (source install kept as a fallback), the committed `dist/` artifacts were
+> rebuilt from the current `main` source, and `.github/workflows/publish.yml`
+> publishes via Trusted Publishing (OIDC) when a GitHub Release is published.
+> Test count re-run on 2026-11-11 in a clean venv: **400 passed, 7 skipped**.
 > The release path below was run end to end on 0.5.9: `twine check` PASSED on both
 > artifacts, and the resulting wheel installed cleanly into a fresh venv where
 > `transit-truth --help` and `transit-truth verify --help` both work.
-> The same two files are attached to the GitHub Release
-> (<https://github.com/dafahaha/transit-truth/releases/tag/v0.5.9>), so users can
-> download a wheel without building anything.
+> The GitHub Release (<https://github.com/dafahaha/transit-truth/releases/tag/v0.5.9>)
+> carries the originally-tagged build. The artifacts below were rebuilt on
+> 2026-11-11 from current `main`, with the README flipped to `pip install
+> transit-truth`; these are the ones meant for the PyPI upload.
 > Canonical artifacts (reproducible, `SOURCE_DATE_EPOCH=1792368000`):
 >
 > | file | bytes | sha256 |
 > |---|---|---|
-> | `transit_truth-0.5.9-py3-none-any.whl` | 193117 | `82b7abd94fcf288d9350f91603d6696c1ef88d813e985091a699fdd0b0afeccf` |
-> | `transit_truth-0.5.9.tar.gz` | 223287 | `765ef8538f32913a00c8add881ba6e5e8f7594f3da59e652dc977442590f4d80` |
+> | `transit_truth-0.5.9-py3-none-any.whl` | 193244 | `663106cc5d2517309ada38cf15c7a3a72470dc7fc638890bdab443f7d012f334` |
+> | `transit_truth-0.5.9.tar.gz` | 227859 | `1675073380b7f0128d6cf3652267a48212314e959a489e53a9b6ad6b7f82410e` |
 >
 > The only remaining step is the PyPI upload, which requires your own PyPI account
 > and 2FA token — this is the part only you can do. Do it in order; do not skip
