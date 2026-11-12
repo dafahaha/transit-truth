@@ -70,7 +70,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.5.9] - 2026-10-19
 
-### 发行侧独立审查收尾（测试计数最终为 378 passed / 7 skipped / 385 collected）
+### 发行侧独立审查收尾（该次构建的测试计数为 378 passed / 7 skipped / 385 collected；2026-11-11 从 main 重建、准备上传 PyPI 的 0.5.9 为 400 passed / 7 skipped / 407 collected，见文件顶部「第三轮独立审查修复」）
 - **Fixed (F3)**：`verify_endpoint` 在探针电池前新增 ~5s 裸 TCP 可达性预检（`asyncio.open_connection`，仅验证端口有人监听）；端口拒绝 / DNS 失败 / 超时时立即返回 `error.code = "endpoint_unreachable"`，不再耗尽 90s 总超时后误诊为 `battery_timeout`。新增 `test_verify_endpoint_unreachable.py` 两条回归（死端口快速失败、监听端口不被预检误杀）。
 - **Hardening (F-1)**：该 TCP 预检补强 DNS-rebinding TOCTOU——预检时重新 getaddrinfo，`allow_local=False` 时对每个解析到的 IP 跑与 SSRF 守卫相同的 blocked-IP 判定并丢弃非公共地址（全部被丢则返回 `invalid_endpoint` 并提示可能 rebinding / 环回目标需 --allow-local），通过 IP 才裸建连。
 - **Hardening（R15）**：预检对所有通过过滤的 IP **并行竞速**（`asyncio.wait(FIRST_COMPLETED)`），首个连接成功立即返回并取消其余，全部失败才报错；总墙钟被单个 4s 尝试超时封顶，不再按地址数串行叠加（Windows 双栈公网死端口由实测 ~11.2s 降到 ~4s）。新增 `test_precheck_race.py` 两条回归（多地址全超时总耗时≈单次超时、首成功即返回且其余被取消）。
@@ -89,7 +89,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Docs — 英文 README 数据透明度补齐 / 计数同步
 - README.en.md 在 "What it actually does" 后补齐 "What the shipped reference data shows"：Okapi 76%、"是否为 Okapi"规则 88% resubstitution 准确率（Wilson 95%CI [0.80, 0.93]）、最强探针 TVD=0.90（分布距离，非分类准确率）、管线自洽后验 0.913（CrI [0.885, 0.937]），明确为 in-distribution resubstitution 自洽检验、非 held-out 准确率，数字与中文 README 逐一对齐。
-- 测试数全仓回填为 **336 passed / 7 skipped**（7 个 skipped 为需真实 key 的 integration）。（历史当时值；本版本最终计数见上方「发行侧独立审查收尾」子标题 = 378 passed / 7 skipped / 385 collected。）
+- 测试数全仓回填为 **336 passed / 7 skipped**（7 个 skipped 为需真实 key 的 integration）。（历史当时值；该次构建的计数见本段「发行侧独立审查收尾」标题 = 378 passed / 7 skipped / 385 collected；2026-11-11 重建版为 400 / 7 / 407。）
 
 ### 版本
 - 版本四源统一 0.5.9，版本一致性测试同步。
