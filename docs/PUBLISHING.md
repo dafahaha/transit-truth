@@ -18,8 +18,8 @@
 >
 > | file | bytes | sha256 |
 > |---|---|---|
-> | `transit_truth-0.5.9-py3-none-any.whl` | 193232 | `e2aa2dec5317da83b03a41fc6e77957af9c9c1b5593302a02aafb527e429bbe8` |
-> | `transit_truth-0.5.9.tar.gz` | 227852 | `bfd209cb71eab6b52a83736b7fb8223abdd486f1d026a20c21013cb51b1355f9` |
+> | `transit_truth-0.5.9-py3-none-any.whl` | 193219 | `563f21d4def1707be45acbefc13a734e17e9ffd5599f7e10be5d8a9ccfb8b569` |
+> | `transit_truth-0.5.9.tar.gz` | 227941 | `37674ba60464eb57e64468ce15d3439451168dce7409c8d1363af376e75efd73` |
 >
 > The only remaining step is the PyPI upload, which requires your own PyPI account
 > and 2FA token — this is the part only you can do. Do it in order; do not skip
@@ -107,10 +107,10 @@ If PyPI ever rejects the name on upload, candidates are `transit-truth-cli`,
    - Workflow name: `publish.yml`
    - Environment name: `pypi`
 
-   This removes secrets entirely: GitHub's OIDC token does the upload. If you
-   would rather use a token instead: PyPI → API tokens → Add token, scope it
-   to the `transit-truth` project (not "entire account"), and save it to a
-   GitHub Actions secret named `PYPI_API_TOKEN`.
+   This removes secrets entirely: GitHub's OIDC token does the upload. If the
+   automated run fails, fall back to a local upload with a project-scoped API
+   token (see the alternative below) — do not create a repository secret, because
+   `publish.yml` reads none.
 
 ## 2. Smoke test on TestPyPI first
 

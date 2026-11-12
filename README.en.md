@@ -356,7 +356,7 @@ current `verify`/`serve`/PyPI model-identity path:
 - **Tests:** 400 passed / 7 skipped (407 collected; the 7 skipped are integration
   tests that need a real API key; run them with `pytest -m integration`).
 
-## Installing from source (before the PyPI release)
+## Installing from source
 
 ```bash
 git clone https://github.com/dafahaha/transit-truth.git
