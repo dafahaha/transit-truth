@@ -24,7 +24,7 @@
 
 - **它回答什么**：你按 `gpt-4o-mini` 的价付钱，后端真的是这个模型吗？给它一个 OpenAI 兼容端点，它跑一轮有界探针（17 个逻辑探针；仅在瞬时失败时重试，默认每次最多重试 3 次，最坏 17×4 = 68 次 HTTP 调用，可用环境变量 `MAX_RETRIES` 调低），出一份 JSON。
 - **它输出什么**：`pass` / `suspicious` / `insufficient_evidence` 三态 + 置信度 + 证据。证据不足就说不足，不硬猜。
-- **它不声称什么**：不是密码学证明，只是概率性辅助证据；内置参考有限（当前是 Qwen2.5 tokenizer 指纹 + 单站采集的 GPT 基线）；temperature=0 的公开探针可被硬编码复现，报告会标 `deterministic_replay_risk` 并把置信度压到 low。完整边界见文末「局限」。
+- **它不声称什么**：不是密码学证明，只是概率性辅助证据；内置参考有限（当前是 Qwen2.5 与 GLM-4-9B-Chat 两套 tokenizer 指纹 + 单站采集的 GPT 基线）；temperature=0 的公开探针可被硬编码复现，报告会标 `deterministic_replay_risk` 并把置信度压到 low。完整边界见文末「局限」。
 
 ---
 
@@ -142,7 +142,8 @@ transit-truth verify --base-url http://127.0.0.1:8765/v1 --model qwen2.5-0.5b-in
 > **覆盖范围（诚实标注）**：当前自带参考指纹——
 > - `gpt-4o-mini` 与 `gpt-4o`：n=50 基线，经**单个第三方中转站 wolfai.top 采集，非 OpenAI 官方端点**；只能声明这两个命名端点在该中转站可被区分，不是厂商无关指纹。
 > - Qwen2.5-0.5B-Instruct：仅真实本地 tokenizer 计数，**无行为分布**，自身永远不可能给出 `pass`。
-> - DeepSeek-R1-Distill-Qwen：派生自 Qwen2 tokenizer，计数无法与 Qwen 区分；GLM 已收录、tokenizer 下载 pending。
+> - GLM-4-9B-Chat：真实本地 tokenizer 计数（7 个探针），**无行为分布**，自身永远不可能给出 `pass`。
+> - DeepSeek-R1-Distill-Qwen：派生自 Qwen2 tokenizer，计数无法与 Qwen 区分。
 > - Claude / Gemini / 其它 GPT 声明的闭源指纹，需你提供自己的 key 采集。
 >
 > **定位声明**：黑盒结果是**概率性辅助证据，不是密码学证明，也不做真伪裁判**。`suspicious` 不等于"确定造假"。行为探针在 temperature=0 下退化为点质量，公开基线可被确定性回放（硬编码约 4 个众数字符串即可复现"匹配"），报告对此会显式标 `deterministic_replay_risk` 并把置信封顶——**官方密码学 attestation 才是终局，本工具只是概率性辅助**。详见 [docs/verify.md](docs/verify.md) 与 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
@@ -380,7 +381,7 @@ transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
 - [ ] **HTML 报告生成**（可分享的审计报告）— legacy
 - [ ] **审计结果分享卡片**（1200x630 PNG，一键下载分享社交媒体）— legacy
 - [ ] **灵活配置管理**（legacy web 的 14 个环境变量）— legacy；`serve` 使用自己的少量旋钮（max_requests/behavioral_samples/timeout/total_timeout）
-- [x] **测试**：实测 **400 passed / 7 skipped**（407 collected；v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.2 诚实性/抗回放、v0.4.3 饥饿式样本绕过回归、v0.4.4 覆盖率门+tokenizer 口径、v0.4.5 版本一致性+tokenizer 严格匹配回归、v0.4.6 单字段容错+stdout 单一 JSON 契约+负 verdict 自洽回归、v0.4.7 非 JSON 200 响应体容错+tokenizer 不确定带不升级 pass 回归、v0.5.0 本地 Web serve 端点+key 不落盘/不进日志/脱敏+公共绑定门控回归、v0.5.1 serve XSS 转义+Origin/Host/Content-Type 守卫+绑定门控+Docker 修正回归、v0.5.2 wheel 打包 webapp+全局 Host/Origin 守卫+NaN/Infinity 拒绝+上游错误体不泄漏 key 回归、v0.5.3 门面模块崩溃修复+非法参数 400+非阻塞 429、v0.5.4 消除外链静态 import+整数旋钮非整 400+CI 守卫/checkout 升级、v0.5.5 hard-cap 理由自洽+错误页人话+守卫扩面+严格整数串+Host fail-closed、v0.5.6 错误码映射对齐+hard-cap 证据标签拆分+IPv6 环回放行+守卫扩面、v0.5.7 hard-cap 两分支变异可失败+双向错误码守卫+静态守卫补盲+弱 pass 强制 low、v0.5.8 开篇/能力清单诚实分区+弱 pass band 边界钉、v0.5.9 参考目录缺失/空目录 fail-loud stderr 警告+sync 陈旧 JSON prune）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
+- [x] **测试**：实测 **401 passed / 7 skipped**（408 collected；v1–v5 累计新增无状态核验、指纹库、序贯检验、加固与集成测试；v0.4.2 诚实性/抗回放、v0.4.3 饥饿式样本绕过回归、v0.4.4 覆盖率门+tokenizer 口径、v0.4.5 版本一致性+tokenizer 严格匹配回归、v0.4.6 单字段容错+stdout 单一 JSON 契约+负 verdict 自洽回归、v0.4.7 非 JSON 200 响应体容错+tokenizer 不确定带不升级 pass 回归、v0.5.0 本地 Web serve 端点+key 不落盘/不进日志/脱敏+公共绑定门控回归、v0.5.1 serve XSS 转义+Origin/Host/Content-Type 守卫+绑定门控+Docker 修正回归、v0.5.2 wheel 打包 webapp+全局 Host/Origin 守卫+NaN/Infinity 拒绝+上游错误体不泄漏 key 回归、v0.5.3 门面模块崩溃修复+非法参数 400+非阻塞 429、v0.5.4 消除外链静态 import+整数旋钮非整 400+CI 守卫/checkout 升级、v0.5.5 hard-cap 理由自洽+错误页人话+守卫扩面+严格整数串+Host fail-closed、v0.5.6 错误码映射对齐+hard-cap 证据标签拆分+IPv6 环回放行+守卫扩面、v0.5.7 hard-cap 两分支变异可失败+双向错误码守卫+静态守卫补盲+弱 pass 强制 low、v0.5.8 开篇/能力清单诚实分区+弱 pass band 边界钉、v0.5.9 参考目录缺失/空目录 fail-loud stderr 警告+sync 陈旧 JSON prune）；其中端到端桩测试离线可跑，真实 API key 集成测试用 `pytest -m integration` 单独运行
 - [x] **CI/CD**（GitHub Actions，Python 3.10/3.11/3.12/3.13 矩阵）
 
 ### 🚧 开发中
@@ -430,7 +431,7 @@ transit-truth verify --base-url https://relay.example/v1 --model gpt-4o-mini
 
 > **关于"预算化 ε-稀释检验"**：`backend/app/verify/sequential.py` 的样本量/检出力计算是闭式工程估算工具，用于回答"给定预算 N 与稀释 ε，能否检出掺假"。方法层面 IRIS（arXiv:2607.20860）已做过预算化审计与 ε 估计，我们此处只是一个实用辅助计算器，**不声称方法论原创**。
 >
-> **指纹库覆盖现状（诚实标注）**：`data/fingerprints/` 当前仅 **Qwen2.5-0.5B-Instruct 一个模型的真实 tokenizer 计数 PoC**（7 个探针，无行为分布）；GLM tokenizer 因镜像限流 pending；DeepSeek-R1-Distill-Qwen 派生自 Qwen2 tokenizer（计数相同，tokenizer 无法区分两者）。GPT/Claude/Gemini 闭源指纹需用户自配 key 采集。tokenizer 信号分两种情形：① **tokenizer 匹配但无行为参考**——只能说明同族，**不得输出 `pass`**，结论封顶 `insufficient_evidence`；② **tokenizer 不匹配（错族）**——会计 `mismatch` 并升级为 `suspicious`（覆盖行为统计结果，同时置空 posterior/LR/CI/卡方以免自相矛盾）。
+> **指纹库覆盖现状（诚实标注）**：`data/fingerprints/` 当前有 **Qwen2.5-0.5B-Instruct 与 GLM-4-9B-Chat 两个模型的真实 tokenizer 计数**（各 7 个探针，无行为分布；GLM 指纹由 PR #8 提供，并经维护者用上游 `ChatGLM4Tokenizer` 复算 7/7 一致）；DeepSeek-R1-Distill-Qwen 派生自 Qwen2 tokenizer（计数相同，tokenizer 无法区分两者）。GPT/Claude/Gemini 闭源指纹需用户自配 key 采集。tokenizer 信号分两种情形：① **tokenizer 匹配但无行为参考**——只能说明同族，**不得输出 `pass`**，结论封顶 `insufficient_evidence`；② **tokenizer 不匹配（错族）**——会计 `mismatch` 并升级为 `suspicious`（覆盖行为统计结果，同时置空 posterior/LR/CI/卡方以免自相矛盾）。
 
 ## 真实基准数据
 

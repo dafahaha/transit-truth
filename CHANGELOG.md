@@ -10,6 +10,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 > 下面这些改动在 2026-11-11 从当前 `main` 重建的 `transit-truth 0.5.9`（准备上传 PyPI）里；
 > GitHub Release v0.5.9 附带的 wheel 构建于 2026-10-19，不包含它们。下一个 PyPI 版本请重新 bump。
 
+### PR 入库与文档同步（2026-11-09）
+
+- **PR #8 合并（GLM-4-9B-Chat 指纹）**：接收 `data/fingerprints/glm-4-9b-chat.json` 与 `backend/app/verify/data/fingerprints/glm-4-9b-chat.json`（两份 sha256 一致），新增 `test_glm_against_own_fingerprint_is_exact_match`。维护者用上游 `THUDM/glm-4-9b-chat` 的 `ChatGLM4Tokenizer` 独立复算 7 个探针，计数 43/41/45/40/34/39/48 与提交值逐项一致；这不是「指纹读回自己」的自洽测试。
+- **PR #7 合并并补全（日文 README）**：原分支只译了 154 行、缺「30 秒概要 / 在线检查 / 本地 Web UI / key 安全 / CORS / 部署边界 / 参考数据」等章节，且仍写 249 passed。合并后重写为与 `README.en.md` 章节对齐的完整日文版，更新为 401 passed，并补上 GLM 已从 pending 变为真实指纹。
+- **口径同步**：README 中/英/日与 `docs/launch_kit.md`、`docs/PUBLISHING.md` 的测试计数统一为 **401 passed / 7 skipped / 408 collected**；wheel 落后提交数从「18 个以上」更正为 **27 个**；指纹覆盖从「仅 Qwen 一个」更正为 **Qwen2.5 + GLM-4-9B-Chat**。
+- **测试**：`401 passed / 7 skipped / 408 collected`（52–63 s，Linux/Windows 均可离线跑；7 skipped 为需真实 key 的 integration）。
+
 ### 第三轮独立审查修复
 
 - **P0-1 占位符不再变成 0 分（`scripts/build_ranking_data.py`）**：`num()` 从「在任意位置取第一个数字」改为整串匹配（接受 `78`、`78/100`、`-17.2%`、`1571ms`），`about 78`、`990`、`[0-100, e.g. 55.7]` 一律返回 `None`；`md_field` 对方括号占位符与含 `e.g.`/`例如` 的值判为未填写；`clean_value` 对未闭合注释 fail-closed；字段名加 `IGNORECASE`。英文模板原样提交、中文模板原样提交都不再产生假榜单项。

@@ -17,7 +17,7 @@ Built for LLM-security researchers, agent developers, and anyone who routes LLM 
 
 - **The question it answers:** you are billed for `gpt-4o-mini` — is that actually what the endpoint serves? Give it an OpenAI-compatible endpoint and it runs one bounded battery (17 logical probes; retried only on transient failures, up to 3 extra attempts each by default, so the worst case is 17×4 = 68 HTTP calls — lower it with the `MAX_RETRIES` env var), then returns a single JSON report.
 - **What you get:** `pass` / `suspicious` / `insufficient_evidence`, plus confidence and the evidence behind it. Too little evidence means it says so.
-- **What it does not claim:** not a cryptographic proof, only probabilistic auxiliary evidence; the shipped reference set is small (a Qwen2.5 tokenizer fingerprint plus a single-relay GPT baseline); a public `temperature=0` probe battery can be hard-coded and replayed, so reports flag `deterministic_replay_risk` and cap confidence at low. Full limits are in "Limitations" below.
+- **What it does not claim:** not a cryptographic proof, only probabilistic auxiliary evidence; the shipped reference set is small (Qwen2.5 and GLM-4-9B-Chat tokenizer fingerprints plus a single-relay GPT baseline); a public `temperature=0` probe battery can be hard-coded and replayed, so reports flag `deterministic_replay_risk` and cap confidence at low. Full limits are in "Limitations" below.
 
 > **Scope note.** The bundled current `verify`/`serve` path (the code path shipped to PyPI) is **stateless model-identity verification** (CLI/SDK + local `serve` browser UI; the key stays in session memory only). Token billing audit (tiktoken token-billing difference detection), latency/availability/error-rate performance monitoring, OpenAI response-format protocol compliance, balance queries/low-balance alerts, continuous monitoring/alert channels, and a community leaderboard/online submissions belong to an **early, standalone legacy web platform (`app.main`, self-hosted separately)** and are **NOT** part of the current `verify`/`serve`/PyPI bundle.
 
@@ -279,9 +279,10 @@ Read this before trusting any verdict.
     relay, not a vendor-independent fingerprint.
   - Qwen2.5-0.5B-Instruct — real local tokenizer counts only, **no behavioral
     distribution**, so it can never yield a `pass` on its own.
+  - GLM-4-9B-Chat — real local tokenizer counts (7 probes), **no behavioral
+    distribution**, so it can never yield a `pass` on its own.
   - DeepSeek-R1-Distill-Qwen — derives the Qwen2 tokenizer; counts cannot
-    distinguish it from Qwen. GLM is catalogued but pending tokenizer
-    download.
+    distinguish it from Qwen.
   - Closed-model fingerprints for Claude / Gemini / other GPT claims need
     your own keys to collect.
 - **Tokenizer signal, precisely.** A tokenizer **match without behavioral
@@ -353,7 +354,7 @@ current `verify`/`serve`/PyPI model-identity path:
   loopback only; see [docs/serve.md](docs/serve.md)).
 - **Baseline data:** `data/baselines/` (real n=50 collections),
   `data/fingerprints/` (open-source tokenizer catalog).
-- **Tests:** 400 passed / 7 skipped (407 collected; the 7 skipped are integration
+- **Tests:** 401 passed / 7 skipped (408 collected; the 7 skipped are integration
   tests that need a real API key; run them with `pytest -m integration`).
 
 ## Installing from source
