@@ -1,6 +1,6 @@
 # TransitTruth 🛡️
 
-[English](README.en.md) · 中文
+[English](README.en.md) · [中文](README.md) · [日本語](README.ja.md)
 
 [![CI](https://github.com/dafahaha/transit-truth/actions/workflows/ci.yml/badge.svg)](https://github.com/dafahaha/transit-truth/actions/workflows/ci.yml)
 ![Python](https://img.shields.io/badge/python-3.10%E2%80%933.13-blue)
